@@ -1,0 +1,58 @@
+# Trivy Security Scanner Configuration
+# Container image and filesystem vulnerability scanning
+
+# Scanner settings
+scanner:
+  # Skip files and directories
+  skip-files:
+    - "node_modules/**"
+    - ".git/**"
+    - "coverage/**"
+    - "dist/**"
+    - "build/**"
+
+  # Skip directories
+  skip-dirs:
+    - "/usr/local/bundle"
+    - "/var/lib/gems"
+    - "/usr/local/lib/ruby"
+
+# Vulnerability settings
+vulnerability:
+  # Ignore unfixed vulnerabilities
+  ignore-unfixed: true
+
+  # Severity levels to report
+  severity:
+    - "CRITICAL"
+    - "HIGH"
+    - "MEDIUM"
+
+  # Vulnerability types
+  type:
+    - "os"
+    - "library"
+
+# Security advisories
+security:
+  # Enable security advisories check
+  advisories: true
+
+  # Timeout for security checks
+  timeout: "5m"
+
+# Output settings
+output:
+  # Report format (json, table, sarif)
+  format: "json"
+
+  # Output file
+  file: "security-report.json"
+
+# Database settings
+db:
+  # Auto-update vulnerability database
+  auto-refresh: true
+
+  # Database cache directory
+  cache-dir: ".trivy/cache"

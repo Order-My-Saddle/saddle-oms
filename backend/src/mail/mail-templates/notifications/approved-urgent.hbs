@@ -1,0 +1,13 @@
+<h2 style="color: #d9534f;">🚨 URGENT ORDER APPROVED 🚨</h2>
+<p><strong>This is an urgent order that requires immediate attention!</strong></p>
+<br/>
+Click <a href="{{orders_url}}">here</a> to go to the dashboard with all the new orders including urgent order {{order_id}}.
+<br/><br/>
+<p style="background: #fcf8e3; padding: 10px; border-left: 4px solid #faebcc;">
+    <strong>Priority:</strong> URGENT<br/>
+    <strong>Order ID:</strong> {{order_id}}<br/>
+    <strong>Customer:</strong> {{customer_name}}<br/>
+    {{#if deadline}}
+    <strong>Deadline:</strong> {{deadline}}
+    {{/if}}
+</p>

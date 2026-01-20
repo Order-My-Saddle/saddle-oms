@@ -1,0 +1,62 @@
+# =============================================================================
+# E2E API Testing Docker Compose
+# =============================================================================
+# Creates a fresh PostgreSQL database for E2E API testing with migrated data
+#
+# Usage:
+#   docker compose -f test/e2e-api/docker-compose.e2e.yaml up -d
+#   docker compose -f test/e2e-api/docker-compose.e2e.yaml down -v
+# =============================================================================
+
+services:
+  postgres-e2e:
+    image: postgres:17.6
+    container_name: oms_postgres_e2e
+    restart: "no"
+    environment:
+      POSTGRES_DB: oms_e2e_test
+      POSTGRES_USER: oms_e2e_user
+      POSTGRES_PASSWORD: oms_e2e_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_e2e_data:/var/lib/postgresql/data
+    command:
+      - "postgres"
+      - "-c"
+      - "max_connections=200"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "work_mem=16MB"
+      - "-c"
+      - "log_statement=none"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oms_e2e_user -d oms_e2e_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis-e2e:
+    image: redis:7-alpine
+    container_name: oms_redis_e2e
+    restart: "no"
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  maildev-e2e:
+    image: maildev/maildev
+    container_name: oms_maildev_e2e
+    restart: "no"
+    ports:
+      - "1081:1080"
+      - "1026:1025"
+
+volumes:
+  postgres_e2e_data:

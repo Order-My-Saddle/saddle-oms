@@ -1,0 +1,212 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oms-staging-ingress
+  namespace: oms-staging
+  labels:
+    app: oms
+    environment: staging
+  annotations:
+    # NGINX Ingress Controller annotations
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+    # Security headers
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+      add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; media-src 'self'; object-src 'none'; child-src 'none'; worker-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self';" always;
+
+    # Rate limiting
+    nginx.ingress.kubernetes.io/rate-limit-connections: "20"
+    nginx.ingress.kubernetes.io/rate-limit-requests-per-minute: "300"
+
+    # CORS settings
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://staging.ordermysaddle.com"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization"
+
+    # TLS and certificate management
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+
+    # Request size limits
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/client-max-body-size: "50m"
+
+    # Timeouts
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+
+spec:
+  ingressClassName: nginx
+
+  tls:
+  - hosts:
+    - staging.ordermysaddle.com
+    - api-staging.ordermysaddle.com
+    secretName: oms-staging-tls-cert
+
+  rules:
+  # Frontend routing
+  - host: staging.ordermysaddle.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: oms-frontend-service
+            port:
+              number: 80
+
+  # Backend API routing
+  - host: api-staging.ordermysaddle.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: oms-backend-service
+            port:
+              number: 80
+
+---
+# Certificate Issuer for Let's Encrypt (staging environment)
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+  labels:
+    environment: staging
+spec:
+  acme:
+    # ACME server for Let's Encrypt staging
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+
+    # Email address for important account notifications
+    email: devops@ordermysaddle.com  # Replace with actual email
+
+    # Private key secret ref
+    privateKeySecretRef:
+      name: letsencrypt-staging-private-key
+
+    # ACME challenge solver
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+
+---
+# Network Policy for ingress traffic control
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: oms-staging-ingress-policy
+  namespace: oms-staging
+  labels:
+    app: oms
+    environment: staging
+spec:
+  podSelector:
+    matchLabels:
+      environment: staging
+
+  policyTypes:
+  - Ingress
+  - Egress
+
+  ingress:
+  # Allow traffic from NGINX Ingress Controller
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: ingress-nginx
+    ports:
+    - protocol: TCP
+      port: 3000  # Frontend
+    - protocol: TCP
+      port: 3001  # Backend
+
+  # Allow internal cluster communication
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: oms-staging
+    ports:
+    - protocol: TCP
+      port: 3000  # Frontend
+    - protocol: TCP
+      port: 3001  # Backend
+    - protocol: TCP
+      port: 5432  # PostgreSQL
+    - protocol: TCP
+      port: 6379  # Redis
+
+  egress:
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+    - protocol: TCP
+      port: 53
+
+  # Allow HTTPS outbound (for external APIs, npm registries, etc.)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+
+  # Allow internal cluster communication
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: oms-staging
+    ports:
+    - protocol: TCP
+      port: 3000
+    - protocol: TCP
+      port: 3001
+    - protocol: TCP
+      port: 5432
+    - protocol: TCP
+      port: 6379
+
+---
+# Load Balancer Service for external access (if needed)
+apiVersion: v1
+kind: Service
+metadata:
+  name: oms-staging-loadbalancer
+  namespace: oms-staging
+  labels:
+    app: oms
+    environment: staging
+  annotations:
+    service.beta.kubernetes.io/do-loadbalancer-enable-proxy-protocol: "true"
+    service.beta.kubernetes.io/do-loadbalancer-healthcheck-check-interval-seconds: "10"
+    service.beta.kubernetes.io/do-loadbalancer-healthcheck-healthy-threshold: "2"
+    service.beta.kubernetes.io/do-loadbalancer-healthcheck-unhealthy-threshold: "3"
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: 443
+    protocol: TCP
+  selector:
+    app: nginx-ingress
+    component: controller

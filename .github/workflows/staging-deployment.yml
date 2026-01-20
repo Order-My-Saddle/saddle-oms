@@ -1,0 +1,389 @@
+name: Deploy to Staging V2
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    labels:
+      - deploy-staging-v2
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging-v2'
+        type: choice
+        options:
+        - staging-v2
+        - staging
+      force_deploy:
+        description: 'Force deployment even if tests fail'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_BACKEND: ${{ github.repository }}-backend
+  IMAGE_NAME_FRONTEND: ${{ github.repository }}-frontend
+  K8S_NAMESPACE: oms-staging-v2
+
+jobs:
+  # Security scanning and linting
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # Backend build, test, and image creation
+  backend-build:
+    name: Build Backend
+    runs-on: ubuntu-latest
+    needs: security-scan
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run linting
+      run: npm run lint
+
+    - name: Run type check
+      run: npx tsc --noEmit
+
+    - name: Build application
+      run: npm run build
+
+    - name: Run unit tests
+      run: npm test -- --passWithNoTests --coverage
+      continue-on-error: ${{ github.event.inputs.force_deploy == 'true' }}
+
+    - name: Upload test coverage
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./backend/coverage/lcov.info
+        flags: backend
+        name: backend-coverage
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=staging-v2-latest
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        file: ./backend/Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          NODE_ENV=staging
+
+  # Frontend build, test, and image creation
+  frontend-build:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    needs: security-scan
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run linting
+      run: npm run lint
+
+    - name: Run type check
+      run: npm run type-check
+
+    - name: Run tests
+      run: npm test
+      continue-on-error: ${{ github.event.inputs.force_deploy == 'true' }}
+
+    - name: Build application
+      run: npm run build
+      env:
+        NEXT_PUBLIC_API_URL: https://api-staging-v2.ordermysaddle.com
+        NODE_ENV: staging
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=staging-v2-latest
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        file: ./frontend/Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          NODE_ENV=staging
+          NEXT_PUBLIC_API_URL=https://api-staging-v2.ordermysaddle.com
+
+  # Deploy to Kubernetes staging-v2 namespace
+  deploy-staging:
+    name: Deploy to Staging V2
+    runs-on: ubuntu-latest
+    needs: [backend-build, frontend-build]
+    environment:
+      name: staging-v2
+      url: https://staging-v2.ordermysaddle.com
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Kubernetes CLI
+      uses: azure/setup-kubectl@v3
+      with:
+        version: '1.28.0'
+
+    - name: Configure kubectl for DigitalOcean
+      uses: digitalocean/action-doctl@v2
+      with:
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+    - name: Setup Kubernetes context
+      run: doctl kubernetes cluster kubeconfig save k8s-1-28-6-do-0-ams3-1713552913551
+
+    - name: Create namespace if not exists
+      run: |
+        kubectl create namespace ${{ env.K8S_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Create secrets from environment variables
+      run: |
+        # Create database secrets
+        kubectl create secret generic oms-postgres-secrets \
+          --namespace=${{ env.K8S_NAMESPACE }} \
+          --from-literal=POSTGRES_USER="${{ secrets.DB_USERNAME }}" \
+          --from-literal=POSTGRES_PASSWORD="${{ secrets.DB_PASSWORD }}" \
+          --from-literal=POSTGRES_DB="${{ secrets.DB_NAME }}" \
+          --dry-run=client -o yaml | kubectl apply -f -
+
+        # Create application secrets
+        kubectl create secret generic oms-app-secrets \
+          --namespace=${{ env.K8S_NAMESPACE }} \
+          --from-literal=DATABASE_URL="postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}:5432/${{ secrets.DB_NAME }}" \
+          --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET_KEY }}" \
+          --from-literal=JWT_EXPIRES_IN="24h" \
+          --from-literal=REDIS_URL="redis://${{ secrets.REDIS_HOST }}:6379" \
+          --from-literal=ENCRYPTION_SECRET="${{ secrets.ENCRYPTION_SECRET }}" \
+          --from-literal=API_PORT="3001" \
+          --from-literal=NODE_ENV="staging" \
+          --dry-run=client -o yaml | kubectl apply -f -
+
+        # Create Redis secrets
+        kubectl create secret generic oms-redis-secrets \
+          --namespace=${{ env.K8S_NAMESPACE }} \
+          --from-literal=REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}" \
+          --dry-run=client -o yaml | kubectl apply -f -
+
+        # Create registry credentials
+        kubectl create secret docker-registry registry-credentials \
+          --namespace=${{ env.K8S_NAMESPACE }} \
+          --docker-server=${{ env.REGISTRY }} \
+          --docker-username=${{ github.actor }} \
+          --docker-password=${{ secrets.GITHUB_TOKEN }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Update image tags in K8s manifests
+      run: |
+        cd kubernetes/staging-v2
+
+        # Update backend image tag
+        sed -i "s|ghcr.io/YOUR_ORG/oms-backend:latest|${{ env.REGISTRY }}/${{ env.IMAGE_NAME_BACKEND }}:staging-v2-latest|g" backend-deployment.yaml
+
+        # Update frontend image tag
+        sed -i "s|ghcr.io/YOUR_ORG/oms-frontend:latest|${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:staging-v2-latest|g" frontend-deployment.yaml
+
+    - name: Deploy database and cache services
+      run: kubectl apply -f kubernetes/staging-v2/database-deployment.yaml
+
+    - name: Wait for database to be ready
+      run: |
+        kubectl wait --namespace=${{ env.K8S_NAMESPACE }} \
+          --for=condition=ready pod \
+          --selector=app=oms-postgres \
+          --timeout=300s
+
+    - name: Deploy backend application
+      run: kubectl apply -f kubernetes/staging-v2/backend-deployment.yaml
+
+    - name: Wait for backend to be ready
+      run: |
+        kubectl wait --namespace=${{ env.K8S_NAMESPACE }} \
+          --for=condition=ready pod \
+          --selector=app=oms-backend \
+          --timeout=300s
+
+    - name: Deploy frontend application
+      run: kubectl apply -f kubernetes/staging-v2/frontend-deployment.yaml
+
+    - name: Wait for frontend to be ready
+      run: |
+        kubectl wait --namespace=${{ env.K8S_NAMESPACE }} \
+          --for=condition=ready pod \
+          --selector=app=oms-frontend \
+          --timeout=300s
+
+    - name: Deploy ingress configuration
+      run: kubectl apply -f kubernetes/staging-v2/ingress.yaml
+
+    - name: Run database migrations
+      run: |
+        kubectl exec --namespace=${{ env.K8S_NAMESPACE }} \
+          deployment/oms-backend \
+          -- npm run migration:run
+
+    - name: Verify deployment
+      run: |
+        kubectl get pods --namespace=${{ env.K8S_NAMESPACE }}
+        kubectl get services --namespace=${{ env.K8S_NAMESPACE }}
+        kubectl get ingress --namespace=${{ env.K8S_NAMESPACE }}
+
+    - name: Health check endpoints
+      run: |
+        # Wait for ingress to be ready
+        sleep 60
+
+        # Check backend health
+        curl -f https://api-staging-v2.ordermysaddle.com/health || echo "Backend health check failed"
+
+        # Check frontend health
+        curl -f https://staging-v2.ordermysaddle.com/api/health || echo "Frontend health check failed"
+
+  # E2E tests against deployed staging environment
+  e2e-tests:
+    name: Run E2E Tests
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    defaults:
+      run:
+        working-directory: ./e2e
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: e2e/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+
+    - name: Run E2E tests
+      run: npx playwright test
+      env:
+        BASE_URL: https://staging-v2.ordermysaddle.com
+        API_URL: https://api-staging-v2.ordermysaddle.com
+        TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+        TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+
+    - name: Upload E2E test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-test-results
+        path: e2e/test-results/
+        retention-days: 7
+
+  # Slack notification
+  notify:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, e2e-tests]
+    if: always()
+
+    steps:
+    - name: Notify Slack on success
+      if: needs.deploy-staging.result == 'success' && needs.e2e-tests.result == 'success'
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        text: '🚀 OMS Staging V2 deployment successful! All E2E tests passed.'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: Notify Slack on failure
+      if: needs.deploy-staging.result == 'failure' || needs.e2e-tests.result == 'failure'
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        text: '❌ OMS Staging V2 deployment failed! Check logs for details.'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
