@@ -1,0 +1,335 @@
+import { fetchEntities } from './api';
+
+function getToken() {
+  if (typeof window !== 'undefined') {
+    // Try to get token from auth_token first (Jotai store)
+    try {
+      const stored = localStorage.getItem('auth_token');
+      if (stored && stored !== 'null') {
+        const parsedToken = JSON.parse(stored);
+        console.log('🔑 Found token in auth_token localStorage');
+        return parsedToken;
+      }
+    } catch (e) {
+      console.log('🔑 Failed to parse auth_token from localStorage, trying token key...');
+    }
+
+    // Check localStorage for 'token' key
+    try {
+      const token = localStorage.getItem('token');
+      if (token && token !== 'null') {
+        console.log('🔑 Found token in token localStorage');
+        return token;
+      }
+    } catch (e) {
+      console.log('🔑 No token found in localStorage, trying cookies...');
+    }
+
+    // Fallback to cookies
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'token') {
+        console.log('🔑 Found token in cookies');
+        return value;
+      }
+    }
+    console.log('🔑 No token found anywhere');
+  }
+  return null;
+}
+
+export interface Supplier {
+  id: number; // INTEGER - matching legacy database
+  name: string;
+  username: string;
+  email?: string;
+  address?: string; // Required by HasAddressTrait
+  city?: string; // Required by HasAddressTrait
+  country?: string;
+  currency?: string; // Required by HasCurrencyTrait
+  enabled?: boolean;
+  lastLogin?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  // Additional address fields from HasAddressTrait
+  zipcode?: string;
+  state?: string;
+  cellNo?: string;
+  phoneNo?: string;
+}
+
+export interface SuppliersResponse {
+  'hydra:member': Supplier[];
+  'hydra:totalItems': number;
+  'hydra:view'?: {
+    '@id': string;
+    'hydra:first'?: string;
+    'hydra:last'?: string;
+    'hydra:next'?: string;
+    'hydra:previous'?: string;
+  };
+}
+
+export async function fetchSuppliers({
+  page = 1,
+  searchTerm = '',
+  filters = {},
+  orderBy = 'name',
+  order = 'asc'
+}: {
+  page?: number;
+  searchTerm?: string;
+  filters?: Record<string, string>;
+  orderBy?: string;
+  order?: 'asc' | 'desc';
+} = {}): Promise<SuppliersResponse> {
+  console.log('fetchSuppliers: Called with params:', { page, searchTerm, filters, orderBy, order });
+  
+  // Build filter parameters for API Platform
+  const extraParams: Record<string, string | number | boolean> = {};
+
+  // Handle search term by filtering on name and username
+  if (searchTerm && searchTerm.trim()) {
+    console.log(`fetchSuppliers: Processing searchTerm:`, searchTerm);
+    // Use name filter for partial matching (the API should support partial matching on name)
+    extraParams['name'] = searchTerm.trim();
+  }
+
+  // Handle individual field filters
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value && value.trim()) {
+      console.log(`fetchSuppliers: Processing filter ${key}:`, value);
+      // For text fields, use partial matching
+      if (key === 'name' || key === 'username' || key === 'city' || key === 'country') {
+        extraParams[key] = value;
+      }
+      // For status/enabled field
+      else if (key === 'status') {
+        extraParams['enabled'] = value === 'ACTIVE';
+      }
+      // For other exact matches
+      else {
+        extraParams[key] = value;
+      }
+    }
+  });
+
+  console.log('fetchSuppliers: Calling fetchEntities with entity "factories" and params:', extraParams);
+
+  return await fetchEntities({
+    entity: 'factories',
+    page,
+    orderBy,
+    order,
+    extraParams
+  });
+}
+
+export async function createSupplier(supplierData: Partial<Supplier>): Promise<Supplier> {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const token = getToken();
+
+  // Create BreezeJS-style entity with the correct format for the backend
+  const entity = {
+    // Include all supplier fields for creation
+    name: supplierData.name,
+    username: supplierData.username,
+    email: supplierData.email,
+    address: supplierData.address, // Required field
+    city: supplierData.city, // Required field
+    country: supplierData.country,
+    currency: supplierData.currency || 'USD', // Required field with default
+    enabled: supplierData.enabled ?? true,
+    // Add other supplier-specific fields if provided
+    ...(supplierData.zipcode && { zipcode: supplierData.zipcode }),
+    ...(supplierData.state && { state: supplierData.state }),
+    ...(supplierData.cellNo && { cellNo: supplierData.cellNo }),
+    ...(supplierData.phoneNo && { phoneNo: supplierData.phoneNo }),
+    // BreezeJS entity metadata with correct format
+    entityAspect: {
+      entityTypeName: "Factory:#App.Entity.Factory",
+      entityState: "Added",
+      originalValuesMap: {},
+      autoGeneratedKey: null,
+      defaultResourceName: "factories"
+    }
+  };
+
+  // Remove undefined fields to keep payload clean
+  Object.keys(entity).forEach(key => {
+    if (key !== 'entityAspect' && entity[key] === undefined) {
+      delete entity[key];
+    }
+  });
+
+  // Create the save bundle structure expected by the backend
+  const saveBundle = {
+    entities: [entity]
+  };
+
+  console.log('Attempting supplier creation with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
+
+  const response = await fetch(`${API_URL}/save`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/ld+json',
+      'Accept': 'application/ld+json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+    body: JSON.stringify(saveBundle),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Supplier creation failed:', response.status, errorText);
+    throw new Error(`Failed to create supplier: ${response.status} ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  console.log('Supplier creation result:', result);
+
+  // Check for errors in SaveBundle response
+  if (result.Errors && result.Errors.length > 0) {
+    console.error('SaveBundle errors:', result.Errors);
+    console.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
+    const errorMessages = result.Errors.map((err: any) => {
+      return err.ErrorMessage || err.message || err.Message || err.error || err.description || JSON.stringify(err);
+    }).join(', ');
+    throw new Error(`Supplier creation failed: ${errorMessages}`);
+  }
+
+  // Return the created supplier from the save result
+  if (result.Entities && result.Entities.length > 0) {
+    return result.Entities[0];
+  } else if (result.entities && result.entities.length > 0) {
+    return result.entities[0];
+  } else {
+    // If no entity returned in SaveBundle but no errors, creation was likely successful
+    console.log('No entities in SaveBundle response but no errors, returning optimistic data');
+    return {
+      id: 'pending', // Will be set by backend
+      ...supplierData
+    } as Supplier;
+  }
+}
+
+export async function updateSupplier(id: number | string, supplierData: Partial<Supplier>): Promise<Supplier> {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const token = getToken();
+
+  // Create entity with the same explicit structure as customers
+  const entity = {
+    // Include the id field for updates
+    id: id,
+    // Include all supplier fields explicitly (like customers)
+    name: supplierData.name,
+    username: supplierData.username,
+    email: supplierData.email,
+    address: supplierData.address, // Required field
+    city: supplierData.city, // Required field
+    country: supplierData.country,
+    currency: supplierData.currency || 'USD', // Required field with default
+    enabled: supplierData.enabled,
+    // Add other supplier-specific fields if needed
+    ...(supplierData.zipcode && { zipcode: supplierData.zipcode }),
+    ...(supplierData.state && { state: supplierData.state }),
+    ...(supplierData.cellNo && { cellNo: supplierData.cellNo }),
+    ...(supplierData.phoneNo && { phoneNo: supplierData.phoneNo }),
+    // BreezeJS entity metadata with correct format
+    entityAspect: {
+      entityTypeName: "Factory:#App.Entity.Factory",  // Match the factory entity structure
+      entityState: "Modified",
+      originalValuesMap: {},
+      autoGeneratedKey: null,
+      defaultResourceName: "factories"
+    }
+  };
+
+  // Remove undefined fields to keep payload clean
+  Object.keys(entity).forEach(key => {
+    if (key !== 'entityAspect' && entity[key] === undefined) {
+      delete entity[key];
+    }
+  });
+
+  // Create the save bundle structure expected by the backend
+  const saveBundle = {
+    entities: [entity]
+  };
+
+  console.log('Attempting supplier update with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
+
+  const response = await fetch(`${API_URL}/save`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/ld+json',
+      'Accept': 'application/ld+json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+    body: JSON.stringify(saveBundle),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Update supplier error response:', errorText);
+    throw new Error(`Failed to update supplier: ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  console.log('Supplier update result:', result);
+
+  // Check for errors in SaveBundle response
+  if (result.Errors && result.Errors.length > 0) {
+    console.error('SaveBundle errors:', result.Errors);
+    // Log the full error structure to understand the format
+    console.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
+    const errorMessages = result.Errors.map((err: any) => {
+      // Try different error message fields
+      return err.ErrorMessage || err.message || err.Message || err.error || err.description || JSON.stringify(err);
+    }).join(', ');
+    throw new Error(`Supplier update failed: ${errorMessages}`);
+  }
+
+  // Handle SaveBundle response format
+  if (result.Entities && result.Entities.length > 0) {
+    // Use the updated entity from the response
+    return result.Entities[0];
+  } else if (result.entities && result.entities.length > 0) {
+    // Fallback for alternative response format
+    return result.entities[0];
+  } else {
+    // If no entity returned in SaveBundle but no errors, update was likely successful
+    console.log('No entities in SaveBundle response but no errors, returning optimistic data');
+    return {
+      id: id,
+      ...supplierData
+    } as Supplier;
+  }
+}
+
+export async function deleteSupplier(id: number | string): Promise<void> {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const token = getToken();
+  
+  const response = await fetch(`${API_URL}/api/v1/factories/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Accept': 'application/ld+json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete supplier: ${response.statusText}`);
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "@context": "/contexts/OrderProductSaddle",
+  "@id": "/order_product_saddles",
+  "@type": "hydra:Collection",
+  "hydra:member": [],
+  "hydra:totalItems": 0,
+  "hydra:view": {},
+  "hydra:search": {}
+}

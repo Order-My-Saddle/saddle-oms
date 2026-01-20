@@ -1,0 +1,489 @@
+// Service for fetching enriched orders data from the enriched_order API resource
+import { fetchEntities } from './api';
+
+// Helper function to get current user from auth context
+function getCurrentUser() {
+  if (typeof window !== 'undefined') {
+    try {
+      // Try to get user from Jotai store
+      const storedUser = localStorage.getItem('auth_user');
+      if (storedUser && storedUser !== 'null') {
+        return JSON.parse(storedUser);
+      }
+    } catch (error) {
+      console.warn('Failed to get user from localStorage:', error);
+    }
+  }
+  return null;
+}
+
+interface GetEnrichedOrdersParams {
+  page?: number;
+  partial?: boolean;
+  filters?: Record<string, string>;
+  orderBy?: string;
+  order?: 'asc' | 'desc';
+  fromDate?: Date;
+  toDate?: Date;
+  searchTerm?: string;
+}
+
+interface SearchFilters {
+  orderId?: string | number;
+  id?: number;
+  orderStatus?: string;
+  customerName?: string;
+  fitterName?: string;
+  supplierName?: string;
+  urgent?: boolean;
+  saddleFilter?: string;
+  fromDate?: Date;
+  toDate?: Date;
+}
+
+// Function to search for a specific order by ID through multiple pages
+export async function searchForOrderByPages(orderId: string | number): Promise<any> {
+  console.log('Starting paginated search for order ID:', orderId);
+  
+  // We'll try the first 10 pages to find the order
+  const targetOrderId = Number(orderId);
+  const pageLimit = 10;
+  const itemsPerPage = 30; // Default API pagination
+  
+  for (let page = 1; page <= pageLimit; page++) {
+    console.log(`Searching page ${page} for order ID ${orderId}`);
+    
+    try {
+      // Get the specific page of results
+      const response = await fetchEntities({
+        entity: 'enriched_orders',
+        page,
+        extraParams: {
+          'order[orderId]': 'desc', // Always sort by orderId descending to make search more efficient
+        },
+      });
+      
+      if (!response['hydra:member'] || response['hydra:member'].length === 0) {
+        console.log(`No results on page ${page}, stopping search`);
+        break;
+      }
+      
+      console.log(`Page ${page} has ${response['hydra:member'].length} orders`);
+      
+      // Check for the order on this page
+      const foundOrder = response['hydra:member'].find((order: any) => {
+        const currentOrderId = Number(order.orderId);
+        return currentOrderId === targetOrderId;
+      });
+      
+      // Sample a few orders to see what's on this page
+      if (page === 1 || page % 3 === 0) { // Log first page and every third page
+        const orderIds = response['hydra:member'].map((order: any) => Number(order.orderId)).sort((a: number, b: number) => a - b);
+        console.log(`Sample order IDs on page ${page}: ${orderIds.slice(0, 5)}...`);
+        console.log(`Order ID range on page ${page}: ${Math.min(...orderIds)} - ${Math.max(...orderIds)}`);
+      }
+      
+      if (foundOrder) {
+        console.log(`Found order ${orderId} on page ${page}:`, foundOrder);
+        
+        // Return a properly formatted response with just the found order
+        return {
+          'hydra:member': [foundOrder],
+          'hydra:totalItems': 1,
+          'hydra:view': response['hydra:view'] ? {
+            'hydra:first': response['hydra:view']['hydra:first'],
+            'hydra:last': response['hydra:view']['hydra:first']
+          } : undefined
+        };
+      }
+      
+      // Check if we've gone past where the order would be
+      // Since we're sorting by orderId desc, if the lowest orderId on this page is already less than our target
+      // then we won't find it in later pages either
+      const lowestOrderIdOnPage = Math.min(...response['hydra:member'].map((order: any) => Number(order.orderId)));
+      
+      if (lowestOrderIdOnPage < targetOrderId) {
+        console.log(`Lowest order ID on page ${page} (${lowestOrderIdOnPage}) is already below target ${targetOrderId}, stopping search`);
+        break;
+      }
+    } catch (error) {
+      console.error(`Error searching page ${page}:`, error);
+      throw error;
+    }
+  }
+  
+  console.log(`Order ${orderId} not found after searching ${pageLimit} pages`);
+  
+  // Return empty result if order not found
+  return {
+    'hydra:member': [],
+    'hydra:totalItems': 0
+  };
+}
+
+// Accept filters and pass to fetchEntities for the enriched_order entity
+export async function getEnrichedOrders(params: GetEnrichedOrdersParams = {}) {
+  console.log('enrichedOrders.ts: getEnrichedOrders called with params:', params);
+  
+  // Format filters for API Platform
+  const formattedFilters = { ...params.filters };
+  console.log('enrichedOrders.ts: Initial formattedFilters:', formattedFilters);
+  
+  // Auto-apply fitter filtering for FITTER role users
+  const currentUser = getCurrentUser();
+  if (currentUser && currentUser.role === 'ROLE_FITTER' && currentUser.username && !formattedFilters.fitterUsername) {
+    console.log('enrichedOrders.ts: Auto-applying fitter filter for user:', currentUser.username);
+    formattedFilters.fitterUsername = currentUser.username;
+  }
+  
+  // Special case for orderId search - use paginated search if we have an exact orderId
+  if (formattedFilters.orderId && /^\d+$/.test(formattedFilters.orderId)) {
+    try {
+      console.log('Detected specific order ID search:', formattedFilters.orderId);
+      
+      // Use paginated search to find the specific order
+      return await searchForOrderByPages(formattedFilters.orderId);
+    } catch (error) {
+      console.warn('Failed to find order through paginated search, falling back to regular search:', error);
+      // Fall back to regular search if the paginated search fails
+    }
+  }
+  
+  // Process filter parameters for API Platform
+  // Remove array notation that prevents server-side filtering
+  const cleanedFilters: Record<string, any> = {};
+  
+  Object.keys(formattedFilters).forEach(key => {
+    const value = formattedFilters[key];
+    if (value !== undefined && value !== null && value !== '') {
+      console.log(`Filtering by ${key}:`, value);
+      // Use direct field names without array notation for proper API Platform filtering
+      cleanedFilters[key] = value;
+    }
+  });
+  
+  // Replace formattedFilters with cleaned version
+  Object.keys(formattedFilters).forEach(key => delete formattedFilters[key]);
+  Object.assign(formattedFilters, cleanedFilters);
+
+  // Add sorting parameters if provided
+  if (params.orderBy) {
+    const order = params.order === 'asc' ? 'asc' : 'desc'; // Default to desc if not specified
+    // Use the correct format for API Platform sorting
+    formattedFilters[`order[${params.orderBy}]`] = order;
+  }
+  
+  console.log('enrichedOrders.ts: Final API request parameters:', formattedFilters);
+
+  const response = await fetchEntities({
+    entity: 'enriched_orders',
+    page: params.page,
+    partial: params.partial,
+    extraParams: formattedFilters,
+    searchTerm: params.searchTerm,
+  });
+  
+  console.log('enrichedOrders.ts: API response received:', {
+    totalItems: response['hydra:totalItems'],
+    memberCount: response['hydra:member']?.length,
+    firstOrderStatuses: response['hydra:member']?.slice(0, 3).map((order: any) => order.orderStatus)
+  });
+  
+  // Server-side filtering should now work properly without array notation
+  console.log('enrichedOrders.ts: Server-side filtering should handle the request properly');
+  
+  return response;
+}
+
+// ========== COMPREHENSIVE SEARCH FUNCTIONS ==========
+
+// Search by specific order ID (numeric)
+export async function searchByOrderId(orderId: string | number): Promise<any> {
+  console.log('Searching by Order ID:', orderId);
+  return getEnrichedOrders({
+    filters: { orderId: String(orderId) },
+    orderBy: 'orderId',
+    order: 'desc'
+  });
+}
+
+// Search by order status
+export async function searchByOrderStatus(status: string): Promise<any> {
+  console.log('Searching by Order Status:', status);
+  
+  // Try the exact status first
+  let result = await getEnrichedOrders({
+    filters: { orderStatus: status },
+    orderBy: 'orderId',
+    order: 'desc'
+  });
+  
+  // If no results and it looks like a constant format, try variations
+  if (result['hydra:totalItems'] === 0 || result['hydra:member']?.length === 0) {
+    console.log('No results for exact status, trying variations for:', status);
+    
+    // Try lowercase
+    const lowerStatus = status.toLowerCase();
+    if (lowerStatus !== status) {
+      result = await getEnrichedOrders({
+        filters: { orderStatus: lowerStatus },
+        orderBy: 'orderId',
+        order: 'desc'
+      });
+      
+      if (result['hydra:totalItems'] > 0) {
+        console.log('Found results with lowercase status:', lowerStatus);
+        return result;
+      }
+    }
+    
+    // Try snake_case
+    const snakeStatus = status.toLowerCase().replace(/\s+/g, '_');
+    if (snakeStatus !== status && snakeStatus !== lowerStatus) {
+      result = await getEnrichedOrders({
+        filters: { orderStatus: snakeStatus },
+        orderBy: 'orderId',
+        order: 'desc'
+      });
+      
+      if (result['hydra:totalItems'] > 0) {
+        console.log('Found results with snake_case status:', snakeStatus);
+        return result;
+      }
+    }
+    
+    // Try replacing underscores with spaces for readable format
+    const spaceStatus = status.replace(/_/g, ' ');
+    if (spaceStatus !== status) {
+      result = await getEnrichedOrders({
+        filters: { orderStatus: spaceStatus },
+        orderBy: 'orderId',
+        order: 'desc'
+      });
+      
+      if (result['hydra:totalItems'] > 0) {
+        console.log('Found results with space-separated status:', spaceStatus);
+        return result;
+      }
+    }
+  }
+  
+  return result;
+}
+
+// Search by customer name
+export async function searchByCustomerName(customerName: string): Promise<any> {
+  console.log('Searching by Customer Name:', customerName);
+  return getEnrichedOrders({
+    filters: { customerName },
+    orderBy: 'orderId',
+    order: 'desc'
+  });
+}
+
+// Search by fitter name
+export async function searchByFitterName(fitterName: string): Promise<any> {
+  console.log('Searching by Fitter Name:', fitterName);
+  return getEnrichedOrders({
+    filters: { fitterName },
+    orderBy: 'orderId',
+    order: 'desc'
+  });
+}
+
+// Search by supplier name
+export async function searchBySupplier(supplierName: string): Promise<any> {
+  console.log('Searching by Supplier Name:', supplierName);
+  return getEnrichedOrders({
+    filters: { supplierName },
+    orderBy: 'orderId',
+    order: 'desc'
+  });
+}
+
+// Search by date range
+export async function searchByDateRange(fromDate: Date, toDate: Date): Promise<any> {
+  console.log('Searching by Date Range:', fromDate, 'to', toDate);
+  
+  const fromDateStr = fromDate.toISOString().split('T')[0];
+  const toDateStr = toDate.toISOString().split('T')[0];
+  
+  return getEnrichedOrders({
+    filters: {
+      'orderTime[after]': fromDateStr,
+      'orderTime[before]': toDateStr
+    },
+    orderBy: 'orderTime',
+    order: 'desc'
+  });
+}
+
+// Search by urgent status
+export async function searchByUrgentStatus(urgent: boolean): Promise<any> {
+  console.log('Searching by Urgent Status:', urgent);
+  return getEnrichedOrders({
+    filters: { urgent: urgent },
+    orderBy: 'orderId',
+    order: 'desc'
+  });
+}
+
+// Universal search that tries multiple fields
+export async function universalSearch(searchTerm: string): Promise<any> {
+  console.log('Performing universal search for:', searchTerm);
+  
+  // If search term is numeric, search by order ID
+  if (/^\d+$/.test(searchTerm)) {
+    console.log('Numeric search term detected, searching by order ID');
+    const orderIdResult = await searchByOrderId(searchTerm);
+    if (orderIdResult['hydra:member'] && orderIdResult['hydra:member'].length > 0) {
+      console.log('Found results by order ID');
+      return orderIdResult;
+    }
+    console.log('No results by order ID, continuing with general search');
+  }
+  
+  // For text searches, try multiple strategies
+  console.log('Text search term detected, trying multiple search strategies');
+  
+  // Strategy 1: Use backend search parameter if available
+  try {
+    console.log('Strategy 1: Using backend search parameter');
+    const searchResult = await getEnrichedOrders({
+      searchTerm,
+      orderBy: 'orderId',
+      order: 'desc',
+      page: 1,
+      partial: false
+    });
+    
+    if (searchResult['hydra:member'] && searchResult['hydra:member'].length > 0) {
+      console.log('Backend search returned results:', searchResult['hydra:member'].length);
+      return searchResult;
+    }
+    console.log('Backend search returned no results, trying individual field searches');
+  } catch (error) {
+    console.log('Backend search failed, trying individual field searches:', error);
+  }
+  
+  // Strategy 2: Try individual field searches and combine results
+  const searchPromises = [
+    searchByCustomerName(searchTerm).catch(() => ({ 'hydra:member': [], 'hydra:totalItems': 0 })),
+    searchByFitterName(searchTerm).catch(() => ({ 'hydra:member': [], 'hydra:totalItems': 0 })),
+    searchBySupplier(searchTerm).catch(() => ({ 'hydra:member': [], 'hydra:totalItems': 0 }))
+  ];
+  
+  try {
+    const results = await Promise.all(searchPromises);
+    console.log('Individual field search results:', results.map(r => r['hydra:totalItems']));
+    
+    // Combine all results, removing duplicates by orderId
+    const allOrders = new Map();
+    let totalItems = 0;
+    
+    results.forEach(result => {
+      if (result['hydra:member']) {
+        result['hydra:member'].forEach((order: any) => {
+          if (!allOrders.has(order.orderId)) {
+            allOrders.set(order.orderId, order);
+            totalItems++;
+          }
+        });
+      }
+    });
+    
+    const combinedResults = {
+      'hydra:member': Array.from(allOrders.values()),
+      'hydra:totalItems': totalItems
+    };
+    
+    console.log('Combined search results:', combinedResults['hydra:totalItems']);
+    return combinedResults;
+    
+  } catch (error) {
+    console.error('All search strategies failed:', error);
+    return {
+      'hydra:member': [],
+      'hydra:totalItems': 0
+    };
+  }
+}
+
+// Advanced search with multiple filters
+export async function advancedSearch(filters: SearchFilters): Promise<any> {
+  console.log('Performing advanced search with filters:', filters);
+  
+  const searchFilters: Record<string, string> = {};
+  
+  // Add all provided filters
+  if (filters.orderId) searchFilters.orderId = String(filters.orderId);
+  if (filters.id) searchFilters.id = String(filters.id);
+  if (filters.orderStatus) searchFilters.orderStatus = filters.orderStatus;
+  if (filters.customerName) searchFilters.customerName = filters.customerName;
+  if (filters.fitterName) searchFilters.fitterName = filters.fitterName;
+  if (filters.supplierName) searchFilters.supplierName = filters.supplierName;
+  if (filters.urgent !== undefined) searchFilters.urgent = filters.urgent;
+  if (filters.saddleFilter) {
+    // Saddle filter could include seat sizes, brands, models, etc.
+    searchFilters.seatSizes = filters.saddleFilter;
+  }
+  
+  // Handle date range
+  if (filters.fromDate) {
+    searchFilters['orderTime[after]'] = filters.fromDate.toISOString().split('T')[0];
+  }
+  if (filters.toDate) {
+    searchFilters['orderTime[before]'] = filters.toDate.toISOString().split('T')[0];
+  }
+  
+  return getEnrichedOrders({
+    filters: searchFilters,
+    orderBy: 'orderId',
+    order: 'desc'
+  });
+}
+
+// Dashboard-specific search for status filtering
+export async function getOrdersByStatus(status: string): Promise<any> {
+  console.log('Getting orders by status for dashboard:', status);
+  return searchByOrderStatus(status);
+}
+
+// Helper function to get all unique status values from the API (for debugging)
+export async function getAllStatusValues(): Promise<string[]> {
+  try {
+    const response = await getEnrichedOrders({
+      page: 1,
+      partial: false,
+      // Get first page without filters to see what status values exist
+    });
+    
+    const statusValues = new Set<string>();
+    if (response['hydra:member']) {
+      response['hydra:member'].forEach((order: any) => {
+        if (order.orderStatus) {
+          statusValues.add(order.orderStatus);
+        }
+      });
+    }
+    
+    const uniqueStatuses = Array.from(statusValues).sort();
+    console.log('getAllStatusValues: Found unique status values:', uniqueStatuses);
+    return uniqueStatuses;
+  } catch (error) {
+    console.error('getAllStatusValues: Error fetching status values:', error);
+    return [];
+  }
+}
+
+// Search with pagination support for large datasets
+export async function paginatedSearch(searchParams: SearchFilters & { page?: number; limit?: number }): Promise<any> {
+  console.log('Performing paginated search:', searchParams);
+  
+  const { page = 1, ...filters } = searchParams;
+  
+  return advancedSearch({
+    ...filters,
+    // Add pagination to the search
+  });
+}

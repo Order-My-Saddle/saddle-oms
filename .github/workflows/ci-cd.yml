@@ -1,0 +1,646 @@
+name: 🚀 OMS DevSecOps Pipeline (Ralph Loop Compatible)
+
+on:
+  push:
+    branches: [main, staging, develop]
+  pull_request:
+    branches: [main, staging, develop]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BASE: ${{ github.repository }}
+  # Ralph Loop automation flags
+  RALPH_LOOP_MODE: true
+  SECURITY_SCAN_ENABLED: true
+  E2E_TESTING_ENABLED: true
+
+jobs:
+  # 🔐 Security and Secret Scanning (First Line of Defense)
+  security-scan:
+    runs-on: ubuntu-latest
+    name: 🔍 Security & Secret Scanning
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history for security scanning
+          fetch-depth: 0
+
+      - name: 🔍 GitLeaks Secret Detection
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+      - name: 🛡️ Trivy Filesystem Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: 📊 Upload Trivy Results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: 🔎 SAST with CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: typescript, javascript
+
+      - name: 🔍 CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+  # 🧪 Dependency and License Scanning
+  dependency-scan:
+    runs-on: ubuntu-latest
+    name: 📦 Dependency & License Audit
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 📦 Backend Dependency Audit
+        working-directory: backend
+        run: |
+          npm ci
+          npm audit --audit-level=moderate
+          # Generate dependency report
+          npm list --all --json > dependency-report.json
+
+      - name: 📦 Frontend Dependency Audit
+        working-directory: frontend
+        run: |
+          npm ci
+          npm audit --audit-level=moderate
+
+      - name: 📦 E2E Dependencies Audit
+        working-directory: e2e
+        run: |
+          npm ci
+          npm audit --audit-level=moderate
+
+      - name: 📊 Upload Dependency Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-reports
+          path: |
+            backend/dependency-report.json
+            security-report.json
+
+  # Backend testing (NestJS)
+  test-backend:
+    runs-on: ubuntu-latest
+    name: 🧪 Test NestJS Backend
+    needs: [security-scan, dependency-scan]
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: oms_test
+          POSTGRES_USER: oms
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: src/package-lock.json
+
+      - name: Install dependencies
+        working-directory: src
+        run: npm ci
+
+      - name: Run linting
+        working-directory: src
+        run: npm run lint
+
+      - name: Run unit tests
+        working-directory: src
+        run: npm run test
+        env:
+          DATABASE_URL: postgresql://oms:test_password@localhost:5432/oms_test
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+
+      - name: Run integration tests
+        working-directory: src
+        run: npm run test:e2e
+        env:
+          DATABASE_URL: postgresql://oms:test_password@localhost:5432/oms_test
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+
+      - name: Upload backend test coverage
+        uses: codecov/codecov-action@v3
+        with:
+          directory: src/coverage
+          flags: backend
+
+  # Frontend testing (Next.js)
+  test-frontend:
+    runs-on: ubuntu-latest
+    name: 🎨 Test Next.js Frontend
+    needs: [security-scan, dependency-scan]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run linting
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Run unit tests
+        working-directory: frontend
+        run: npm test
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Upload frontend test coverage
+        uses: codecov/codecov-action@v3
+        with:
+          directory: frontend/coverage
+          flags: frontend
+
+  # 🎭 Comprehensive End-to-End Testing with Playwright
+  test-e2e:
+    runs-on: ubuntu-latest
+    name: 🎭 Comprehensive E2E Tests (Ralph Loop)
+    needs: [test-backend, test-frontend]
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: oms_test
+          POSTGRES_USER: oms
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    strategy:
+      matrix:
+        # Test across multiple browser engines for comprehensive coverage
+        project: [chromium, firefox, webkit]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 🏗️ Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: 🎨 Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: 🎭 Install E2E dependencies
+        working-directory: e2e
+        run: npm ci
+
+      - name: 🎭 Install Playwright browsers
+        working-directory: e2e
+        run: npx playwright install --with-deps
+
+      - name: 🚀 Start backend services
+        working-directory: backend
+        run: |
+          npm run start:dev &
+          echo $! > backend.pid
+          sleep 30
+        env:
+          DATABASE_URL: postgresql://oms:test_password@localhost:5432/oms_test
+          REDIS_URL: redis://localhost:6379/1
+          JWT_SECRET: test-jwt-secret-key-for-e2e
+          NODE_ENV: test
+          PORT: 3001
+
+      - name: 🎨 Start frontend services
+        working-directory: frontend
+        run: |
+          npm run dev &
+          echo $! > frontend.pid
+          sleep 15
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3001
+          NEXTAUTH_URL: http://localhost:3000
+          NODE_ENV: test
+          PORT: 3000
+
+      - name: 🔍 Verify services are running
+        run: |
+          echo "🔍 Checking backend health..."
+          curl -f http://localhost:3001/health || exit 1
+          echo "🔍 Checking frontend..."
+          curl -f http://localhost:3000 || exit 1
+
+      - name: 🎭 Run comprehensive E2E tests
+        working-directory: e2e
+        run: |
+          echo "🚀 Running E2E tests for ${{ matrix.project }}"
+          npx playwright test --project=${{ matrix.project }}
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          E2E_API_URL: http://localhost:3001
+          ENVIRONMENT: local
+          CI: true
+          RALPH_LOOP_MODE: true
+
+      - name: 🎭 Run smoke tests (critical path)
+        if: matrix.project == 'chromium'
+        working-directory: e2e
+        run: npx playwright test --grep="@smoke"
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          E2E_API_URL: http://localhost:3001
+
+      - name: 🔒 Run security-focused tests
+        if: matrix.project == 'chromium'
+        working-directory: e2e
+        run: npx playwright test --grep="@security"
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          E2E_API_URL: http://localhost:3001
+
+      - name: 📊 Upload E2E test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results-${{ matrix.project }}
+          path: |
+            e2e/test-results/
+            e2e/playwright-report/
+            e2e/test-output/
+          retention-days: 7
+
+      - name: 📊 Upload HTML reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ matrix.project }}
+          path: e2e/test-results/html-report/
+          retention-days: 30
+
+      - name: 🧹 Cleanup processes
+        if: always()
+        run: |
+          if [ -f backend/backend.pid ]; then
+            kill $(cat backend/backend.pid) || true
+          fi
+          if [ -f frontend/frontend.pid ]; then
+            kill $(cat frontend/frontend.pid) || true
+          fi
+
+  # 🐳 Build and push Docker images with security scanning
+  build-and-push:
+    runs-on: ubuntu-latest
+    name: 🐳 Build & Push Secure Images
+    needs: [security-scan, dependency-scan, test-backend, test-frontend, test-e2e]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        service: [backend, frontend]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.service == 'backend' && './src' || './frontend' }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Deploy to staging
+  deploy-staging:
+    runs-on: ubuntu-latest
+    name: Deploy to Staging
+    needs: build-and-push
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > ~/.kube/config
+
+      - name: 🚀 Deploy secure infrastructure to staging
+        run: |
+          echo "🏗️ Deploying secure Kubernetes infrastructure to staging..."
+
+          # Apply namespace and security policies first
+          kubectl apply -f kubernetes/staging/namespace.yaml
+          kubectl apply -f kubernetes/staging/network-policies.yaml || true
+
+          # Create secrets from environment variables (NO hardcoded values)
+          kubectl create secret generic oms-app-secrets \
+            --from-literal=DATABASE_URL="${{ secrets.STAGING_DATABASE_URL }}" \
+            --from-literal=JWT_SECRET="${{ secrets.STAGING_JWT_SECRET }}" \
+            --from-literal=REDIS_URL="${{ secrets.STAGING_REDIS_URL }}" \
+            -n oms-staging \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          kubectl create secret generic oms-postgres-secrets \
+            --from-literal=POSTGRES_USER="${{ secrets.STAGING_DB_USER }}" \
+            --from-literal=POSTGRES_PASSWORD="${{ secrets.STAGING_DB_PASSWORD }}" \
+            -n oms-staging \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          # Apply database infrastructure
+          kubectl apply -f kubernetes/staging/database-deployment.yaml
+
+          # Wait for database to be ready
+          kubectl wait --for=condition=ready pod -l app=oms-postgres -n oms-staging --timeout=300s
+
+          # Apply application deployments with updated images
+          kubectl apply -f kubernetes/staging/backend-deployment.yaml
+          kubectl apply -f kubernetes/staging/frontend-deployment.yaml
+
+          # Update image tags
+          kubectl set image deployment/oms-backend \
+            oms-backend=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/backend:develop-${{ github.sha }} \
+            -n oms-staging
+
+          kubectl set image deployment/oms-frontend \
+            oms-frontend=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/frontend:develop-${{ github.sha }} \
+            -n oms-staging
+
+          # Apply networking
+          kubectl apply -f kubernetes/staging/ingress.yaml
+
+          # Wait for rollout completion
+          echo "⏳ Waiting for deployment rollout..."
+          kubectl rollout status deployment/oms-backend -n oms-staging --timeout=600s
+          kubectl rollout status deployment/oms-frontend -n oms-staging --timeout=600s
+          kubectl rollout status deployment/oms-postgres -n oms-staging --timeout=300s
+          kubectl rollout status deployment/oms-redis -n oms-staging --timeout=300s
+
+      - name: 🔍 Comprehensive staging health checks
+        run: |
+          echo "🔍 Running comprehensive health checks..."
+          sleep 60
+
+          # Test database connectivity
+          kubectl exec deployment/oms-postgres -n oms-staging -- \
+            psql -U ${{ secrets.STAGING_DB_USER }} -d oms_staging -c "SELECT 1;"
+
+          # Test Redis connectivity
+          kubectl exec deployment/oms-redis -n oms-staging -- \
+            redis-cli ping
+
+          # Test backend health and API endpoints
+          kubectl exec deployment/oms-backend -n oms-staging -- \
+            curl -f http://localhost:3001/health
+
+          kubectl exec deployment/oms-backend -n oms-staging -- \
+            curl -f "http://localhost:3001/api/customers?limit=1"
+
+          # Test frontend accessibility
+          kubectl exec deployment/oms-frontend -n oms-staging -- \
+            curl -f http://localhost:3000
+
+          echo "✅ All staging services are healthy!"
+
+      - name: 🎭 Run E2E tests on staging environment
+        run: |
+          echo "🎭 Running E2E tests against staging deployment..."
+
+          # Setup E2E testing environment
+          cd e2e
+          npm ci
+          npx playwright install --with-deps chromium
+
+          # Run staging E2E tests
+          ENVIRONMENT=staging \
+          E2E_BASE_URL=https://staging.ordermysaddle.com \
+          E2E_API_URL=https://api-staging.ordermysaddle.com \
+          RALPH_LOOP_MODE=true \
+          npx playwright test --project=chromium --grep="@smoke|@critical"
+
+          echo "✅ Staging E2E tests completed successfully!"
+
+      - name: 📊 Upload staging E2E results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: staging-e2e-results
+          path: |
+            e2e/test-results/
+            e2e/playwright-report/
+          retention-days: 7
+
+      - name: Notify deployment success
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: '🚀 Staging deployment completed successfully!'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Deploy to production
+  deploy-production:
+    runs-on: ubuntu-latest
+    name: Deploy to Production
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > ~/.kube/config
+
+      - name: Deploy to production
+        run: |
+          # Blue-green deployment strategy
+          kubectl set image deployment/oms-backend \
+            backend=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/backend:main-${{ github.sha }} \
+            -n oms-production
+
+          kubectl set image deployment/oms-frontend \
+            frontend=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/frontend:main-${{ github.sha }} \
+            -n oms-production
+
+          # Wait for rollout with longer timeout for production
+          kubectl rollout status deployment/oms-backend -n oms-production --timeout=600s
+          kubectl rollout status deployment/oms-frontend -n oms-production --timeout=600s
+
+      - name: Production health checks
+        run: |
+          sleep 60
+
+          # Comprehensive health checks
+          kubectl exec deployment/oms-backend -n oms-production -- \
+            curl -f http://localhost:3001/health
+
+          kubectl exec deployment/oms-backend -n oms-production -- \
+            curl -f "http://localhost:3001/api/customers?limit=1"
+
+          kubectl exec deployment/oms-frontend -n oms-production -- \
+            curl -f http://localhost:3000
+
+          echo "🎉 Production deployment successful!"
+
+      - name: Performance benchmark
+        run: |
+          echo "Running performance benchmark..."
+          # Add performance testing script here
+          # Example: curl response time validation
+
+      - name: Notify production deployment
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: '🎉 Production deployment completed successfully!'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify deployment failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: '❌ Production deployment failed! Immediate attention required.'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Performance monitoring
+  performance-monitoring:
+    runs-on: ubuntu-latest
+    name: Performance Monitoring
+    if: github.ref == 'refs/heads/main'
+    needs: deploy-production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run performance tests
+        run: |
+          echo "📊 Running performance validation..."
+
+          # Example performance checks
+          # Response time validation
+          RESPONSE_TIME=$(curl -w "%{time_total}" -s -o /dev/null https://production.ordermysaddle.com/health)
+          echo "Health endpoint response time: ${RESPONSE_TIME}s"
+
+          # Validate response time is under 1 second
+          if (( $(echo "$RESPONSE_TIME > 1.0" | bc -l) )); then
+            echo "⚠️ Warning: Health check response time exceeded 1 second"
+          fi
+
+      - name: Update performance dashboard
+        run: |
+          echo "📈 Updating performance metrics dashboard..."
+          # Add integration with monitoring tools here

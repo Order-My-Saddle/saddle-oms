@@ -1,0 +1,21 @@
+<h3>💬 New Comment on Order {{order_id}}</h3>
+<p>{{user_full_name}} left a comment on order {{order_id}}</p>
+
+{{#if comment_text}}
+<div style="background: #f5f5f5; padding: 15px; border-left: 4px solid #007bff; margin: 15px 0;">
+    <p><strong>Comment:</strong></p>
+    <p>{{comment_text}}</p>
+</div>
+{{/if}}
+
+<br/>
+<a href="{{order_url}}" style="background: #007bff;
+          padding: 10px 20px;
+          color: #fff;
+          font-size: .85rem;
+          text-decoration: none;
+          display: inline-block;
+          text-align: center;
+          border-radius: 5px;">
+    View Order
+</a>

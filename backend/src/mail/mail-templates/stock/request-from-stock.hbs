@@ -1,0 +1,28 @@
+<h1>📦 Stock Saddle Request</h1>
+<p>User {{username}} requested the following saddle:</p>
+<p><strong>Saddle Name:</strong> {{product_name}}</p>
+<p><strong>Saddle ID:</strong> {{product_id}}</p>
+{{#if quantity}}
+<p><strong>Quantity:</strong> {{quantity}}</p>
+{{/if}}
+<br/>
+<a href="{{available_stock_url}}" style="background: #6d1010;
+          padding: 10px 20px;
+          margin-bottom: 20px;
+          color: #fff;
+          font-size: .85rem;
+          text-decoration: none;
+          display: inline-block;
+          text-align: center;
+          border-radius: 5px;">
+    Show available stock
+</a>
+<br/>
+<p>Or copy-paste the following link to your browser</p>
+<p>{{available_stock_url}}</p>
+{{#if no_country_managers}}
+<br/>
+<p style="background: #fcf8e3; padding: 10px; border-left: 4px solid #faebcc;">
+    <strong>Note:</strong> This e-mail was sent to you as supervisor since there are no country managers defined for country: {{country}}
+</p>
+{{/if}}

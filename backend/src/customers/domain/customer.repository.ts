@@ -1,0 +1,39 @@
+import { Customer } from "./customer";
+import { CustomerId } from "./value-objects/customer-id.value-object";
+import { Email } from "./value-objects/email.value-object";
+import { CustomerStatus } from "./value-objects/customer-status.value-object";
+
+/**
+ * Customer Domain Repository Interface
+ *
+ * Defines the contract for customer persistence without exposing infrastructure details
+ * Uses integer IDs to match PostgreSQL schema
+ */
+export abstract class ICustomerRepository {
+  abstract findById(id: CustomerId): Promise<Customer | null>;
+  abstract findByEmail(
+    email: Email,
+    fitterId?: number,
+  ): Promise<Customer | null>;
+  abstract findByFitterId(fitterId: number): Promise<Customer[]>;
+  abstract findByStatus(status: CustomerStatus): Promise<Customer[]>;
+  abstract findByCountry(country: string): Promise<Customer[]>;
+  abstract findByCity(city: string): Promise<Customer[]>;
+  abstract findActive(): Promise<Customer[]>;
+  abstract save(customer: Customer): Promise<void>;
+  abstract delete(id: CustomerId): Promise<void>;
+  abstract findAll(filters?: {
+    status?: CustomerStatus;
+    fitterId?: number;
+    country?: string;
+    city?: string;
+    isActive?: boolean;
+  }): Promise<Customer[]>;
+  abstract countByFitterId(fitterId: number): Promise<number>;
+  abstract countActive(): Promise<number>;
+  abstract findActiveCustomersWithoutFitter(): Promise<Customer[]>;
+  abstract existsByEmail(email: Email, fitterId?: number): Promise<boolean>;
+
+  // Bulk operations for migration support
+  abstract bulkCreate(customers: Customer[]): Promise<Customer[]>;
+}

@@ -1,0 +1,799 @@
+"use client";
+
+import React, { useState, useEffect, useRef } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { DollarSign, Users, Package, TrendingUp, Search } from 'lucide-react';
+import { Order } from '@/types/Order';
+import { OrdersTable } from '@/components/shared/OrdersTable';
+import { OrdersTableHeaderFilter as TableHeaderFilter } from '@/components/shared/OrdersTableHeaderFilter';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { getFitterName, getCustomerName, getSupplierName, getStatus, getUrgent, getDate } from '../utils/orderHydration';
+import { getOrderTableColumns } from '../utils/orderTableColumns';
+import { seatSizes, statuses } from '../utils/orderConstants';
+import { 
+  buildOrderFilters, 
+  extractDynamicSeatSizes, 
+  processDashboardOrders, 
+  processSupplierData,
+  fetchCompleteOrderData 
+} from '../utils/orderProcessing';
+import { getOrderStatusStats } from '../services/dashboard';
+import { getEnrichedOrders, getAllStatusValues, searchByOrderId, universalSearch } from '@/services/enrichedOrders';
+import { useDebounce } from '@/hooks/useDebounce';
+import { updateOrder } from '@/services/api';
+import { useSuppliers } from '@/hooks/useEntities';
+import DashboardOrderStatusFlow from './DashboardOrderStatusFlow';
+import Reports from '@/components/Reports';
+import { OrderDetailModal } from '@/components/shared/OrderDetailModal';
+import { OrderEditModal } from '@/components/shared/OrderEditModal';
+import { OrderApprovalModal } from '@/components/shared/OrderApprovalModal';
+import { EditOrder } from '@/components/EditOrder';
+import { ComprehensiveEditOrder } from '@/components/ComprehensiveEditOrder';
+import { Dialog } from '@/components/ui/dialog';
+
+const salesData = [
+  { name: 'Jan', sales: 4000 },
+  { name: 'Feb', sales: 3000 },
+  { name: 'Mar', sales: 2000 },
+  { name: 'Apr', sales: 2780 },
+  { name: 'May', sales: 1890 },
+  { name: 'Jun', sales: 2390 },
+];
+
+const orderStatusData = {
+  unordered: { count: 503, label: 'Unordered' },
+  orderedChanged: { count: 65, label: 'Ordered/Changed' },
+  approved: { count: 900, label: 'Approved' },
+  inProductionP1: { count: 558, label: 'In Production P1' },
+  inProductionP2: { count: 543, label: 'In Production P2' },
+  inProductionP3: { count: 311, label: 'In Production P3' },
+  shippedToFitter: { count: 7505, label: 'Shipped to Fitter' },
+  shippedToCustomer: { count: 1142, label: 'Shipped to Customer' },
+  inventory: { count: 671, label: 'Inventory' },
+  onHold: { count: 204, label: 'On hold' },
+  onTrial: { count: 6, label: 'On trial' },
+  completedSale: { count: 33346, label: 'Completed sale' }
+};
+
+const recentSales = [
+  {
+    name: "Olivia Martin",
+    email: "olivia.martin@email.com",
+    amount: "+$1,999.00"
+  },
+  {
+    name: "Jackson Lee",
+    email: "jackson.lee@email.com",
+    amount: "+$39.00"
+  },
+  {
+    name: "Isabella Nguyen",
+    email: "isabella.nguyen@email.com",
+    amount: "+$299.00"
+  },
+  {
+    name: "William Kim",
+    email: "will@email.com",
+    amount: "+$99.00"
+  },
+  {
+    name: "Sofia Davis",
+    email: "sofia.davis@email.com",
+    amount: "+$39.00"
+  }
+];
+
+export default function Dashboard() {
+  const [orderStatusStats, setOrderStatusStats] = useState<any>(null);
+  const [totalOrders, setTotalOrders] = useState<number>(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 500); // 500ms delay
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    if (debouncedSearchTerm.trim()) {
+      setCurrentPage(1);
+    }
+  }, [debouncedSearchTerm]);
+  const [selectedStatus, setSelectedStatus] = useState('');
+  const [headerFilters, setHeaderFilters] = useState<Record<string, string>>({});
+  const [date, setDate] = React.useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [ordersError, setOrdersError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const itemsPerPage = 30;
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const [dateFilterTrigger, setDateFilterTrigger] = useState(0);
+  const [isEditingOrder, setIsEditingOrder] = useState(false);
+  const [isLoadingOrderData, setIsLoadingOrderData] = useState(false);
+  const [orderDataError, setOrderDataError] = useState<string | null>(null);
+  const [useComprehensiveEdit, setUseComprehensiveEdit] = useState(true); // Toggle for new comprehensive editor
+
+  const refreshInterval = useRef<NodeJS.Timeout | null>(null);
+  
+  // Fetch suppliers for dropdown
+  const { data: suppliersData } = useSuppliers({ partial: true });
+  const suppliers = processSupplierData(suppliersData);
+
+  useEffect(() => {
+    // Load status stats
+    getOrderStatusStats()
+      .then(data => {
+        setOrderStatusStats(data);
+        const total = Object.values(data.orderStatusCounts || {}).reduce((sum: number, v) => sum + Number(v), 0);
+        setTotalOrders(total);
+      })
+      .catch(() => {
+        setOrderStatusStats(null);
+        const total = Object.values(orderStatusData).reduce((sum: number, s: any) => sum + (s.count || 0), 0);
+        setTotalOrders(total);
+      });
+    
+    // Load actual status values from database for debugging
+    getAllStatusValues().then(statuses => {
+      console.log('Dashboard: Actual status values in database:', statuses);
+    });
+  }, []);
+
+  useEffect(() => {
+    setLoadingOrders(true);
+    setOrdersError('');
+    
+    // If we have a search term, use universal search instead of regular filtering
+    if (debouncedSearchTerm.trim()) {
+      console.log('Dashboard: Performing universal search for:', debouncedSearchTerm);
+      
+      universalSearch(debouncedSearchTerm.trim())
+        .then(data => {
+          console.log('Dashboard: Search results received:', {
+            totalItems: data['hydra:totalItems'],
+            memberCount: data['hydra:member']?.length,
+            searchTerm: debouncedSearchTerm
+          });
+          
+          // Update pagination state for search results
+          const total = data['hydra:totalItems'] || 0;
+          setTotalItems(total);
+          setTotalPages(Math.max(1, Math.ceil(total / itemsPerPage)));
+          
+          // Process search results
+          const processedOrders = processDashboardOrders(data);
+          setOrders(processedOrders);
+          setLoadingOrders(false);
+        })
+        .catch((error) => {
+          console.error('Dashboard: Search failed:', error);
+          setOrdersError('Search failed. Please try again.');
+          setLoadingOrders(false);
+        });
+    } else {
+      // Build comprehensive filters from headerFilters using shared utility
+      const filters = buildOrderFilters(headerFilters);
+
+      // Add date filters if set
+      if (date.from) {
+        filters['orderTime[after]'] = date.from.toISOString().split('T')[0];
+      }
+      if (date.to) {
+        filters['orderTime[before]'] = date.to.toISOString().split('T')[0];
+      }
+      
+      console.log('Dashboard: Fetching orders with filters:', filters);
+      console.log('Dashboard: Current page:', currentPage);
+      
+      getEnrichedOrders({
+        page: currentPage,
+        partial: false,
+        filters,
+      })
+      .then(data => {
+        console.log('Dashboard: Received API response:', {
+          totalItems: data['hydra:totalItems'],
+          memberCount: data['hydra:member']?.length,
+          currentPage: currentPage
+        });
+        
+        // Update pagination state
+        const total = data['hydra:totalItems'] || 0;
+        setTotalItems(total);
+        setTotalPages(Math.max(1, Math.ceil(total / itemsPerPage)));
+        
+        // Log first few orders to see their complete structure
+        if (data['hydra:member'] && data['hydra:member'].length > 0) {
+          console.log('Dashboard: Sample order data from API:', 
+            data['hydra:member'].slice(0, 3).map((order: any) => ({
+              orderId: order.orderId,
+              orderStatus: order.orderStatus,
+              status: order.status,
+              customerName: order.customerName,
+              fitterName: order.fitterName,
+              supplierName: order.supplierName,
+              customer: order.customer,
+              fitter: order.fitter,
+              supplier: order.supplier
+            }))
+          );
+          
+          // Special logging for order 41059 if it exists
+          const order41059 = data['hydra:member'].find((order: any) => 
+            order.orderId == 41059 || order.orderId === '41059'
+          );
+          if (order41059) {
+            console.log('Dashboard: Found order 41059 with data:', {
+              orderId: order41059.orderId,
+              customerName: order41059.customerName,
+              fitterName: order41059.fitterName,
+              supplierName: order41059.supplierName,
+              customer: order41059.customer,
+              fitter: order41059.fitter,
+              supplier: order41059.supplier,
+              orderStatus: order41059.orderStatus
+            });
+          }
+        }
+        
+        // Process orders using shared utility
+        const processedOrders = processDashboardOrders(data);
+        setOrders(processedOrders);
+        setLoadingOrders(false);
+      })
+      .catch(() => {
+        setOrdersError('Failed to load orders');
+        setLoadingOrders(false);
+      });
+    }
+  }, [headerFilters, currentPage, dateFilterTrigger, debouncedSearchTerm]);
+
+  useEffect(() => {
+    if (refreshInterval.current) clearInterval(refreshInterval.current);
+    refreshInterval.current = setInterval(() => {
+      // Build the same filters for refresh using shared utility
+      const filters = buildOrderFilters(headerFilters);
+
+      if (date.from) {
+        filters['orderTime[after]'] = date.from.toISOString().split('T')[0];
+      }
+      if (date.to) {
+        filters['orderTime[before]'] = date.to.toISOString().split('T')[0];
+      }
+
+      getEnrichedOrders({
+        page: currentPage,
+        partial: false,
+        filters,
+      })
+        .then(data => {
+          // Process orders to ensure they have all required fields while preserving API data
+          const processedOrders = (data['hydra:member'] || []).map((order: any) => {
+            // Extract and normalize data from the hydra response
+            const processedOrder = {
+              ...order, // Keep all original API data
+              // Add computed fields for compatibility, but don't override existing data
+              id: order.id || order.orderId || '',
+              saddle: order.reference || '',
+              date: order.orderTime || order.createdAt || '',
+              status: order.orderStatus || order.status || '',
+              orderStatus: order.orderStatus || order.status || '',
+              orderTime: order.orderTime || order.createdAt || '',
+              isUrgent: order.urgent || false,
+              // Extract seat sizes from reference or seatSizes array if not already present
+              seatSize: order.seatSizes ? 
+                (Array.isArray(order.seatSizes) ? order.seatSizes.join(', ') : order.seatSizes) : 
+                extractSeatSizes(order),
+              // Only add computed names if the direct fields aren't available
+              ...(order.customerName ? {} : { customer: getCustomerName(order) || '' }),
+              ...(order.fitterName ? {} : { fitter: getFitterName(order) || '' }),
+              ...(order.supplierName ? {} : { supplier: getSupplierName(order) || '' })
+            };
+            return processedOrder;
+          });
+          setOrders(processedOrders);
+        })
+        .catch(() => {
+          // Optionally: setOrdersError('Failed to auto-refresh orders');
+        });
+    }, 300000); // 5 minuten
+    return () => {
+      if (refreshInterval.current) clearInterval(refreshInterval.current);
+    };
+  }, [headerFilters, currentPage, dateFilterTrigger]);
+
+  // Extract unique seat sizes from orders using shared utility
+  const dynamicSeatSizes = React.useMemo(() => {
+    return extractDynamicSeatSizes(orders);
+  }, [orders]);
+
+  const columns = getOrderTableColumns(
+    headerFilters, 
+    (key, value) => {
+      setHeaderFilters(prev => ({ ...prev, [key]: value }));
+      // Reset to page 1 when filters change
+      setCurrentPage(1);
+    },
+    suppliers,
+    dynamicSeatSizes
+  );
+
+  const urgentOrdersCount = orders.filter(order => getUrgent(order)).length;
+
+  const handleSaveOrder = async (updatedOrder: any) => {
+    try {
+      console.log('Saving order:', updatedOrder);
+      // TODO: Implement actual API call to update the order
+      // For now, just update the local state
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === updatedOrder.id || order.orderId === updatedOrder.orderId 
+            ? { ...order, ...updatedOrder }
+            : order
+        )
+      );
+      
+      // Here you would typically make an API call like:
+      // await updateOrder(updatedOrder.id, updatedOrder);
+      
+      console.log('Order saved successfully');
+    } catch (error) {
+      console.error('Error saving order:', error);
+      throw error; // Re-throw to let the modal handle the error
+    }
+  };
+
+  const handleApproveOrder = async (order: any, approvalNotes?: string) => {
+    try {
+      console.log('Approving order:', order.orderId || order.id, 'with notes:', approvalNotes);
+      
+      // Update the order status to APPROVED in the database
+      const updateData = {
+        orderStatus: 'APPROVED',
+        approvalNotes,
+        approvedAt: new Date().toISOString(),
+        approvedBy: 'current_user' // In a real app, this would be the current user
+      };
+      
+      // Make API call to update the order in the database
+      const updatedOrder = await updateOrder(order.id, updateData);
+      
+      // Update local state with the response from API
+      setOrders(prevOrders => 
+        prevOrders.map(o => 
+          o.id === order.id || o.orderId === order.orderId 
+            ? { ...o, ...updatedOrder }
+            : o
+        )
+      );
+      
+      console.log('Order approved successfully in database');
+    } catch (error) {
+      console.error('Error approving order:', error);
+      // Show user-friendly error message
+      alert(`Failed to approve order: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error;
+    }
+  };
+
+  // Use shared fetchCompleteOrderData utility
+  const fetchCompleteOrderDataWrapper = async (order: any): Promise<any> => {
+    return fetchCompleteOrderData(order, setIsLoadingOrderData, setOrderDataError);
+  };
+
+  const handleStatusCardClick = (status: string) => {
+    console.log('Dashboard: Status card clicked:', status);
+    console.log('Dashboard: Current selectedStatus:', selectedStatus);
+    
+    const newStatus = status === selectedStatus ? '' : status;
+    console.log('Dashboard: Setting new status filter to:', newStatus);
+    
+    setSelectedStatus(newStatus);
+    setHeaderFilters(prev => ({
+      ...prev,
+      status: newStatus
+    }));
+    // Reset to page 1 when status filter changes
+    setCurrentPage(1);
+  };
+
+  // All filtering is now done server-side, no client-side filtering needed
+  const filteredOrders = orders;
+
+  const statusData = orderStatusStats || orderStatusData;
+
+  const statusList = Object.entries(orderStatusStats || orderStatusData).map(([key, val]: any) => ({
+    key,
+    label: val.label,
+    count: val.count,
+    color: '#7b2326',
+  }));
+
+  function DatePickerField({ label, date, setDate }: { label: string; date: Date | undefined; setDate: (date: Date | undefined) => void }) {
+    return (
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-muted-foreground mb-1">{label}</span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant={"outline"}
+              className={
+                "w-[140px] justify-start text-left font-normal" +
+                (!date ? " text-muted-foreground" : "")
+              }
+            >
+              {date ? date.toLocaleDateString() : <span>Pick a date</span>}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={setDate}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+    );
+  }
+
+  // Show EditOrder component if editing
+  if (isEditingOrder && selectedOrder) {
+    return (
+      <Dialog open={isEditingOrder} onOpenChange={() => {
+        setIsEditingOrder(false);
+        setSelectedOrder(null);
+      }}>
+        {useComprehensiveEdit ? (
+          <ComprehensiveEditOrder
+            order={{
+              id: selectedOrder.id,
+              orderId: selectedOrder.orderId || selectedOrder.id
+            }}
+            onClose={() => {
+              setIsEditingOrder(false);
+              setSelectedOrder(null);
+              setOrderDataError(null);
+            }}
+            onBack={() => {
+              setIsEditingOrder(false);
+              setSelectedOrder(null);
+              setOrderDataError(null);
+            }}
+          />
+        ) : (
+          <EditOrder
+            order={selectedOrder}
+            initialData={selectedOrder}
+            isLoading={isLoadingOrderData}
+            error={orderDataError}
+            onClose={() => {
+              setIsEditingOrder(false);
+              setSelectedOrder(null);
+              setOrderDataError(null);
+            }}
+            onBack={() => {
+              setIsEditingOrder(false);
+              setSelectedOrder(null);
+              setOrderDataError(null);
+            }}
+          />
+        )}
+      </Dialog>
+    );
+  }
+
+  return (
+    <div>
+      <h2 className="text-3xl font-bold">Dashboard</h2>
+      <Tabs defaultValue="all-orders" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="all-orders">All Orders</TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all-orders" className="space-y-4">
+          {/* Order Status Overview */}
+          <DashboardOrderStatusFlow 
+            onStatusClick={key => {
+              console.log('Dashboard: Status flow clicked with key:', key);
+              setHeaderFilters(f => ({...f, status: key}));
+              setCurrentPage(1); // Reset to page 1 when status filter changes
+            }}
+            onTotalOrders={setTotalOrders}
+          />
+
+          {/* All Orders header - clickable to reset filters */}
+          <div style={{
+            display: 'flex', flexDirection: 'row', alignItems: 'center', marginBottom: 18, marginLeft: 0
+          }}>
+            <button 
+              onClick={() => {
+                console.log('Resetting all filters via All Orders button');
+                setHeaderFilters({});
+                setDate({ from: undefined, to: undefined });
+                setCurrentPage(1);
+              }}
+              style={{
+                background: '#fff',
+                border: 'none',
+                borderRadius: 18,
+                padding: '2px 18px',
+                fontWeight: 600,
+                color: '#7b2326',
+                fontSize: 18,
+                minWidth: 140,
+                display: 'flex',
+                alignItems: 'center',
+                position: 'relative',
+                boxShadow: '0 2px 6px rgba(123,35,38,0.07)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = '#7b2326';
+                e.currentTarget.style.color = '#fff';
+                const countSpan = e.currentTarget.querySelector('span');
+                if (countSpan) {
+                  countSpan.style.background = '#fff';
+                  countSpan.style.color = '#7b2326';
+                }
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = '#fff';
+                e.currentTarget.style.color = '#7b2326';
+                const countSpan = e.currentTarget.querySelector('span');
+                if (countSpan) {
+                  countSpan.style.background = '#fff';
+                  countSpan.style.color = '#7b2326';
+                }
+              }}
+              title="Click to reset all filters"
+            >
+              All Orders
+              <span style={{
+                display: 'inline-block',
+                marginLeft: 18,
+                fontSize: 16,
+                fontWeight: 700,
+                color: '#7b2326',
+                background: '#fff',
+                border: 'none',
+                borderRadius: 15,
+                padding: '2px 10px',
+                minWidth: 32,
+                textAlign: 'center',
+                transition: 'background 0.15s, color 0.15s',
+              }}>{totalOrders > 0 ? totalOrders : ''}</span>
+            </button>
+            
+            {/* Reset All Filters Button */}
+            {(Object.keys(headerFilters).some(key => headerFilters[key]) || date.from || date.to || searchTerm.trim()) && (
+              <button
+                onClick={() => {
+                  console.log('Resetting all filters and search via Reset button');
+                  setHeaderFilters({});
+                  setDate({ from: undefined, to: undefined });
+                  setSearchTerm(''); // Clear search term
+                  setCurrentPage(1);
+                }}
+                style={{
+                  background: '#dc2626',
+                  border: 'none',
+                  borderRadius: 6,
+                  padding: '6px 12px',
+                  fontWeight: 500,
+                  color: '#fff',
+                  fontSize: 14,
+                  marginLeft: 12,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: '0 2px 4px rgba(220,38,38,0.2)',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = '#b91c1c';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = '#dc2626';
+                }}
+                title="Clear all active filters and search"
+              >
+                Reset All Filters
+              </button>
+            )}
+            
+            {/* Search Status Indicator */}
+            {debouncedSearchTerm.trim() && (
+              <div style={{
+                marginLeft: 12,
+                padding: '4px 8px',
+                background: '#f3f4f6',
+                border: '1px solid #d1d5db',
+                borderRadius: 6,
+                fontSize: 14,
+                color: '#374151',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6
+              }}>
+                <Search size={16} />
+                Searching for: "{debouncedSearchTerm}"
+                <button
+                  onClick={() => setSearchTerm('')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#6b7280',
+                    fontSize: 16,
+                    lineHeight: 1,
+                    padding: 0,
+                    marginLeft: 4
+                  }}
+                  title="Clear search"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* All Orders */}
+          <div style={{ marginTop: 32 }}>
+            {loadingOrders ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7b2326] mb-4"></div>
+                <p className="text-gray-600">
+                  {debouncedSearchTerm.trim() ? 'Searching orders...' : 'Loading orders...'}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {debouncedSearchTerm.trim() 
+                    ? `Searching for "${debouncedSearchTerm}"`
+                    : headerFilters.status || Object.keys(headerFilters).some(key => headerFilters[key]) 
+                      ? 'Applying filters...' 
+                      : `Page ${currentPage} of ${totalPages}`}
+                </p>
+              </div>
+            ) : ordersError ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="text-red-600 text-center">
+                  <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
+                  <p className="font-semibold">Error Loading Orders</p>
+                  <p className="text-sm text-gray-600 mt-1">{ordersError}</p>
+                  <Button 
+                    onClick={() => window.location.reload()} 
+                    className="mt-3 bg-red-600 hover:bg-red-700"
+                    size="sm"
+                  >
+                    Retry
+                  </Button>
+                </div>
+              </div>
+            ) : filteredOrders.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="text-gray-500 text-center">
+                  <Package className="h-8 w-8 mx-auto mb-2" />
+                  <p className="font-semibold">No Orders Found</p>
+                  <p className="text-sm mt-1">
+                    {debouncedSearchTerm.trim()
+                      ? `No orders found matching "${debouncedSearchTerm}". Try searching for order ID, customer name, fitter name, or supplier name.`
+                      : Object.keys(headerFilters).some(key => headerFilters[key]) || date.from || date.to
+                        ? 'Try adjusting your filters to see more results.'
+                        : 'There are no orders to display.'}
+                  </p>
+                  {debouncedSearchTerm.trim() && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      Clear Search
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <OrdersTable
+                orders={filteredOrders}
+                columns={columns}
+                searchTerm={searchTerm}
+                onSearch={setSearchTerm}
+                headerFilters={headerFilters}
+                onFilterChange={(key: string, value: string) => {
+                  if (key === 'dateRefresh') {
+                    // Trigger date filtering by updating the dateFilterTrigger
+                    setDateFilterTrigger(prev => prev + 1);
+                    setCurrentPage(1);
+                  } else {
+                    setHeaderFilters(prev => ({ ...prev, [key]: value }));
+                    setCurrentPage(1);
+                  }
+                }}
+                onViewOrder={(order) => {
+                  console.log('View order:', order);
+                  setSelectedOrder(order);
+                  setIsOrderModalOpen(true);
+                }}
+                onEditOrder={(order) => {
+                  console.log('Edit order:', order);
+                  // Just set the basic order info - comprehensive editor will fetch full data
+                  setSelectedOrder(order);
+                  setIsEditingOrder(true);
+                }}
+                onApproveOrder={(order) => {
+                  console.log('Approve order:', order);
+                  setSelectedOrder(order);
+                  setIsApprovalModalOpen(true);
+                }}
+                onDeleteOrder={(order) => console.log('Delete order:', order)}
+                seatSizes={seatSizes}
+                statuses={statuses}
+                fitters={[]}
+                dateFrom={date.from}
+                setDateFrom={from => setDate(d => ({ ...d, from }))}
+                dateTo={date.to}
+                setDateTo={to => setDate(d => ({ ...d, to }))}
+                pagination={{
+                  currentPage: currentPage,
+                  totalPages: totalPages,
+                  onPageChange: (page: number) => {
+                    console.log('Dashboard: Changing to page:', page);
+                    setCurrentPage(page);
+                  },
+                  totalItems: totalItems,
+                  itemsPerPage: itemsPerPage,
+                }}
+              />
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="reports">
+          <Reports />
+        </TabsContent>
+      </Tabs>
+      
+      {/* Order Detail Modal */}
+      <OrderDetailModal
+        order={selectedOrder}
+        isOpen={isOrderModalOpen}
+        onClose={() => {
+          setIsOrderModalOpen(false);
+          setSelectedOrder(null);
+        }}
+      />
+      
+      {/* Order Edit Modal */}
+      <OrderEditModal
+        order={selectedOrder}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedOrder(null);
+        }}
+        onSave={handleSaveOrder}
+      />
+      
+      {/* Order Approval Modal */}
+      <OrderApprovalModal
+        order={selectedOrder}
+        isOpen={isApprovalModalOpen}
+        onClose={() => {
+          setIsApprovalModalOpen(false);
+          setSelectedOrder(null);
+        }}
+        onApprove={handleApproveOrder}
+      />
+    </div>
+  );
+}
+
+// extractSeatSizes function moved to shared utilities

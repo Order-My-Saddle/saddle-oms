@@ -1,0 +1,318 @@
+"use client";
+
+import { useAuth } from "@/context/AuthContext";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { User, Mail, IdCard, Edit, Save, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { updateUser, type UpdateUserData } from "@/services/users";
+import { UserRole } from "@/types/Role";
+import { toast } from "sonner";
+
+export default function ProfilePage() {
+  const { user, refreshUser } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    username: "",
+  });
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.email || "",
+        username: user.username || "",
+      });
+    }
+  }, [user]);
+
+  const getDisplayName = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    return user?.username || "User";
+  };
+
+  const getAvatarInitials = () => {
+    const name = getDisplayName();
+    const words = name.split(" ");
+    if (words.length >= 2) {
+      return `${words[0][0]}${words[1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const getRoleLabel = (role: UserRole) => {
+    switch (role) {
+      case UserRole.ADMIN:
+        return "Administrator";
+      case UserRole.FITTER:
+        return "Fitter";
+      case UserRole.SUPPLIER:
+        return "Supplier";
+      case UserRole.SUPERVISOR:
+        return "Supervisor";
+      case UserRole.USER:
+        return "User";
+      default:
+        return "User";
+    }
+  };
+
+  const getRoleBadgeVariant = (role: UserRole) => {
+    switch (role) {
+      case UserRole.ADMIN:
+        return "destructive";
+      case UserRole.SUPERVISOR:
+        return "default";
+      case UserRole.FITTER:
+        return "secondary";
+      case UserRole.SUPPLIER:
+        return "outline";
+      default:
+        return "secondary";
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!user?.id) return;
+
+    setIsLoading(true);
+    try {
+      const updateData: UpdateUserData = {
+        firstName: formData.firstName || undefined,
+        lastName: formData.lastName || undefined,
+        email: formData.email || undefined,
+        username: formData.username || undefined,
+      };
+
+      // Remove undefined values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key as keyof UpdateUserData] === undefined) {
+          delete updateData[key as keyof UpdateUserData];
+        }
+      });
+
+      await updateUser(user.id, updateData);
+      await refreshUser();
+      setIsEditing(false);
+      toast.success("Profile updated successfully");
+    } catch (error) {
+      console.error("Failed to update profile:", error);
+      toast.error("Failed to update profile. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (user) {
+      setFormData({
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.email || "",
+        username: user.username || "",
+      });
+    }
+    setIsEditing(false);
+  };
+
+  if (!user) {
+    return (
+      <div className="container mx-auto py-10">
+        <Card>
+          <CardContent className="flex items-center justify-center h-32">
+            <p className="text-muted-foreground">Loading profile...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto py-10">
+      <div className="max-w-2xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center space-x-4">
+          <Avatar className="h-20 w-20">
+            <AvatarFallback className="text-lg">{getAvatarInitials()}</AvatarFallback>
+          </Avatar>
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold">{getDisplayName()}</h1>
+            <p className="text-muted-foreground">{user.email || "No email provided"}</p>
+            <Badge variant={getRoleBadgeVariant(user.role) as "default" | "secondary" | "destructive" | "outline"}>
+              {getRoleLabel(user.role)}
+            </Badge>
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Profile Information Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center space-x-2">
+                  <User className="h-5 w-5" />
+                  <span>Profile Information</span>
+                </CardTitle>
+                <CardDescription>
+                  Manage your personal information and account details
+                </CardDescription>
+              </div>
+              <div className="flex space-x-2">
+                {isEditing ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancel}
+                      disabled={isLoading}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleSave}
+                      disabled={isLoading}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {isLoading ? "Saving..." : "Save"}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditing(true)}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* First Name */}
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First Name</Label>
+                {isEditing ? (
+                  <Input
+                    id="firstName"
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange("firstName", e.target.value)}
+                    placeholder="Enter first name"
+                  />
+                ) : (
+                  <p className="text-sm p-2 border rounded-md bg-muted/50">
+                    {user.firstName || "Not provided"}
+                  </p>
+                )}
+              </div>
+
+              {/* Last Name */}
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name</Label>
+                {isEditing ? (
+                  <Input
+                    id="lastName"
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange("lastName", e.target.value)}
+                    placeholder="Enter last name"
+                  />
+                ) : (
+                  <p className="text-sm p-2 border rounded-md bg-muted/50">
+                    {user.lastName || "Not provided"}
+                  </p>
+                )}
+              </div>
+
+              {/* Username */}
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                {isEditing ? (
+                  <Input
+                    id="username"
+                    value={formData.username}
+                    onChange={(e) => handleInputChange("username", e.target.value)}
+                    placeholder="Enter username"
+                  />
+                ) : (
+                  <p className="text-sm p-2 border rounded-md bg-muted/50">
+                    {user.username}
+                  </p>
+                )}
+              </div>
+
+              {/* Email */}
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                {isEditing ? (
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                    placeholder="Enter email address"
+                  />
+                ) : (
+                  <p className="text-sm p-2 border rounded-md bg-muted/50 flex items-center">
+                    <Mail className="h-4 w-4 mr-2" />
+                    {user.email || "Not provided"}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Account Information (Read Only) */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium flex items-center">
+                <IdCard className="h-5 w-5 mr-2" />
+                Account Information
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>User ID</Label>
+                  <p className="text-sm p-2 border rounded-md bg-muted/50 font-mono">
+                    {user.id}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <div className="p-2 border rounded-md bg-muted/50">
+                    <Badge variant={getRoleBadgeVariant(user.role) as "default" | "secondary" | "destructive" | "outline"}>
+                      {getRoleLabel(user.role)}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

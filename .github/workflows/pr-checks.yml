@@ -1,0 +1,393 @@
+name: PR Quality Checks
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # Code quality checks
+  code-quality:
+    runs-on: ubuntu-latest
+    name: Code Quality & Standards
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better analysis
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      # Backend code quality
+      - name: Install backend dependencies
+        working-directory: src
+        run: npm ci
+
+      - name: Backend linting
+        working-directory: src
+        run: npm run lint
+
+      - name: Backend type checking
+        working-directory: src
+        run: npx tsc --noEmit
+
+      - name: Backend tests with coverage
+        working-directory: src
+        run: npm run test:cov
+        env:
+          NODE_ENV: test
+
+      # Frontend code quality
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Frontend linting
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Frontend type checking
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Frontend tests with coverage
+        working-directory: frontend
+        run: npm test -- --coverage
+
+      - name: Frontend build validation
+        working-directory: frontend
+        run: npm run build
+
+  # Security and dependency checks
+  security-checks:
+    runs-on: ubuntu-latest
+    name: Security Analysis
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Backend security audit
+        working-directory: src
+        run: |
+          npm ci
+          npm audit --audit-level=moderate
+
+      - name: Frontend security audit
+        working-directory: frontend
+        run: |
+          npm ci
+          npm audit --audit-level=moderate
+
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/init@v2
+        with:
+          languages: typescript
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+  # API contract validation
+  api-validation:
+    runs-on: ubuntu-latest
+    name: API Contract Validation
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: oms_test
+          POSTGRES_USER: oms
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: src/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: src
+        run: npm ci
+
+      - name: Start backend server
+        working-directory: src
+        run: |
+          npm run start:dev &
+          sleep 30
+        env:
+          DATABASE_URL: postgresql://oms:test_password@localhost:5432/oms_test
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+          PORT: 3001
+
+      - name: Validate API endpoints
+        run: |
+          # Health check
+          curl -f http://localhost:3001/health
+
+          # Test core API endpoints
+          echo "Testing core endpoints..."
+
+          # Test customers endpoint (should require auth)
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/customers)
+          if [ "$RESPONSE" -eq 401 ]; then
+            echo "✅ Customers endpoint correctly requires authentication"
+          else
+            echo "❌ Customers endpoint security issue: HTTP $RESPONSE"
+            exit 1
+          fi
+
+          # Test orders endpoint
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/orders)
+          if [ "$RESPONSE" -eq 401 ]; then
+            echo "✅ Orders endpoint correctly requires authentication"
+          else
+            echo "❌ Orders endpoint security issue: HTTP $RESPONSE"
+            exit 1
+          fi
+
+          # Test enriched orders endpoint
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/enriched_orders)
+          if [ "$RESPONSE" -eq 200 ] || [ "$RESPONSE" -eq 401 ]; then
+            echo "✅ Enriched orders endpoint accessible"
+          else
+            echo "❌ Enriched orders endpoint issue: HTTP $RESPONSE"
+            exit 1
+          fi
+
+  # Performance regression testing
+  performance-check:
+    runs-on: ubuntu-latest
+    name: Performance Regression Test
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: oms_test
+          POSTGRES_USER: oms
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: src/package-lock.json
+
+      - name: Install dependencies and start backend
+        working-directory: src
+        run: |
+          npm ci
+          npm run start:dev &
+          sleep 30
+        env:
+          DATABASE_URL: postgresql://oms:test_password@localhost:5432/oms_test
+          REDIS_URL: redis://localhost:6379
+          NODE_ENV: test
+
+      - name: Basic performance validation
+        run: |
+          echo "🚀 Running basic performance checks..."
+
+          # Health endpoint should respond quickly
+          HEALTH_TIME=$(curl -w "%{time_total}" -s -o /dev/null http://localhost:3001/health)
+          echo "Health endpoint response time: ${HEALTH_TIME}s"
+
+          # Validate health check is under 0.1 seconds
+          if (( $(echo "$HEALTH_TIME > 0.1" | bc -l) )); then
+            echo "⚠️ Warning: Health check response time > 100ms"
+          else
+            echo "✅ Health check performance acceptable"
+          fi
+
+          # Test enriched orders endpoint performance
+          ORDERS_TIME=$(curl -w "%{time_total}" -s -o /dev/null http://localhost:3001/enriched_orders?limit=10)
+          echo "Enriched orders endpoint response time: ${ORDERS_TIME}s"
+
+          if (( $(echo "$ORDERS_TIME > 0.5" | bc -l) )); then
+            echo "⚠️ Warning: Enriched orders response time > 500ms"
+          else
+            echo "✅ Enriched orders performance acceptable"
+          fi
+
+  # Documentation checks
+  documentation-check:
+    runs-on: ubuntu-latest
+    name: Documentation Validation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check required documentation
+        run: |
+          echo "📚 Validating documentation..."
+
+          # Check for required files
+          required_files=(
+            "README.md"
+            "PROMPT.md"
+            "@fix_plan.md"
+            "@AGENT.md"
+            "docs/CURRENT_STATE_ANALYSIS.md"
+            "specs/TECHNICAL_REQUIREMENTS.md"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "✅ Found: $file"
+            else
+              echo "❌ Missing: $file"
+              exit 1
+            fi
+          done
+
+      - name: Validate markdown files
+        uses: DavidAnson/markdownlint-action@v1
+        with:
+          files: '**/*.md'
+          ignore: 'node_modules/**'
+          config: |
+            {
+              "default": true,
+              "MD013": false,
+              "MD033": false
+            }
+
+  # Ralph Loop compatibility check
+  ralph-loop-compatibility:
+    runs-on: ubuntu-latest
+    name: Ralph Loop Compatibility
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Ralph Loop structure
+        run: |
+          echo "🤖 Validating Ralph Loop compatibility..."
+
+          # Check for required Ralph Loop files
+          ralph_files=(
+            "PROMPT.md"
+            "@fix_plan.md"
+            "@AGENT.md"
+          )
+
+          for file in "${ralph_files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "✅ Ralph Loop file found: $file"
+            else
+              echo "❌ Ralph Loop file missing: $file"
+              exit 1
+            fi
+          done
+
+          # Validate PROMPT.md has required sections
+          if grep -q "Development Constraints" PROMPT.md && \
+             grep -q "Entity Implementation Pattern" PROMPT.md && \
+             grep -q "Current Implementation Status" PROMPT.md; then
+            echo "✅ PROMPT.md has required sections"
+          else
+            echo "❌ PROMPT.md missing required sections"
+            exit 1
+          fi
+
+          # Validate @AGENT.md has build commands
+          if grep -q "npm run" "@AGENT.md" && \
+             grep -q "Backend (NestJS)" "@AGENT.md" && \
+             grep -q "Frontend (Next.js)" "@AGENT.md"; then
+            echo "✅ @AGENT.md has required build commands"
+          else
+            echo "❌ @AGENT.md missing required build commands"
+            exit 1
+          fi
+
+          echo "🎉 Ralph Loop compatibility validated!"
+
+  # PR summary comment
+  pr-summary:
+    runs-on: ubuntu-latest
+    name: PR Summary
+    needs: [code-quality, security-checks, api-validation, performance-check, documentation-check, ralph-loop-compatibility]
+    if: always()
+
+    steps:
+      - name: Comment PR with results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: checks } = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.payload.pull_request.head.sha,
+            });
+
+            const jobResults = {
+              'code-quality': '${{ needs.code-quality.result }}',
+              'security-checks': '${{ needs.security-checks.result }}',
+              'api-validation': '${{ needs.api-validation.result }}',
+              'performance-check': '${{ needs.performance-check.result }}',
+              'documentation-check': '${{ needs.documentation-check.result }}',
+              'ralph-loop-compatibility': '${{ needs.ralph-loop-compatibility.result }}'
+            };
+
+            let summary = "## 🔍 PR Quality Check Results\n\n";
+
+            for (const [job, result] of Object.entries(jobResults)) {
+              const icon = result === 'success' ? '✅' : result === 'failure' ? '❌' : '⚠️';
+              const status = result.charAt(0).toUpperCase() + result.slice(1);
+              summary += `${icon} **${job.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}**: ${status}\n`;
+            }
+
+            const allPassed = Object.values(jobResults).every(result => result === 'success');
+
+            if (allPassed) {
+              summary += "\n🎉 **All checks passed!** This PR is ready for review.";
+            } else {
+              summary += "\n⚠️ **Some checks failed.** Please review the failed checks above.";
+            }
+
+            summary += "\n\n---\n*Automated by OMS CI/CD Pipeline*";
+
+            await github.rest.issues.createComment({
+              issue_number: context.payload.pull_request.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: summary
+            });

@@ -1,0 +1,135 @@
+# Operating System
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.example
+.env.backup
+.env.staging
+.env.staging-v2
+.env.production
+.env.*
+!.env.*.template
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+.next/
+.nuxt/
+.output/
+.vercel/
+.netlify/
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+.classpath
+
+# Testing
+coverage/
+*.lcov
+.nyc_output/
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Logs
+logs/
+*.log
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Cache
+.cache/
+.tmp/
+.temp/
+temp/
+tmp/
+
+# Runtime
+*.pid
+*.seed
+*.pid.lock
+
+# Security - NEVER COMMIT THESE
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*kubeconfig*
+*kube-config*
+*.aws/
+*.gcp/
+*terraform.tfstate*
+*terraform.tfvars*
+secrets/
+.secrets/
+.ssh/
+id_rsa*
+id_dsa*
+id_ed25519*
+*.pub
+.gnupg/
+.pgp/
+jwt-secret*
+database-password*
+api-keys*
+auth-tokens*
+service-account*
+client-secret*
+
+# Security audit and reports
+security-report*.json
+audit-*.log
+vulnerability-*.json
+*.security
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# DevSecOps tooling
+.snyk
+.sonarcloud.properties
+.trivyignore
+
+# Specific sensitive files
+k8s-1-28-6-do-0-ams3-1713552913551-kubeconfig
+*kubeconfig.yaml
+*kubeconfig.yml
+
+# production data
+production-data
+ordermys_new.sql
+backend/src/database/seeds/relational/production-data
+
+# AI DOCS
+ARCHIVE

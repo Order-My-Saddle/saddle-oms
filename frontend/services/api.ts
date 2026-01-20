@@ -1,0 +1,398 @@
+// Centralized API service for Orders, Reports, Dashboard
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+// Helper function to safely escape strings for OData filters
+function escapeODataString(str: string): string {
+  if (typeof str !== 'string') {
+    return String(str).replace(/'/g, "''");
+  }
+  // Escape single quotes by doubling them (OData standard)
+  // Also remove potentially dangerous characters
+  return str.replace(/'/g, "''").replace(/[<>]/g, '');
+}
+
+function getToken() {
+  if (typeof window !== 'undefined') {
+    // Try to get token from Jotai store first
+    try {
+      const stored = localStorage.getItem('auth_token');
+      if (stored && stored !== 'null') {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      // Fallback to cookies
+    }
+    
+    // Fallback to cookies for backward compatibility
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'token') {
+        return value;
+      }
+    }
+  }
+  return null;
+}
+
+function authHeaders() {
+  const token = getToken();
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+}
+
+// Helper: build REST API filter parameters from filters object
+function buildOrderFilterParams(filters: Record<string, string>): Record<string, string> {
+  const params: Record<string, string> = {};
+
+  // Status filters (multiple statuses: comma separated)
+  if (filters.orderStatus) {
+    const statuses = filters.orderStatus.split(',').map(s => s.trim()).filter(Boolean);
+    if (statuses.length > 0) {
+      params['orderStatus'] = statuses.join(',');
+    }
+  }
+
+  // Text search filters
+  if (filters.fitter) {
+    params['fitter'] = filters.fitter;
+  }
+  if (filters.customer) {
+    params['customer'] = filters.customer;
+  }
+  if (filters.seatSize) {
+    params['seatSize'] = filters.seatSize;
+  }
+
+  return params;
+}
+
+// Enhanced filter builder for enriched orders using REST API parameters
+function buildEnrichedOrderFilters(filters: Record<string, any>): Record<string, any> {
+  const apiFilters: Record<string, any> = {};
+
+  // Direct field mappings for NestJS backend
+  const directMappings = [
+    'orderId', 'orderStatus', 'customerName', 'fitterName',
+    'supplierName', 'urgent', 'reference', 'fitterReference'
+  ];
+
+  directMappings.forEach(field => {
+    if (filters[field] !== undefined && filters[field] !== null && filters[field] !== '') {
+      // Handle boolean values specially for urgent field
+      if (field === 'urgent' && typeof filters[field] === 'boolean') {
+        apiFilters[field] = filters[field];
+      } else {
+        apiFilters[field] = String(filters[field]);
+      }
+    }
+  });
+
+  // Handle special cases
+  if (filters.id) {
+    // IDs are now integers - convert to string for API
+    apiFilters['id'] = String(filters.id);
+  }
+
+  if (filters.seatSizes) {
+    apiFilters['seatSizes'] = filters.seatSizes;
+  }
+
+  // Handle date ranges for NestJS API
+  if (filters.orderTimeAfter) {
+    apiFilters['orderTimeAfter'] = filters.orderTimeAfter;
+  }
+
+  if (filters.orderTimeBefore) {
+    apiFilters['orderTimeBefore'] = filters.orderTimeBefore;
+  }
+
+  return apiFilters;
+}
+
+// Universal search helper
+function buildUniversalSearchFilters(searchTerm: string, entity: string): Record<string, string> {
+  const filters: Record<string, string> = {};
+
+  if (!searchTerm) return filters;
+
+  // If it's a number, likely an ID (order ID, user ID, etc.)
+  if (/^\d+$/.test(searchTerm)) {
+    if (entity === 'enriched_orders') {
+      filters['orderId'] = searchTerm;
+    } else {
+      filters['id'] = searchTerm;
+    }
+    return filters;
+  }
+
+  // For text searches, we'll handle this in the client-side filtering
+  // since API Platform doesn't have great cross-field search
+  return {};
+}
+
+export async function fetchOrders({ page = 1, partial = true, filters = {} } = {}) {
+  const url = new URL(`${API_URL}/api/v1/orders`);
+  url.searchParams.set('page', String(page));
+  url.searchParams.set('order[orderId]', 'desc');
+
+  // Add filters as query parameters
+  const filterParams = buildOrderFilterParams(filters);
+  Object.entries(filterParams).forEach(([key, value]) => {
+    url.searchParams.set(key, value);
+  });
+
+  const res = await fetch(url.toString(), {
+    headers: authHeaders(),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Failed to fetch orders');
+  return res.json();
+}
+
+export async function fetchOrderStatusStats() {
+  const res = await fetch(`${API_URL}/api/v1/orders/stats`, {
+    headers: authHeaders(),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Failed to fetch order status stats');
+  return res.json();
+}
+
+// Placeholder for future reports API
+export async function fetchReports(params: Record<string, any> = {}) {
+  // Example endpoint, adjust as needed
+  const url = new URL(`${API_URL}/api/v1/reports`);
+  Object.entries(params).forEach(([key, value]) => url.searchParams.append(key, String(value)));
+  const res = await fetch(url.toString(), {
+    headers: authHeaders(),
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error('Failed to fetch reports');
+  return res.json();
+}
+
+interface FetchEntitiesParams {
+  entity: string;
+  page?: number;
+  partial?: boolean;
+  orderBy?: string;
+  filter?: string;
+  extraParams?: Record<string, string | number | boolean>;
+  order?: 'asc' | 'desc';
+  searchTerm?: string;
+  dateRange?: {
+    field: string;
+    from?: Date;
+    to?: Date;
+  };
+  multiSort?: Array<{
+    field: string;
+    order: 'asc' | 'desc';
+  }>;
+}
+
+// Generic entity fetcher for any resource (customers, fitters, users, brands, etc)
+export async function fetchEntities({
+  entity,
+  page = 1,
+  partial = true,
+  orderBy = '',
+  filter = '',
+  extraParams = {},
+  order = 'desc', // Default to descending order
+  searchTerm = '',
+  dateRange,
+  multiSort = [],
+}: FetchEntitiesParams) {
+  // Check if pagination is explicitly set in extraParams, default to true
+  const paginationEnabled = extraParams.pagination !== undefined ? extraParams.pagination : true;
+  let url = `${API_URL}/api/v1/${entity}?pagination=${paginationEnabled}&page=${page}&partial=${partial}`;
+  
+  // Handle multiple sorting (if provided, takes priority over single sort)
+  if (multiSort.length > 0) {
+    multiSort.forEach(sortItem => {
+      url += `&order[${sortItem.field}]=${sortItem.order}`;
+    });
+  } else if (orderBy) {
+    // Handle single sorting
+    if (extraParams.order) {
+      try {
+        const orderObj = JSON.parse(extraParams.order as string);
+        const [sortField, sortOrder] = Object.entries(orderObj)[0];
+        url += `&order[${sortField}]=${sortOrder}`;
+      } catch (e) {
+        console.warn('Invalid order parameter format, using default');
+        url += `&order[${orderBy}]=${order}`;
+      }
+    } else {
+      // Otherwise use the orderBy and order parameters
+      url += `&order[${orderBy}]=${order}`;
+    }
+  }
+  
+  // Handle date range filtering
+  if (dateRange) {
+    if (dateRange.from) {
+      const fromDate = dateRange.from.toISOString().split('T')[0];
+      url += `&${dateRange.field}[after]=${encodeURIComponent(fromDate)}`;
+    }
+    if (dateRange.to) {
+      const toDate = dateRange.to.toISOString().split('T')[0];
+      url += `&${dateRange.field}[before]=${encodeURIComponent(toDate)}`;
+    }
+  }
+  
+  // Handle universal search term
+  if (searchTerm) {
+    // For text search, we'll use a broad search approach
+    // This can be customized per entity type
+    if (entity === 'enriched_orders') {
+      // For orders, search across multiple text fields
+      url += `&search=${encodeURIComponent(searchTerm)}`;
+    } else {
+      // For other entities, use a generic search parameter
+      url += `&search=${encodeURIComponent(searchTerm)}`;
+    }
+  }
+  
+  // Add legacy filter if provided
+  if (filter) url += `&${filter}`;
+  
+  // Add any extra parameters
+  for (const [k, v] of Object.entries(extraParams)) {
+    // Skip parameters we've already handled
+    if (k === 'order' || k === 'search' || k === 'pagination') continue;
+    url += `&${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`;
+  }
+
+  // Add cache-busting timestamp to ensure fresh data
+  url += `&_t=${Date.now()}`;
+
+  console.log('fetchEntities: Fetching URL:', url.toString());
+  console.log('fetchEntities: Request headers:', {
+    ...authHeaders(),
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  });
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      ...authHeaders(),
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    },
+    credentials: 'include',
+  });
+
+  console.log(`fetchEntities: Response status for ${entity}:`, res.status, res.statusText);
+  console.log('fetchEntities: Response headers:', Object.fromEntries(res.headers.entries()));
+
+  if (!res.ok) {
+    let errorResponseText = '';
+    try {
+      errorResponseText = await res.text();
+      console.error(`fetchEntities: Error response body for ${entity}:`, errorResponseText);
+    } catch (e) {
+      console.error(`fetchEntities: Could not read error response body for ${entity}:`, e);
+    }
+
+    if (res.status === 401) {
+      throw new Error(`Authentication required for ${entity}. Please log in.`);
+    } else if (res.status === 403) {
+      throw new Error(`Access denied for ${entity}. Insufficient permissions.`);
+    } else if (res.status === 500) {
+      console.error(`fetchEntities: 500 Error Details for ${entity}:`, {
+        url,
+        status: res.status,
+        statusText: res.statusText,
+        responseBody: errorResponseText,
+        timestamp: new Date().toISOString()
+      });
+      throw new Error(`Server error when fetching ${entity}. Please try again later.`);
+    } else {
+      throw new Error(`Failed to fetch ${entity}: ${res.status} ${res.statusText}`);
+    }
+  }
+
+  const result = await res.json();
+
+  // Special handling for users entity to map name to firstName/lastName
+  if (entity === 'users' && result['hydra:member'] && Array.isArray(result['hydra:member'])) {
+    result['hydra:member'] = result['hydra:member'].map((backendUser: any) => {
+      // Split name into firstName and lastName
+      const nameParts = (backendUser.name || '').split(' ').filter((part: string) => part.length > 0);
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      return {
+        ...backendUser,
+        firstName: firstName,
+        lastName: lastName,
+      };
+    });
+  }
+
+  return result;
+}
+
+// Function to update an order
+export async function updateOrder(orderId: number | string, updateData: Record<string, any>) {
+  const url = `${API_URL}/api/v1/orders/${orderId}`;
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: authHeaders(),
+    credentials: 'include',
+    body: JSON.stringify(updateData),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to update order: ${res.status} ${errorText}`);
+  }
+
+  return res.json();
+}
+
+// Function to create a new order
+export async function createOrder(orderData: Record<string, any>) {
+  const url = `${API_URL}/api/v1/orders`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: authHeaders(),
+    credentials: 'include',
+    body: JSON.stringify(orderData),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to create order: ${res.status} ${errorText}`);
+  }
+
+  return res.json();
+}
+
+// Function to create a new customer
+export async function createCustomer(customerData: Record<string, any>) {
+  const url = `${API_URL}/api/v1/customers`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: authHeaders(),
+    credentials: 'include',
+    body: JSON.stringify(customerData),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Failed to create customer: ${res.status} ${errorText}`);
+  }
+
+  return res.json();
+}

@@ -1,0 +1,100 @@
+import { Injectable, CanActivate, ExecutionContext } from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+import { RlsService } from "./rls.service";
+import { RoleEnum } from "../roles/roles.enum";
+
+/**
+ * Row Level Security Guard
+ *
+ * This guard automatically sets RLS context for incoming requests after JWT authentication.
+ * It should be used alongside JWT guards to ensure proper data isolation.
+ *
+ * Usage:
+ * @UseGuards(JwtAuthGuard, RlsGuard)
+ * @Controller('customers')
+ * export class CustomerController {
+ *   // All methods will automatically have RLS context set
+ * }
+ *
+ * The guard extracts user information from the JWT payload and sets the appropriate
+ * RLS context, ensuring that all database queries are filtered based on user role and ownership.
+ */
+@Injectable()
+export class RlsGuard implements CanActivate {
+  constructor(
+    private readonly rlsService: RlsService,
+    protected readonly reflector: Reflector,
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest();
+    const user = request.user; // Set by JWT guard
+
+    if (!user || !user.id) {
+      // If no user context, allow through but don't set RLS context
+      // This handles public endpoints or cases where JWT guard is not used
+      return true;
+    }
+
+    try {
+      // Extract user information from JWT payload
+      const userId = user.id;
+      const userRole = user.role?.id || RoleEnum.user; // Default to user role
+
+      // Get role-specific IDs
+      let factoryId: string | undefined;
+      let fitterId: string | undefined;
+
+      if (userRole === RoleEnum.factory) {
+        // Look up factory ID for factory users
+        // This could be cached in JWT payload or looked up here
+        factoryId = user.factoryId;
+      }
+
+      if (userRole === RoleEnum.fitter) {
+        // Look up fitter ID for fitter users
+        // This could be cached in JWT payload or looked up here
+        fitterId = user.fitterId;
+      }
+
+      // Set RLS context for the current request
+      await this.rlsService.setUserContext(
+        userId,
+        userRole,
+        factoryId,
+        fitterId,
+      );
+
+      return true;
+    } catch (error) {
+      // Log error but don't block the request
+      console.error("Failed to set RLS context:", error);
+      return true;
+    }
+  }
+}
+
+/**
+ * Decorator to skip RLS context setting for specific endpoints
+ * Useful for public endpoints or special administrative operations
+ */
+export const SkipRlsContext = () => Reflect.metadata("skipRlsContext", true);
+
+/**
+ * Enhanced RLS Guard that respects SkipRlsContext decorator
+ */
+@Injectable()
+export class EnhancedRlsGuard extends RlsGuard {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const skipRls = this.reflector.get<boolean>(
+      "skipRlsContext",
+      context.getHandler(),
+    );
+
+    if (skipRls) {
+      return true;
+    }
+
+    return super.canActivate(context);
+  }
+}
