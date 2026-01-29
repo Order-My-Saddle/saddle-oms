@@ -39,7 +39,10 @@ export class PresetController {
   }
 
   @Patch(":id")
-  async update(@Param("id", ParseIntPipe) id: number, @Body() updatePresetDto: any) {
+  async update(
+    @Param("id", ParseIntPipe) id: number,
+    @Body() updatePresetDto: any,
+  ) {
     return this.presetService.update(id, updatePresetDto);
   }
 

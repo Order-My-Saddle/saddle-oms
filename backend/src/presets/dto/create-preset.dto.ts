@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsString, IsOptional, IsNumber, IsNotEmpty, Min, MaxLength } from "class-validator";
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  IsNotEmpty,
+  Min,
+  MaxLength,
+} from "class-validator";
 
 export class CreatePresetDto {
   @ApiProperty({

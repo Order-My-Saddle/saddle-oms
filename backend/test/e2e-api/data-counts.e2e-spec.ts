@@ -269,7 +269,9 @@ describe("Data Counts Validation", () => {
         AND table_type = 'BASE TABLE'
       `);
 
-      const tableNames = result.map((r: { table_name: string }) => r.table_name);
+      const tableNames = result.map(
+        (r: { table_name: string }) => r.table_name,
+      );
 
       for (const table of requiredTables) {
         expect(tableNames).toContain(table);
@@ -301,14 +303,23 @@ describe("Data Counts Validation", () => {
 
     it("should have RLS enabled on protected tables", async () => {
       // Tables with RLS enabled per EnableRowLevelSecurity migration
-      const protectedTables = ["credentials", "orders", "customers", "fitters", "factories"];
+      const protectedTables = [
+        "credentials",
+        "orders",
+        "customers",
+        "fitters",
+        "factories",
+      ];
 
       for (const table of protectedTables) {
-        const result = await dataSource.query(`
+        const result = await dataSource.query(
+          `
           SELECT relrowsecurity
           FROM pg_class
           WHERE relname = $1
-        `, [table]);
+        `,
+          [table],
+        );
 
         if (result.length > 0) {
           expect(result[0].relrowsecurity).toBe(true);

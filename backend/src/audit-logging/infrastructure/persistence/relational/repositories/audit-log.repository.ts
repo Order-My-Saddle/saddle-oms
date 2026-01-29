@@ -36,7 +36,6 @@ export class AuditLogRepository {
     });
   }
 
-
   /**
    * High-performance search with filtering, sorting, and pagination
    */
@@ -294,7 +293,6 @@ export class AuditLogRepository {
       query.andWhere("audit.userId = :userId", { userId: filters.userId });
     }
 
-
     if (filters.userType) {
       query.andWhere("audit.userType = :userType", {
         userType: filters.userType,
@@ -305,7 +303,6 @@ export class AuditLogRepository {
     if (filters.orderId) {
       query.andWhere("audit.orderId = :orderId", { orderId: filters.orderId });
     }
-
 
     if (filters.hasOrder !== undefined) {
       if (filters.hasOrder) {

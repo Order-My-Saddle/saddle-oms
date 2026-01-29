@@ -388,7 +388,9 @@ export class OrderRepository implements IOrderRepository {
    */
   async delete(id: OrderId): Promise<void> {
     try {
-      await this.orderEntityRepository.softDelete({ id: parseInt(id.toString(), 10) });
+      await this.orderEntityRepository.softDelete({
+        id: parseInt(id.toString(), 10),
+      });
       this.logger.debug(`Soft deleted order: ${id.toString()}`);
     } catch (error) {
       this.logger.error(
@@ -510,7 +512,6 @@ export class OrderRepository implements IOrderRepository {
     }
   }
 
-
   /**
    * Find production orders (for migration and reporting)
    */
@@ -561,29 +562,6 @@ export class OrderRepository implements IOrderRepository {
     }
   }
 
-  /**
-   * Get seat size summary for analytics
-   */
-  async getSeatSizeSummary(): Promise<any> {
-    try {
-      const result = await this.orderEntityRepository
-        .createQueryBuilder("order")
-        .select("order.seatSizes", "seatSizes")
-        .addSelect("COUNT(*)", "count")
-        .where("order.seatSizes IS NOT NULL")
-        .groupBy("order.seatSizes")
-        .getRawMany();
-
-      return {
-        summary: result,
-        total: result.reduce((sum, item) => sum + parseInt(item.count, 10), 0),
-      };
-    } catch (error) {
-      this.logger.error(
-        `Failed to get seat size summary: ${error.message}`,
-        error.stack,
-      );
-      throw new Error(`Failed to get seat size summary: ${error.message}`);
-    }
-  }
+  // NOTE: getSeatSizeSummary method removed - legacy system stores seat size in special_notes field
+  // Seat size filtering is handled via text search in enriched-orders.service.ts
 }

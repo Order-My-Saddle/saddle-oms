@@ -31,7 +31,7 @@
     "@playwright/test": "^1.45.0",
     "@types/node": "^20.14.0",
     "dotenv": "^16.4.5",
-    "faker": "^6.6.6"
+    "faker": "^5.5.3"
   },
   "dependencies": {
     "axios": "^1.7.0",

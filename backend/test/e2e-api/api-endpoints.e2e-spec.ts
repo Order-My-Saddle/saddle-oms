@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax */
 /**
  * E2E API Tests: API Endpoints
  *
@@ -91,8 +92,7 @@ describe("API Endpoints (E2E)", () => {
 
   describe("Health Check", () => {
     it("GET /api/health - should return health status", async () => {
-      const response = await request(app.getHttpServer())
-        .get("/api/health");
+      const response = await request(app.getHttpServer()).get("/api/health");
 
       // Health check may fail if Redis not available, but endpoint should respond
       expect([200, 503]).toContain(response.status);
@@ -113,7 +113,9 @@ describe("API Endpoints (E2E)", () => {
         expect(response.body).toHaveProperty("token");
         expect(response.body).toHaveProperty("user");
       } else if (response.status === 500) {
-        console.warn("Auth returned 500 - database may not be seeded with test user");
+        console.warn(
+          "Auth returned 500 - database may not be seeded with test user",
+        );
       }
     });
 
@@ -130,7 +132,9 @@ describe("API Endpoints (E2E)", () => {
     });
 
     it("GET /api/v1/auth/me - should require authentication", async () => {
-      const response = await request(app.getHttpServer()).get("/api/v1/auth/me");
+      const response = await request(app.getHttpServer()).get(
+        "/api/v1/auth/me",
+      );
 
       expect(response.status).toBe(401);
     });
@@ -246,7 +250,9 @@ describe("API Endpoints (E2E)", () => {
 
   describe("Fitters API", () => {
     it("GET /api/v1/fitters - should require authentication", async () => {
-      const response = await request(app.getHttpServer()).get("/api/v1/fitters");
+      const response = await request(app.getHttpServer()).get(
+        "/api/v1/fitters",
+      );
       expect(response.status).toBe(401);
     });
 
@@ -329,7 +335,9 @@ describe("API Endpoints (E2E)", () => {
 
   describe("Options API", () => {
     it("GET /api/v1/options - should require authentication", async () => {
-      const response = await request(app.getHttpServer()).get("/api/v1/options");
+      const response = await request(app.getHttpServer()).get(
+        "/api/v1/options",
+      );
       expect(response.status).toBe(401);
     });
 
@@ -400,7 +408,9 @@ describe("API Endpoints (E2E)", () => {
   // Presets API - Module disabled in AppModule (commented out)
   describe.skip("Presets API", () => {
     it("GET /api/v1/presets - should require authentication", async () => {
-      const response = await request(app.getHttpServer()).get("/api/v1/presets");
+      const response = await request(app.getHttpServer()).get(
+        "/api/v1/presets",
+      );
       expect(response.status).toBe(401);
     });
 
@@ -469,7 +479,9 @@ describe("API Endpoints (E2E)", () => {
       if (response.status === 200) {
         // Enriched orders returns Hydra format with hydra:member
         expect(response.body).toHaveProperty("hydra:member");
-        console.log(`Enriched orders returned: ${response.body["hydra:member"]?.length}`);
+        console.log(
+          `Enriched orders returned: ${response.body["hydra:member"]?.length}`,
+        );
       }
     });
   });

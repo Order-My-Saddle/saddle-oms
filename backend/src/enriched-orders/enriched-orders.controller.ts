@@ -95,15 +95,43 @@ export class EnrichedOrdersController {
       searchTerm: query.searchTerm
         ? String(query.searchTerm).trim()
         : undefined,
+      search: query.search ? String(query.search).trim() : undefined,
       orderBy: this.sanitizeOrderBy(query.orderBy),
       orderDirection: query.orderDirection === "ASC" ? "ASC" : "DESC",
+      // Order ID filters
+      id: this.parsePositiveInt(query.id),
+      orderId: this.parsePositiveInt(query.orderId),
+      // Urgency filters (accepts multiple formats)
       urgency: query.urgency ? String(query.urgency).trim() : undefined,
+      urgent: query.urgent,
+      // Fitter filters
       fitterId: this.parsePositiveInt(query.fitterId),
+      fitterName: query.fitterName
+        ? String(query.fitterName).trim()
+        : undefined,
+      fitter: query.fitter ? String(query.fitter).trim() : undefined,
+      // Customer filters
       customerId: this.parsePositiveInt(query.customerId),
+      customerName: query.customerName
+        ? String(query.customerName).trim()
+        : undefined,
+      customer: query.customer ? String(query.customer).trim() : undefined,
+      // Brand/saddle filter
       brandId: this.parsePositiveInt(query.brandId),
+      // Status filters
       orderStatus: query.orderStatus
         ? String(query.orderStatus).trim()
         : undefined,
+      status: query.status ? String(query.status).trim() : undefined,
+      // Factory filters
+      factoryId: this.parsePositiveInt(query.factoryId),
+      factoryName: query.factoryName
+        ? String(query.factoryName).trim()
+        : undefined,
+      factory: query.factory ? String(query.factory).trim() : undefined,
+      // Seat size filters (searches in special_notes field)
+      seatSizes: query.seatSizes ? String(query.seatSizes).trim() : undefined,
+      seatSize: query.seatSize ? String(query.seatSize).trim() : undefined,
     };
   }
 
@@ -126,7 +154,7 @@ export class EnrichedOrdersController {
       "fitter_name",
       "brand_name",
       "model_name",
-      "seat_size",
+      "special_notes",
       "status",
     ];
 

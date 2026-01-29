@@ -25,6 +25,8 @@ import { OrderService } from "./order.service";
 import { OrderSearchService } from "./order-search.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { UpdateOrderDto } from "./dto/update-order.dto";
+// QueryOrderDto may be used for future query parameter validation
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { QueryOrderDto } from "./dto/query-order.dto";
 import { OrderSearchDto } from "./dto/order-search.dto";
 import { OrderDto } from "./dto/order.dto";
@@ -106,7 +108,14 @@ export class OrderController {
     @Query("factoryId") factoryId?: number,
     @Query("status") status?: string,
   ): Promise<{ data: OrderDto[]; total: number; pages: number }> {
-    return this.orderService.findAll(page, limit, fitterId, customerId, factoryId, status);
+    return this.orderService.findAll(
+      page,
+      limit,
+      fitterId,
+      customerId,
+      factoryId,
+      status,
+    );
   }
 
   @Get("search")
@@ -394,7 +403,9 @@ export class OrderController {
       },
     },
   })
-  async getCustomerSummary(@Param("customerId", ParseIntPipe) customerId: number): Promise<{
+  async getCustomerSummary(
+    @Param("customerId", ParseIntPipe) customerId: number,
+  ): Promise<{
     orderCount: number;
     totalValue: number;
   }> {
@@ -416,7 +427,9 @@ export class OrderController {
     description: "Fitter orders retrieved successfully",
     type: [OrderDto],
   })
-  async findByFitter(@Param("fitterId", ParseIntPipe) fitterId: number): Promise<OrderDto[]> {
+  async findByFitter(
+    @Param("fitterId", ParseIntPipe) fitterId: number,
+  ): Promise<OrderDto[]> {
     return this.orderService.findByFitterId(fitterId);
   }
 

@@ -1,11 +1,8 @@
 import {
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  DeleteDateColumn,
 } from "typeorm";
 
 @Entity("presets")
@@ -21,15 +18,6 @@ export class PresetEntity {
   @Column({ name: "sequence", type: "integer", default: 0 })
   sequence: number;
 
-  @Column({ name: "deleted", type: "boolean", default: false })
-  deleted: boolean;
-
-  @CreateDateColumn({ name: "created_at" })
-  createdAt: Date;
-
-  @UpdateDateColumn({ name: "updated_at" })
-  updatedAt: Date;
-
-  @DeleteDateColumn({ name: "deleted_at", nullable: true })
-  deletedAt: Date | null;
+  @Column({ name: "deleted", type: "smallint", default: 0 })
+  deleted: number;
 }

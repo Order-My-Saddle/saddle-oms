@@ -33,7 +33,7 @@ import { RoleEnum } from "../roles/roles.enum";
 @Controller("admin/cache")
 @ApiBearerAuth()
 @UseGuards(RolesGuard)
-@Roles(RoleEnum.admin)
+@Roles(RoleEnum.admin, RoleEnum.supervisor)
 export class CacheManagementController {
   constructor(
     private readonly cacheService: ProductionCacheService,

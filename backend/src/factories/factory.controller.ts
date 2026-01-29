@@ -65,7 +65,8 @@ export class FactoryController {
   @Get()
   @ApiOperation({
     summary: "Get all factories",
-    description: "Retrieve all factories with optional filtering and pagination",
+    description:
+      "Retrieve all factories with optional filtering and pagination",
   })
   @ApiResponse({
     status: 200,

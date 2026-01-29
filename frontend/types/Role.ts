@@ -7,7 +7,7 @@ export enum UserRole {
 }
 
 export type User = {
-  id: number;
+  id: number | string;
   username: string;
   email?: string;
   firstName?: string;

@@ -1,11 +1,8 @@
 import {
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  DeleteDateColumn,
 } from "typeorm";
 
 /**
@@ -30,18 +27,9 @@ export class LeathertypeEntity {
   @Column({ name: "deleted", type: "smallint", default: 0 })
   deleted: number;
 
-  @CreateDateColumn({ name: "created_at", type: "timestamp" })
-  createdAt: Date;
-
-  @UpdateDateColumn({ name: "updated_at", type: "timestamp" })
-  updatedAt: Date;
-
-  @DeleteDateColumn({ name: "deleted_at", nullable: true })
-  deletedAt?: Date;
-
   // Computed properties for business logic
   get isActive(): boolean {
-    return this.deleted === 0 && !this.deletedAt;
+    return this.deleted === 0;
   }
 
   get displayName(): string {

@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { FitterEntity } from "./infrastructure/persistence/relational/entities/fitter.entity";
@@ -77,7 +74,9 @@ export class FitterService {
     }
 
     if (country) {
-      queryBuilder.andWhere("fitter.country ILIKE :country", { country: `%${country}%` });
+      queryBuilder.andWhere("fitter.country ILIKE :country", {
+        country: `%${country}%`,
+      });
     }
 
     queryBuilder.orderBy("fitter.city", "ASC");
@@ -98,7 +97,10 @@ export class FitterService {
   /**
    * Update fitter
    */
-  async update(id: number, updateFitterDto: UpdateFitterDto): Promise<FitterDto> {
+  async update(
+    id: number,
+    updateFitterDto: UpdateFitterDto,
+  ): Promise<FitterDto> {
     const fitter = await this.fitterRepository.findOne({
       where: { id, deleted: 0 },
     });
@@ -108,16 +110,25 @@ export class FitterService {
     }
 
     // Update fields that are provided
-    if (updateFitterDto.userId !== undefined) fitter.userId = updateFitterDto.userId;
-    if (updateFitterDto.address !== undefined) fitter.address = updateFitterDto.address;
-    if (updateFitterDto.zipcode !== undefined) fitter.zipcode = updateFitterDto.zipcode;
-    if (updateFitterDto.state !== undefined) fitter.state = updateFitterDto.state;
+    if (updateFitterDto.userId !== undefined)
+      fitter.userId = updateFitterDto.userId;
+    if (updateFitterDto.address !== undefined)
+      fitter.address = updateFitterDto.address;
+    if (updateFitterDto.zipcode !== undefined)
+      fitter.zipcode = updateFitterDto.zipcode;
+    if (updateFitterDto.state !== undefined)
+      fitter.state = updateFitterDto.state;
     if (updateFitterDto.city !== undefined) fitter.city = updateFitterDto.city;
-    if (updateFitterDto.country !== undefined) fitter.country = updateFitterDto.country;
-    if (updateFitterDto.phoneNo !== undefined) fitter.phoneNo = updateFitterDto.phoneNo;
-    if (updateFitterDto.cellNo !== undefined) fitter.cellNo = updateFitterDto.cellNo;
-    if (updateFitterDto.currency !== undefined) fitter.currency = updateFitterDto.currency;
-    if (updateFitterDto.emailaddress !== undefined) fitter.emailaddress = updateFitterDto.emailaddress;
+    if (updateFitterDto.country !== undefined)
+      fitter.country = updateFitterDto.country;
+    if (updateFitterDto.phoneNo !== undefined)
+      fitter.phoneNo = updateFitterDto.phoneNo;
+    if (updateFitterDto.cellNo !== undefined)
+      fitter.cellNo = updateFitterDto.cellNo;
+    if (updateFitterDto.currency !== undefined)
+      fitter.currency = updateFitterDto.currency;
+    if (updateFitterDto.emailaddress !== undefined)
+      fitter.emailaddress = updateFitterDto.emailaddress;
 
     const savedFitter = await this.fitterRepository.save(fitter);
     return this.toDto(savedFitter);
@@ -225,8 +236,6 @@ export class FitterService {
     dto.isActive = fitter.deleted === 0;
     dto.fullAddress = fitter.fullAddress;
     dto.displayName = fitter.displayName;
-    dto.createdAt = fitter.createdAt;
-    dto.updatedAt = fitter.updatedAt;
     return dto;
   }
 }

@@ -1,11 +1,8 @@
 import {
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  DeleteDateColumn,
 } from "typeorm";
 
 /**
@@ -50,30 +47,30 @@ export class FitterEntity {
   @Column({ name: "currency", type: "integer", nullable: true })
   currency: number | null;
 
-  @Column({ name: "emailaddress", type: "varchar", length: 255, nullable: true })
+  @Column({
+    name: "emailaddress",
+    type: "varchar",
+    length: 255,
+    nullable: true,
+  })
   emailaddress: string | null;
 
   @Column({ name: "deleted", type: "smallint", default: 0 })
   deleted: number;
 
-  @CreateDateColumn({ name: "created_at", type: "timestamp" })
-  createdAt: Date;
-
-  @UpdateDateColumn({ name: "updated_at", type: "timestamp" })
-  updatedAt: Date;
-
-  @DeleteDateColumn({ name: "deleted_at", nullable: true })
-  deletedAt: Date | null;
-
   // Computed properties for business logic
   get isActive(): boolean {
-    return this.deleted === 0 && !this.deletedAt;
+    return this.deleted === 0;
   }
 
   get fullAddress(): string {
-    const parts = [this.address, this.city, this.state, this.zipcode, this.country].filter(
-      (part) => part && part.trim() !== "",
-    );
+    const parts = [
+      this.address,
+      this.city,
+      this.state,
+      this.zipcode,
+      this.country,
+    ].filter((part) => part && part.trim() !== "");
     return parts.join(", ");
   }
 

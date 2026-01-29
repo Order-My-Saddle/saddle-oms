@@ -23,6 +23,12 @@
   - [Importing Production Data](#importing-production-data)
   - [Validating Migration](#validating-migration)
   - [Troubleshooting](#troubleshooting)
+- [Production Data Sync Workflow](#production-data-sync-workflow)
+  - [Initial Setup](#initial-setup)
+  - [Full Data Import](#full-data-import)
+  - [Seat Size Extraction](#seat-size-extraction)
+  - [Importing New Production Data](#importing-new-production-data)
+  - [Sync Commands Reference](#sync-commands-reference)
 - [Performance optimization (PostgreSQL + TypeORM)](#performance-optimization-postgresql--typeorm)
   - [Indexes and Foreign Keys](#indexes-and-foreign-keys)
   - [Max connections](#max-connections)
@@ -392,6 +398,148 @@ DATABASE_USERNAME=postgres
 DATABASE_PASSWORD=postgres
 DATABASE_SSL_ENABLED=false
 ```
+
+---
+
+## Production Data Sync Workflow
+
+This section covers the complete workflow for syncing production data to local/staging databases, including seat size extraction from order notes.
+
+### Initial Setup
+
+```bash
+cd src/database/seeds/relational/production-data/postgres/scripts
+
+# 1. Start PostgreSQL container (port 5433)
+./setup-postgres.sh
+
+# 2. Transform MySQL data to PostgreSQL format (first time only)
+./transform-mysql-to-postgres.sh
+```
+
+### Full Data Import
+
+For initial setup or complete data refresh:
+
+```bash
+# Full sync: schema + data + seat size extraction + validation
+./sync-production-data.sh
+
+# Or run individual steps:
+./import-data.sh          # Import schema and data
+./extract-seat-sizes.sh   # Extract seat sizes (preview only)
+./extract-seat-sizes.sh --apply  # Apply seat size extraction
+./validate-data.sh        # Validate imported data
+```
+
+### Seat Size Extraction
+
+The system extracts seat size information from the `special_notes` field and stores it in the `seat_sizes` JSONB column.
+
+**Patterns Extracted:**
+
+| Pattern | Example | Extracted |
+|---------|---------|-----------|
+| `seat size X.X` | "seat size 17.5" | `["17,5"]` |
+| `size X.X` | "size 18" | `["18"]` |
+| `X.X seat` | "17.5 seat" | `["17,5"]` |
+| `X.X"` or `inch` | `17.5"` | `["17,5"]` |
+| `stamped X.X` | "stamped in 17.5" | `["17,5"]` |
+
+**Commands:**
+
+```bash
+# Preview what will be extracted (no changes)
+./extract-seat-sizes.sh
+
+# Apply the extraction
+./extract-seat-sizes.sh --apply
+
+# Or use the sync script
+./sync-production-data.sh --extract-seats
+```
+
+**Manual extraction via SQL:**
+
+```sql
+-- Preview extraction
+SELECT id,
+       SUBSTRING(special_notes FROM 1 FOR 60) AS notes,
+       extract_seat_sizes(special_notes) AS sizes
+FROM orders
+WHERE extract_seat_sizes(special_notes) IS NOT NULL
+LIMIT 20;
+
+-- Apply extraction
+UPDATE orders
+SET seat_sizes = extract_seat_sizes(special_notes)
+WHERE extract_seat_sizes(special_notes) IS NOT NULL
+  AND seat_sizes IS NULL;
+```
+
+### Importing New Production Data
+
+When you have a new database dump from production:
+
+```bash
+# Option 1: From a MySQL dump file
+./sync-production-data.sh --from-dump /path/to/production_dump.sql
+
+# Option 2: Manual process
+# 1. Place new SQL files in the data/ directories
+# 2. Run import
+./import-data.sh
+
+# 3. Extract seat sizes from new orders
+./sync-production-data.sh --extract-seats
+
+# 4. Validate
+./validate-data.sh
+```
+
+### Sync Commands Reference
+
+| Command | Description |
+|---------|-------------|
+| `./setup-postgres.sh` | Start PostgreSQL container on port 5433 |
+| `./transform-mysql-to-postgres.sh` | Convert MySQL dump to PostgreSQL format |
+| `./import-data.sh` | Import schema and data |
+| `./import-data.sh --schema` | Import schema only |
+| `./import-data.sh --data` | Import data only |
+| `./extract-seat-sizes.sh` | Preview seat size extraction |
+| `./extract-seat-sizes.sh --apply` | Apply seat size extraction |
+| `./validate-data.sh` | Validate data counts and integrity |
+| `./sync-production-data.sh` | Full sync (import + extract + validate) |
+| `./sync-production-data.sh --extract-seats` | Extract seat sizes only |
+| `./sync-production-data.sh --from-dump FILE` | Import from MySQL dump |
+
+### Environment Variables
+
+You can override default database connection settings:
+
+```bash
+export PG_HOST=127.0.0.1
+export PG_PORT=5433
+export PG_USER=oms_user
+export PG_PASSWORD=oms_password
+export PG_DATABASE=oms_legacy
+export CONTAINER_NAME=oms_postgres_legacy
+
+./sync-production-data.sh
+```
+
+### Data Volume Reference
+
+| Table | Expected Records |
+|-------|-----------------|
+| orders | ~48,142 |
+| customers | ~27,279 |
+| orders_info | ~1,098,273 |
+| fitters | ~282 |
+| credentials | ~360 |
+| saddles | ~109 |
+| options_items | ~887 |
+| role | 6 |
 
 ---
 

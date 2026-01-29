@@ -24,6 +24,9 @@ export function useEntities<T = any>({ entity, page = 1, partial = true, orderBy
         let items: T[] = [];
         if (res['hydra:member']) {
           items = res['hydra:member'];
+        } else if (res.data && Array.isArray(res.data)) {
+          // Handle NestJS standard response format { data: [...], total, pages }
+          items = res.data;
         } else if (Array.isArray(res)) {
           items = res;
         }

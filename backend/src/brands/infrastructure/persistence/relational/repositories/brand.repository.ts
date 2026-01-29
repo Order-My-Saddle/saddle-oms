@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, IsNull } from "typeorm";
+import { Repository } from "typeorm";
 import { BrandEntity } from "../entities/brand.entity";
 import { IBrandRepository } from "../../../../domain/brand.repository";
 import { Brand } from "../../../../domain/brand";
@@ -10,6 +10,8 @@ import { BrandMapper } from "../mappers/brand.mapper";
  * Brand Repository Implementation
  *
  * Implements the domain repository interface using TypeORM
+ * Note: The production brands table has no soft-delete column,
+ * so all methods operate on all records.
  */
 @Injectable()
 export class BrandRepository implements IBrandRepository {
@@ -21,10 +23,7 @@ export class BrandRepository implements IBrandRepository {
 
   async findById(id: number): Promise<Brand | null> {
     const entity = await this.repository.findOne({
-      where: {
-        id,
-        deletedAt: IsNull(),
-      },
+      where: { id },
     });
 
     return entity ? this.mapper.toDomain(entity) : null;
@@ -32,10 +31,7 @@ export class BrandRepository implements IBrandRepository {
 
   async findByName(name: string): Promise<Brand | null> {
     const entity = await this.repository.findOne({
-      where: {
-        name,
-        deletedAt: IsNull(),
-      },
+      where: { name },
     });
 
     return entity ? this.mapper.toDomain(entity) : null;
@@ -43,12 +39,7 @@ export class BrandRepository implements IBrandRepository {
 
   async findByStatus(): Promise<Brand[]> {
     const entities = await this.repository.find({
-      where: {
-        deletedAt: IsNull(),
-      },
-      order: {
-        name: "ASC",
-      },
+      order: { name: "ASC" },
     });
 
     return this.mapper.toDomainArray(entities);
@@ -72,16 +63,14 @@ export class BrandRepository implements IBrandRepository {
   }
 
   async delete(id: number): Promise<void> {
-    await this.repository.update({ id }, { deletedAt: new Date() });
+    await this.repository.delete({ id });
   }
 
   async findAll(filters?: { name?: string }): Promise<Brand[]> {
-    const queryBuilder = this.repository
-      .createQueryBuilder("brand")
-      .where("brand.deletedAt IS NULL");
+    const queryBuilder = this.repository.createQueryBuilder("brand");
 
     if (filters?.name) {
-      queryBuilder.andWhere("brand.name ILIKE :name", {
+      queryBuilder.where("brand.name ILIKE :name", {
         name: `%${filters.name}%`,
       });
     }
@@ -94,33 +83,20 @@ export class BrandRepository implements IBrandRepository {
 
   async existsByName(name: string): Promise<boolean> {
     const count = await this.repository.count({
-      where: {
-        name,
-        deletedAt: IsNull(),
-      },
+      where: { name },
     });
     return count > 0;
   }
 
   async findActiveBrands(): Promise<Brand[]> {
     const entities = await this.repository.find({
-      where: {
-        // status: BrandStatus.ACTIVE, // Entity doesn't have status field
-        deletedAt: IsNull(),
-      },
-      order: {
-        name: "ASC",
-      },
+      order: { name: "ASC" },
     });
 
     return this.mapper.toDomainArray(entities);
   }
 
   async countByStatus(): Promise<number> {
-    return this.repository.count({
-      where: {
-        deletedAt: IsNull(),
-      },
-    });
+    return this.repository.count();
   }
 }

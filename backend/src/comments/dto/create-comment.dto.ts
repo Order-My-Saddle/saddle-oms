@@ -67,5 +67,4 @@ export class CreateCommentDto {
   @IsOptional()
   @IsBoolean()
   isInternal?: boolean;
-
 }

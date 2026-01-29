@@ -23,23 +23,20 @@ export class CustomerMapper {
       entity.id = idValue;
     }
 
-    entity.email = customer.email?.value ?? undefined;
+    entity.email = customer.email?.value ?? "";
     entity.name = customer.name;
-    entity.horseName = customer.horseName ?? undefined;
-    entity.company = customer.company ?? undefined;
-    entity.address = customer.address ?? undefined;
-    entity.city = customer.city ?? undefined;
-    entity.state = customer.state ?? undefined;
-    entity.zipcode = customer.zipcode ?? undefined;
-    entity.country = customer.country ?? undefined;
-    entity.phoneNo = customer.phoneNo ?? undefined;
-    entity.cellNo = customer.cellNo ?? undefined;
-    entity.bankAccountNumber = customer.bankAccountNumber ?? undefined;
-    entity.fitterId = customer.fitterId ?? undefined;
+    entity.horseName = customer.horseName ?? "";
+    entity.company = customer.company ?? "";
+    entity.address = customer.address ?? "";
+    entity.city = customer.city ?? "";
+    entity.state = customer.state ?? "";
+    entity.zipcode = customer.zipcode ?? "";
+    entity.country = customer.country ?? "";
+    entity.phoneNo = customer.phoneNo ?? "";
+    entity.cellNo = customer.cellNo ?? "";
+    entity.bankAccountNumber = customer.bankAccountNumber ?? "";
+    entity.fitterId = customer.fitterId ?? 0;
     entity.deleted = customer.deleted;
-    entity.status = customer.status;
-    entity.createdAt = customer.createdAt;
-    entity.updatedAt = customer.updatedAt;
 
     return entity;
   }
@@ -51,18 +48,18 @@ export class CustomerMapper {
     return Customer.create(
       CustomerId.fromNumber(entity.id),
       entity.name,
-      entity.email,
-      entity.horseName,
-      entity.company,
-      entity.address,
-      entity.city,
-      entity.state,
-      entity.zipcode,
-      entity.country,
-      entity.phoneNo,
-      entity.cellNo,
-      entity.bankAccountNumber,
-      entity.fitterId,
+      entity.email || undefined,
+      entity.horseName || undefined,
+      entity.company || undefined,
+      entity.address || undefined,
+      entity.city || undefined,
+      entity.state || undefined,
+      entity.zipcode || undefined,
+      entity.country || undefined,
+      entity.phoneNo || undefined,
+      entity.cellNo || undefined,
+      entity.bankAccountNumber || undefined,
+      entity.fitterId || undefined,
     );
   }
 
@@ -87,22 +84,20 @@ export class CustomerMapper {
     entity: CustomerEntity,
     customer: Customer,
   ): CustomerEntity {
-    entity.email = customer.email?.value ?? undefined;
+    entity.email = customer.email?.value ?? "";
     entity.name = customer.name;
-    entity.horseName = customer.horseName ?? undefined;
-    entity.company = customer.company ?? undefined;
-    entity.address = customer.address ?? undefined;
-    entity.city = customer.city ?? undefined;
-    entity.state = customer.state ?? undefined;
-    entity.zipcode = customer.zipcode ?? undefined;
-    entity.country = customer.country ?? undefined;
-    entity.phoneNo = customer.phoneNo ?? undefined;
-    entity.cellNo = customer.cellNo ?? undefined;
-    entity.bankAccountNumber = customer.bankAccountNumber ?? undefined;
-    entity.fitterId = customer.fitterId ?? undefined;
+    entity.horseName = customer.horseName ?? "";
+    entity.company = customer.company ?? "";
+    entity.address = customer.address ?? "";
+    entity.city = customer.city ?? "";
+    entity.state = customer.state ?? "";
+    entity.zipcode = customer.zipcode ?? "";
+    entity.country = customer.country ?? "";
+    entity.phoneNo = customer.phoneNo ?? "";
+    entity.cellNo = customer.cellNo ?? "";
+    entity.bankAccountNumber = customer.bankAccountNumber ?? "";
+    entity.fitterId = customer.fitterId ?? 0;
     entity.deleted = customer.deleted;
-    entity.status = customer.status;
-    entity.updatedAt = customer.updatedAt;
 
     return entity;
   }

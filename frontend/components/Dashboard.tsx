@@ -16,18 +16,17 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { getFitterName, getCustomerName, getSupplierName, getStatus, getUrgent, getDate } from '../utils/orderHydration';
 import { getOrderTableColumns } from '../utils/orderTableColumns';
 import { seatSizes, statuses } from '../utils/orderConstants';
-import { 
-  buildOrderFilters, 
-  extractDynamicSeatSizes, 
-  processDashboardOrders, 
-  processSupplierData,
-  fetchCompleteOrderData 
+import {
+  buildOrderFilters,
+  extractDynamicSeatSizes,
+  extractDynamicFactories,
+  processDashboardOrders,
+  fetchCompleteOrderData
 } from '../utils/orderProcessing';
 import { getOrderStatusStats } from '../services/dashboard';
 import { getEnrichedOrders, getAllStatusValues, searchByOrderId, universalSearch } from '@/services/enrichedOrders';
 import { useDebounce } from '@/hooks/useDebounce';
 import { updateOrder } from '@/services/api';
-import { useSuppliers } from '@/hooks/useEntities';
 import DashboardOrderStatusFlow from './DashboardOrderStatusFlow';
 import Reports from '@/components/Reports';
 import { OrderDetailModal } from '@/components/shared/OrderDetailModal';
@@ -123,9 +122,6 @@ export default function Dashboard() {
 
   const refreshInterval = useRef<NodeJS.Timeout | null>(null);
   
-  // Fetch suppliers for dropdown
-  const { data: suppliersData } = useSuppliers({ partial: true });
-  const suppliers = processSupplierData(suppliersData);
 
   useEffect(() => {
     // Load status stats
@@ -315,6 +311,11 @@ export default function Dashboard() {
     return extractDynamicSeatSizes(orders);
   }, [orders]);
 
+  // Extract unique factory names from orders for filter dropdown
+  const dynamicFactories = React.useMemo(() => {
+    return extractDynamicFactories(orders);
+  }, [orders]);
+
   const columns = getOrderTableColumns(
     headerFilters, 
     (key, value) => {
@@ -322,7 +323,7 @@ export default function Dashboard() {
       // Reset to page 1 when filters change
       setCurrentPage(1);
     },
-    suppliers,
+    dynamicFactories,
     dynamicSeatSizes
   );
 
@@ -503,13 +504,14 @@ export default function Dashboard() {
 
         <TabsContent value="all-orders" className="space-y-4">
           {/* Order Status Overview */}
-          <DashboardOrderStatusFlow 
+          <DashboardOrderStatusFlow
             onStatusClick={key => {
               console.log('Dashboard: Status flow clicked with key:', key);
               setHeaderFilters(f => ({...f, status: key}));
               setCurrentPage(1); // Reset to page 1 when status filter changes
             }}
             onTotalOrders={setTotalOrders}
+            selectedStatus={headerFilters.status || ''}
           />
 
           {/* All Orders header - clickable to reset filters */}

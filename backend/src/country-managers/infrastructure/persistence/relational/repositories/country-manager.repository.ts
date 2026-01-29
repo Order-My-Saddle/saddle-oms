@@ -45,7 +45,6 @@ export class CountryManagerRepository {
     });
   }
 
-
   /**
    * Find all country managers with optional filters
    */
@@ -74,7 +73,6 @@ export class CountryManagerRepository {
         isActive: filters.isActive,
       });
     }
-
 
     return await queryBuilder.getMany();
   }
@@ -108,7 +106,6 @@ export class CountryManagerRepository {
       relations: ["user"],
     });
   }
-
 
   /**
    * Update country manager
@@ -152,5 +149,4 @@ export class CountryManagerRepository {
       where: { isActive: false },
     });
   }
-
 }

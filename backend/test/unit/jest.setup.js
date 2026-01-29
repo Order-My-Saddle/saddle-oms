@@ -22,54 +22,13 @@ jest.mock('@nestjs/cache-manager', () => ({
   CACHE_MANAGER: 'CACHE_MANAGER',
 }));
 
-// Mock TypeORM decorators to avoid metadata issues in tests
-jest.mock('typeorm', () => {
-  const actual = jest.requireActual('typeorm');
-  return {
-    ...actual,
-    Entity: () => (target) => target,
-    Column: () => (target, propertyKey) => target,
-    PrimaryGeneratedColumn: () => (target, propertyKey) => target,
-    PrimaryColumn: () => (target, propertyKey) => target,
-    CreateDateColumn: () => (target, propertyKey) => target,
-    UpdateDateColumn: () => (target, propertyKey) => target,
-    DeleteDateColumn: () => (target, propertyKey) => target,
-    VersionColumn: () => (target, propertyKey) => target,
-    OneToMany: () => (target, propertyKey) => target,
-    ManyToOne: () => (target, propertyKey) => target,
-    ManyToMany: () => (target, propertyKey) => target,
-    OneToOne: () => (target, propertyKey) => target,
-    JoinColumn: () => (target, propertyKey) => target,
-    JoinTable: () => (target, propertyKey) => target,
-    Index: () => (target) => target,
-    Unique: () => (target) => target,
-    Check: () => (target) => target,
-  };
-});
+// Note: We intentionally do NOT mock TypeORM decorators here.
+// The mocked property decorators cause properties to become read-only,
+// breaking entity constructors. The actual TypeORM decorators work fine in tests.
 
-// Mock NestJS decorators
-jest.mock('@nestjs/common', () => {
-  const actual = jest.requireActual('@nestjs/common');
-  return {
-    ...actual,
-    Injectable: () => (target) => target,
-    Controller: () => (target) => target,
-    Module: () => (target) => target,
-    Get: () => (target, propertyKey, descriptor) => descriptor,
-    Post: () => (target, propertyKey, descriptor) => descriptor,
-    Put: () => (target, propertyKey, descriptor) => descriptor,
-    Delete: () => (target, propertyKey, descriptor) => descriptor,
-    Patch: () => (target, propertyKey, descriptor) => descriptor,
-    Param: () => (target, propertyKey, parameterIndex) => target,
-    Body: () => (target, propertyKey, parameterIndex) => target,
-    Query: () => (target, propertyKey, parameterIndex) => target,
-    Headers: () => (target, propertyKey, parameterIndex) => target,
-    UseGuards: () => (target, propertyKey, descriptor) => descriptor,
-    UseInterceptors: () => (target, propertyKey, descriptor) => descriptor,
-    UsePipes: () => (target, propertyKey, descriptor) => descriptor,
-    UseFilters: () => (target, propertyKey, descriptor) => descriptor,
-  };
-});
+// Note: We intentionally do NOT mock @nestjs/common here.
+// Mocking Injectable/Inject breaks NestJS dependency injection in tests.
+// The Test.createTestingModule() needs the real decorators to work properly.
 
 // Mock behavior decorators - commented out until decorators are implemented
 // jest.mock('../../../src/behaviors/decorators', () => ({

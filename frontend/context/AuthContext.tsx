@@ -192,9 +192,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error('No user ID in token');
       }
 
-      // Validate userId format (should be a positive integer)
+      // Validate userId format (supports both UUID and positive integer)
+      const userIdStr = String(userId);
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userIdStr);
       const numericId = Number(userId);
-      if (isNaN(numericId) || numericId <= 0 || !Number.isInteger(numericId)) {
+      const isValidInteger = !isNaN(numericId) && numericId > 0 && Number.isInteger(numericId);
+
+      if (!isValidUUID && !isValidInteger) {
         throw new Error('Invalid user ID format');
       }
 
@@ -302,28 +306,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           };
         } catch (fetchError) {
           console.error('❌ AuthContext: Failed to fetch user data after login:', fetchError);
-          
+
           // Fallback: create user from token data if fetch fails
           console.log('🔄 AuthContext: Using fallback user data from token...');
 
+          // Decode token to get roles
+          const decoded = jwt.decode(result.token) as { id?: string | number; roles?: string[]; username?: string; name?: string };
+          console.log('🔄 AuthContext: Decoded token for fallback:', decoded);
+
           // Map name to firstName/lastName if available
-          const fallbackNameParts = (result.user?.name || '').split(' ').filter(part => part.length > 0);
+          const fallbackNameParts = (result.user?.name || decoded?.name || '').split(' ').filter(part => part.length > 0);
           const fallbackFirstName = fallbackNameParts[0] || result.user?.firstName || '';
           const fallbackLastName = fallbackNameParts.slice(1).join(' ') || result.user?.lastName || '';
 
+          // Use roles from decoded token if available
+          const userRole = decoded?.roles ? mapRolesToPrimary(decoded.roles) : mapTypeNameToRole(result.user?.role || 'user');
+          console.log('🔄 AuthContext: Fallback role from token:', userRole);
+
           const userData: User = {
-            id: Number(result.userId) || 0,
-            username: result.user?.username || username,
-            role: mapTypeNameToRole(result.user?.role || 'user'),
+            id: result.userId || decoded?.id || 0,
+            username: result.user?.username || decoded?.username || username,
+            role: userRole,
             email: result.user?.email,
             firstName: fallbackFirstName,
             lastName: fallbackLastName,
           };
-          
+
           console.log('🔄 AuthContext: Setting fallback user data:', userData);
           setUser(userData);
-          
-          return { 
+
+          return {
             success: true,
             message: 'Login successful',
             user: userData
@@ -384,43 +396,56 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
 function mapTypeNameToRole(typeName: string): UserRole {
   console.log('🔍 mapTypeNameToRole: input typeName:', typeName);
-  
-  switch (typeName) {
+
+  // Normalize to lowercase for comparison
+  const normalized = typeName.toLowerCase();
+
+  switch (normalized) {
+    // Handle lowercase names from backend
+    case 'admin': return UserRole.ADMIN;
+    case 'fitter': return UserRole.FITTER;
+    case 'factory': return UserRole.SUPPLIER; // Backend "factory" = Frontend "SUPPLIER"
+    case 'supplier': return UserRole.SUPPLIER;
+    case 'supervisor': return UserRole.SUPERVISOR;
+    case 'user': return UserRole.USER;
+    case 'customsaddler': return UserRole.USER; // Map customsaddler to USER
+    // Handle capitalized names
     case 'Admin': return UserRole.ADMIN;
     case 'Fitter': return UserRole.FITTER;
     case 'Supplier': return UserRole.SUPPLIER;
     case 'Supervisor': return UserRole.SUPERVISOR;
     case 'User': return UserRole.USER;
     // Handle ROLE_ prefixed values
-    case 'ROLE_ADMIN': return UserRole.ADMIN;
-    case 'ROLE_FITTER': return UserRole.FITTER;
-    case 'ROLE_SUPPLIER': return UserRole.SUPPLIER;
-    case 'ROLE_SUPERVISOR': return UserRole.SUPERVISOR;
-    case 'ROLE_USER': return UserRole.USER;
-    default: 
+    case 'role_admin': return UserRole.ADMIN;
+    case 'role_fitter': return UserRole.FITTER;
+    case 'role_supplier': return UserRole.SUPPLIER;
+    case 'role_supervisor': return UserRole.SUPERVISOR;
+    case 'role_user': return UserRole.USER;
+    default:
       console.log('🔍 mapTypeNameToRole: no match found, defaulting to USER');
       return UserRole.USER;
   }
 }
 
 function mapRolesToPrimary(roles: string[]): UserRole {
-  // Priority order: SUPERVISOR > ADMIN > FITTER > SUPPLIER > USER
-  const roleMap = {
+  // Priority order: SUPERVISOR > ADMIN > FITTER > SUPPLIER/FACTORY > USER
+  const roleMap: Record<string, UserRole> = {
     'ROLE_SUPERVISOR': UserRole.SUPERVISOR,
     'ROLE_ADMIN': UserRole.ADMIN,
     'ROLE_FITTER': UserRole.FITTER,
     'ROLE_SUPPLIER': UserRole.SUPPLIER,
+    'ROLE_FACTORY': UserRole.SUPPLIER, // Backend sends ROLE_FACTORY, map to SUPPLIER
     'ROLE_USER': UserRole.USER,
   };
-  
-  const priority = ['ROLE_SUPERVISOR', 'ROLE_ADMIN', 'ROLE_FITTER', 'ROLE_SUPPLIER', 'ROLE_USER'];
-  
+
+  const priority = ['ROLE_SUPERVISOR', 'ROLE_ADMIN', 'ROLE_FITTER', 'ROLE_SUPPLIER', 'ROLE_FACTORY', 'ROLE_USER'];
+
   for (const role of priority) {
     if (roles.includes(role)) {
-      return roleMap[role as keyof typeof roleMap];
+      return roleMap[role] || UserRole.USER;
     }
   }
-  
+
   return UserRole.USER;
 }
 

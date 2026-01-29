@@ -123,7 +123,9 @@ describe("Migrated Data API Validation (E2E)", () => {
       const dbCount = parseInt(dbResult[0].count);
 
       // Get list from API (limited)
-      const apiResponse = await authRequest().get("/api/v1/customers?limit=100");
+      const apiResponse = await authRequest().get(
+        "/api/v1/customers?limit=100",
+      );
 
       if (apiResponse.status === 200) {
         console.log(`Database customers: ${dbCount}`);
@@ -243,9 +245,7 @@ describe("Migrated Data API Validation (E2E)", () => {
     it("should support order search", async () => {
       if (!authToken) return;
 
-      const response = await authRequest().get(
-        "/api/v1/orders/search?limit=5",
-      );
+      const response = await authRequest().get("/api/v1/orders/search?limit=5");
 
       if (response.status === 200) {
         expect(response.body).toHaveProperty("orders");
@@ -338,7 +338,11 @@ describe("Migrated Data API Validation (E2E)", () => {
         // { name: "Presets", url: "/api/v1/presets", countPath: "length" }, // Disabled
         { name: "Factories", url: "/api/v1/factories", countPath: "length" },
         { name: "Fitters", url: "/api/v1/fitters", countPath: "length" },
-        { name: "Customers", url: "/api/v1/customers?limit=1", countPath: "length" },
+        {
+          name: "Customers",
+          url: "/api/v1/customers?limit=1",
+          countPath: "length",
+        },
         { name: "Orders", url: "/api/v1/orders?limit=1", countPath: "length" },
       ];
 
@@ -365,9 +369,7 @@ describe("Migrated Data API Validation (E2E)", () => {
             `${endpoint.name.padEnd(24)} | ${status.toString().padEnd(6)} | ${count}`,
           );
         } catch {
-          console.log(
-            `${endpoint.name.padEnd(24)} | ERROR  | -`,
-          );
+          console.log(`${endpoint.name.padEnd(24)} | ERROR  | -`);
         }
       }
 

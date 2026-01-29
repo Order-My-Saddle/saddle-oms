@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner } from "typeorm";
 
 /**
  * CreateCommentTable Migration
@@ -16,7 +16,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * - status_change: Status transition notes
  */
 export class CreateCommentTable1737100000000 implements MigrationInterface {
-  name = 'CreateCommentTable1737100000000';
+  name = "CreateCommentTable1737100000000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // ========================================
@@ -105,7 +105,7 @@ export class CreateCommentTable1737100000000 implements MigrationInterface {
       COMMENT ON COLUMN "comment"."is_internal" IS 'Whether this comment is visible only to internal staff'
     `);
 
-    console.log('✅ Comment table created with 7 indexes and FK constraints');
+    console.log("✅ Comment table created with 7 indexes and FK constraints");
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -127,7 +127,9 @@ export class CreateCommentTable1737100000000 implements MigrationInterface {
 
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_comment_deleted_at"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_comment_created_at"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "IDX_comment_order_internal"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_comment_order_internal"`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_comment_order_created"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_comment_type"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "IDX_comment_user_id"`);
@@ -139,6 +141,6 @@ export class CreateCommentTable1737100000000 implements MigrationInterface {
 
     await queryRunner.query(`DROP TABLE IF EXISTS "comment"`);
 
-    console.log('✅ Comment table removed');
+    console.log("✅ Comment table removed");
   }
 }

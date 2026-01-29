@@ -157,13 +157,17 @@ export class CacheMetricsService {
     try {
       const stats = await this.cacheService.getCacheStats();
 
-      // Check multiple health indicators
+      // Require minimum operations before evaluating hit rate health
+      // This prevents false alerts during startup/warmup period
+      const minOperationsForHealthCheck = 100;
       const hitRateHealth =
-        stats.hitRate >= this.hitRateTarget
-          ? "healthy"
-          : stats.hitRate >= this.hitRateTarget * 0.8
-            ? "degraded"
-            : "unhealthy";
+        stats.totalOperations < minOperationsForHealthCheck
+          ? "healthy" // Not enough data yet, assume healthy
+          : stats.hitRate >= this.hitRateTarget
+            ? "healthy"
+            : stats.hitRate >= this.hitRateTarget * 0.8
+              ? "degraded"
+              : "unhealthy";
 
       const memoryHealth = stats.memoryUsage
         ? stats.memoryUsage < 1000000000
@@ -298,8 +302,12 @@ export class CacheMetricsService {
 
   private async checkAlerts(metrics: CacheMetrics): Promise<void> {
     await Promise.resolve();
-    // Hit rate alert
-    if (metrics.hitRate < this.hitRateTarget * 0.8) {
+    // Hit rate alert - only if we have enough operations to be statistically meaningful
+    const minOperationsForAlert = 100;
+    if (
+      metrics.totalOperations >= minOperationsForAlert &&
+      metrics.hitRate < this.hitRateTarget * 0.8
+    ) {
       this.addAlert(
         "hit_rate_low",
         metrics.hitRate < this.hitRateTarget * 0.6 ? "critical" : "warning",
@@ -319,8 +327,11 @@ export class CacheMetricsService {
       );
     }
 
-    // Overall health alert
-    if (metrics.healthChecks.overall === "unhealthy") {
+    // Overall health alert - only after warmup period
+    if (
+      metrics.totalOperations >= minOperationsForAlert &&
+      metrics.healthChecks.overall === "unhealthy"
+    ) {
       this.addAlert(
         "connection_error",
         "critical",

@@ -39,8 +39,18 @@ export const orderFilterSchema = z.object({
     .max(20, 'Order ID must be less than 20 characters')
     .regex(/^\d*$/, 'Order ID must be a number')
     .optional(),
+  orderId: z.string()
+    .max(20, 'Order ID must be less than 20 characters')
+    .regex(/^\d*$/, 'Order ID must be a number')
+    .optional(),
+  searchTerm: z.string()
+    .max(255, 'Search term must be less than 255 characters')
+    .optional(),
   reference: z.string()
     .max(255, 'Reference must be less than 255 characters')
+    .optional(),
+  saddle: z.string()
+    .max(255, 'Saddle must be less than 255 characters')
     .optional(),
   customer: z.string()
     .max(255, 'Customer name must be less than 255 characters')
@@ -50,6 +60,9 @@ export const orderFilterSchema = z.object({
     .optional(),
   factory: z.string()
     .max(255, 'Factory name must be less than 255 characters')
+    .optional(),
+  supplier: z.string()
+    .max(255, 'Supplier name must be less than 255 characters')
     .optional(),
   status: z.string()
     .max(50, 'Status must be less than 50 characters')

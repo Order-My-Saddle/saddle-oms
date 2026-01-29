@@ -35,65 +35,100 @@ export class UsersService {
   ) {}
 
   /**
-   * Determine user role based on business logic
-   * - Check if user is in fitter table → Fitter role
-   * - Check for admin usernames → Admin/SuperAdmin role
-   * - Default to User role
+   * Determine user role based on database fields (user_type and supervisor)
+   * from the credentials table.
+   *
+   * Priority:
+   * 1. supervisor=1 → supervisor role
+   * 2. user_type=2 → admin role
+   * 3. user_type=3 → factory role
+   * 4. user_type=4 → customsaddler role
+   * 5. user_type=1 → verify in fitters table → fitter role
+   * 6. Fallback: check fitters table for legacy cases
+   * 7. Default: user role
+   *
+   * @param userId - The user's ID (used for fitter table lookup)
+   * @param username - The username (unused, kept for backwards compatibility)
+   * @param userType - The user_type from credentials table
+   * @param isSupervisor - The supervisor flag from credentials table
    */
   async getUserRole(
     userId: number,
     username?: string,
+    userType?: number | null,
+    isSupervisor?: number | null,
   ): Promise<{ id: number; name: string }> {
-    // Define admin user patterns
-    const superAdminUsernames = ["sadmin", "superadmin"];
-    const adminUsernames = ["admin", "techadmin"];
-    const adminUsernamePatterns = ["admin"]; // usernames containing 'admin'
-
-    // Check for SuperAdmin
-    if (username && superAdminUsernames.includes(username.toLowerCase())) {
+    // Priority 1: Check supervisor flag from database
+    if (isSupervisor === 1) {
       const role = await this.roleRepository.findOne({
-        where: { name: "SuperAdmin" },
+        where: { name: "supervisor" },
       });
       return role && role.name
         ? { id: role.id, name: role.name }
-        : { id: 1, name: "SuperAdmin" };
+        : { id: RoleEnum.supervisor, name: "supervisor" };
     }
 
-    // Check for Admin (exact match or contains 'admin')
-    if (username) {
-      const isAdmin =
-        adminUsernames.includes(username.toLowerCase()) ||
-        adminUsernamePatterns.some((pattern) =>
-          username.toLowerCase().includes(pattern),
-        );
-      if (isAdmin) {
-        const role = await this.roleRepository.findOne({
-          where: { name: "Admin" },
-        });
-        return role && role.name
-          ? { id: role.id, name: role.name }
-          : { id: 1, name: "Admin" };
+    // Priority 2: Use user_type from database
+    if (userType !== undefined && userType !== null) {
+      switch (userType) {
+        case 2: // admin
+          const adminRole = await this.roleRepository.findOne({
+            where: { name: "admin" },
+          });
+          return adminRole && adminRole.name
+            ? { id: adminRole.id, name: adminRole.name }
+            : { id: RoleEnum.admin, name: "admin" };
+
+        case 3: // factory
+          const factoryRole = await this.roleRepository.findOne({
+            where: { name: "factory" },
+          });
+          return factoryRole && factoryRole.name
+            ? { id: factoryRole.id, name: factoryRole.name }
+            : { id: RoleEnum.factory, name: "factory" };
+
+        case 4: // customsaddler
+          const customsaddlerRole = await this.roleRepository.findOne({
+            where: { name: "customsaddler" },
+          });
+          return customsaddlerRole && customsaddlerRole.name
+            ? { id: customsaddlerRole.id, name: customsaddlerRole.name }
+            : { id: RoleEnum.customsaddler, name: "customsaddler" };
+
+        case 1: // fitter - verify in fitters table
+          const fitterForType = await this.fitterRepository.findOne({
+            where: { userId: userId },
+          });
+          if (fitterForType) {
+            const fitterRole = await this.roleRepository.findOne({
+              where: { name: "fitter" },
+            });
+            return fitterRole && fitterRole.name
+              ? { id: fitterRole.id, name: fitterRole.name }
+              : { id: RoleEnum.fitter, name: "fitter" };
+          }
+          break;
       }
     }
 
-    // Check if user is a fitter
+    // Fallback: Check fitters table for legacy cases (when userType is not set)
     const fitter = await this.fitterRepository.findOne({
       where: { userId: userId },
     });
     if (fitter) {
-      const role = await this.roleRepository.findOne({
-        where: { name: "Fitter" },
+      const fitterRole = await this.roleRepository.findOne({
+        where: { name: "fitter" },
       });
-      return role && role.name
-        ? { id: role.id, name: role.name }
-        : { id: 3, name: "Fitter" };
+      return fitterRole && fitterRole.name
+        ? { id: fitterRole.id, name: fitterRole.name }
+        : { id: RoleEnum.fitter, name: "fitter" };
     }
 
     // Default to User role
-    const role = await this.roleRepository.findOne({ where: { name: "User" } });
+    const role = await this.roleRepository.findOne({ where: { name: "user" } });
     return role && role.name
       ? { id: role.id, name: role.name }
-      : { id: 2, name: "User" };
+      : { id: RoleEnum.user, name: "user" };
   }
 
   async create(createUserDto: CreateUserDto): Promise<User> {

@@ -31,18 +31,25 @@ export function TableHeaderFilter({
   entityType,
 }: TableHeaderFilterProps) {
   const [open, setOpen] = useState(false);
-  const [filterValue, setFilterValue] = useState(value || '');
-  const [booleanValue, setBooleanValue] = useState(value || '');
+  // Ensure filter values are always strings, never undefined
+  const [filterValue, setFilterValue] = useState(value ?? '');
+  const [booleanValue, setBooleanValue] = useState(value ?? '');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
+  // Sync local state with prop value when it changes (including to empty string)
   useEffect(() => {
-    setFilterValue(value || '');
-    setBooleanValue(value || '');
+    // Always sync, even when value is empty string
+    const newValue = value ?? '';
+    setFilterValue(newValue);
+    setBooleanValue(newValue);
     if (type === 'date-range' && value) {
       const [from, to] = value.split(':');
       setDateFrom(from || '');
       setDateTo(to || '');
+    } else if (type === 'date-range' && !value) {
+      setDateFrom('');
+      setDateTo('');
     }
   }, [value, type]);
 
@@ -68,16 +75,18 @@ export function TableHeaderFilter({
         }
         return item as FilterOption;
       });
-      
+
       return (
-        <EnumFilter 
-          value={filterValue} 
-          onChange={val => { 
-            setFilterValue(val); 
-            onFilter(val); 
-            setOpen(false); 
-          }} 
-          options={options as FilterOption[]} 
+        <EnumFilter
+          value={filterValue}
+          onChange={val => {
+            // Ensure empty string is properly handled for "All" selection
+            const newValue = val ?? '';
+            setFilterValue(newValue);
+            onFilter(newValue);
+            setOpen(false);
+          }}
+          options={options as FilterOption[]}
         />
       );
     }

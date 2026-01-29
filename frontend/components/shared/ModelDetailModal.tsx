@@ -1,9 +1,12 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Model } from '@/services/models';
 import { Button } from '@/components/ui/button';
+import { fetchFactories, Factory, createFactoryLookup } from '@/services/factories';
+import { getSaddleTypeLabel, FACTORY_REGIONS, FACTORY_REGION_KEYS, FactoryRegionKey } from '@/utils/saddleConstants';
+import { Loader2 } from 'lucide-react';
 
 interface ModelDetailModalProps {
   model: Model | null;
@@ -13,29 +16,59 @@ interface ModelDetailModalProps {
 }
 
 export function ModelDetailModal({ model, isOpen, onClose, onEdit }: ModelDetailModalProps) {
+  const [factories, setFactories] = useState<Factory[]>([]);
+  const [factoryLookup, setFactoryLookup] = useState<Map<number, string>>(new Map());
+  const [loadingFactories, setLoadingFactories] = useState(false);
+
+  // Load factories when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      loadFactories();
+    }
+  }, [isOpen]);
+
+  const loadFactories = async () => {
+    setLoadingFactories(true);
+    try {
+      const data = await fetchFactories();
+      const factoryList = data['hydra:member'] || [];
+      setFactories(factoryList);
+      setFactoryLookup(createFactoryLookup(factoryList));
+    } catch (error) {
+      console.error('Error loading factories:', error);
+    } finally {
+      setLoadingFactories(false);
+    }
+  };
+
+  const getFactoryName = (factoryId?: number): string => {
+    if (factoryId === undefined || factoryId === null || factoryId === 0) return '-';
+    return factoryLookup.get(factoryId) || `Factory #${factoryId}`;
+  };
+
   if (!model) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Model Details - {model.name}</DialogTitle>
+          <DialogTitle>Saddle Details - {model.name}</DialogTitle>
           <DialogDescription>
-            View saddle model information and details.
+            View saddle information and details.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-1 gap-6 mt-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block font-semibold text-sm text-gray-600 mb-1">Model ID</label>
+              <label className="block font-semibold text-sm text-gray-600 mb-1">Saddle ID</label>
               <p className="text-sm text-gray-900 p-2 bg-gray-50 rounded border">
                 {model.id}
               </p>
             </div>
 
             <div>
-              <label className="block font-semibold text-sm text-gray-600 mb-1">Model Name</label>
+              <label className="block font-semibold text-sm text-gray-600 mb-1">Saddle Name</label>
               <p className="text-sm text-gray-900 p-2 bg-gray-50 rounded border">
                 {model.name || '-'}
               </p>
@@ -58,15 +91,51 @@ export function ModelDetailModal({ model, isOpen, onClose, onEdit }: ModelDetail
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block font-semibold text-sm text-gray-600 mb-1">Status</label>
+              <p className={`text-sm p-2 rounded border inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                model.active
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {model.active ? 'Active' : 'Inactive'}
+              </p>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-sm text-gray-600 mb-1">Type</label>
+              <p className="text-sm text-gray-900 p-2 bg-gray-50 rounded border">
+                {getSaddleTypeLabel(model.type)}
+              </p>
+            </div>
+          </div>
+
+          {/* Factory Assignments Section */}
           <div>
-            <label className="block font-semibold text-sm text-gray-600 mb-1">Status</label>
-            <p className={`text-sm p-2 rounded border inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-              model.active
-                ? 'bg-green-100 text-green-800'
-                : 'bg-red-100 text-red-800'
-            }`}>
-              {model.active ? 'Active' : 'Inactive'}
-            </p>
+            <label className="block font-semibold text-sm text-gray-600 mb-2">Factory Assignments</label>
+            {loadingFactories ? (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading factories...
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {FACTORY_REGION_KEYS.map((key) => {
+                  const factoryId = model[key as keyof Model] as number | undefined;
+                  return (
+                    <div key={key} className="bg-gray-50 rounded border p-2">
+                      <span className="text-xs font-medium text-gray-500 block">
+                        {FACTORY_REGIONS[key]}
+                      </span>
+                      <span className="text-sm text-gray-900 truncate block" title={getFactoryName(factoryId)}>
+                        {getFactoryName(factoryId)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {(model.createdAt || model.updatedAt) && (
@@ -104,7 +173,7 @@ export function ModelDetailModal({ model, isOpen, onClose, onEdit }: ModelDetail
               onClick={onEdit}
               className="bg-[#7b2326] hover:bg-[#8b2329] text-white"
             >
-              Edit Model
+              Edit Saddle
             </Button>
           )}
         </div>

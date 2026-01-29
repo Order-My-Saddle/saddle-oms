@@ -21,8 +21,6 @@ export class BrandMapper {
       entity.id = brand.id;
     }
     entity.name = brand.name;
-    entity.createdAt = brand.createdAt || new Date();
-    entity.updatedAt = brand.updatedAt || new Date();
 
     return entity;
   }
@@ -31,13 +29,7 @@ export class BrandMapper {
    * Convert persistence entity to domain entity
    */
   public toDomain(entity: BrandEntity): Brand {
-    return new Brand(
-      entity.id,
-      entity.name,
-      entity.createdAt,
-      entity.updatedAt,
-      entity.deletedAt,
-    );
+    return new Brand(entity.id, entity.name);
   }
 
   /**
@@ -59,8 +51,6 @@ export class BrandMapper {
    */
   public updateEntity(entity: BrandEntity, brand: Brand): BrandEntity {
     entity.name = brand.name;
-    entity.updatedAt = brand.updatedAt || new Date();
-
     return entity;
   }
 }

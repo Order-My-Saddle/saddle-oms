@@ -118,8 +118,14 @@ export class FactoryDto {
   fullAddress?: string;
 
   @ApiPropertyOptional({
-    description: "Factory display name (computed)",
-    example: "Factory in New York",
+    description: "Factory display name (computed from user name or city)",
+    example: "Aiken USA",
   })
   displayName?: string;
+
+  @ApiPropertyOptional({
+    description: "Username of the factory owner",
+    example: "aikenusa",
+  })
+  username?: string;
 }

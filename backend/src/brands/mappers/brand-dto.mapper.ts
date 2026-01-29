@@ -17,9 +17,7 @@ export class BrandMapper {
 
     dto.id = brand.id;
     dto.name = brand.name;
-    dto.createdAt = brand.createdAt;
-    dto.updatedAt = brand.updatedAt;
-    dto.isActive = brand.isActive(); // Use domain method
+    dto.isActive = brand.isActive();
     dto.displayName = brand.name;
 
     return dto;

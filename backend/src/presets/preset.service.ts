@@ -27,7 +27,7 @@ export class PresetService {
   async create(createPresetDto: CreatePresetDto): Promise<PresetDto> {
     // Check if preset with this name already exists
     const existingPreset = await this.presetRepository.findOne({
-      where: { name: createPresetDto.name, deleted: false },
+      where: { name: createPresetDto.name, deleted: 0 },
     });
 
     if (existingPreset) {
@@ -45,7 +45,7 @@ export class PresetService {
    */
   async findOne(id: number): Promise<PresetDto> {
     const preset = await this.presetRepository.findOne({
-      where: { id, deleted: false },
+      where: { id, deleted: 0 },
     });
 
     if (!preset) {
@@ -63,7 +63,7 @@ export class PresetService {
     limit: number = 10,
     search?: string,
   ): Promise<{ data: PresetDto[]; total: number; pages: number }> {
-    const where: any = { deleted: false };
+    const where: any = { deleted: 0 };
 
     if (search) {
       where.name = Like(`%${search}%`);
@@ -91,7 +91,7 @@ export class PresetService {
     updatePresetDto: UpdatePresetDto,
   ): Promise<PresetDto> {
     const preset = await this.presetRepository.findOne({
-      where: { id, deleted: false },
+      where: { id, deleted: 0 },
     });
 
     if (!preset) {
@@ -101,7 +101,7 @@ export class PresetService {
     // Check for name conflicts if name is being changed
     if (updatePresetDto.name && updatePresetDto.name !== preset.name) {
       const existingPreset = await this.presetRepository.findOne({
-        where: { name: updatePresetDto.name, deleted: false },
+        where: { name: updatePresetDto.name, deleted: 0 },
       });
       if (existingPreset && existingPreset.id !== preset.id) {
         throw new ConflictException("Preset with this name already exists");
@@ -119,15 +119,14 @@ export class PresetService {
    */
   async remove(id: number): Promise<void> {
     const preset = await this.presetRepository.findOne({
-      where: { id, deleted: false },
+      where: { id, deleted: 0 },
     });
 
     if (!preset) {
       throw new NotFoundException("Preset not found");
     }
 
-    preset.deleted = true;
-    preset.deletedAt = new Date();
+    preset.deleted = 1;
     await this.presetRepository.save(preset);
   }
 
@@ -136,7 +135,7 @@ export class PresetService {
    */
   async findActivePresets(): Promise<PresetDto[]> {
     const presets = await this.presetRepository.find({
-      where: { deleted: false },
+      where: { deleted: 0 },
       order: { sequence: "ASC", name: "ASC" },
     });
 
@@ -150,7 +149,7 @@ export class PresetService {
     const dto = plainToClass(PresetDto, preset, {
       excludeExtraneousValues: true,
     });
-    dto.isActive = !preset.deleted;
+    dto.isActive = preset.deleted === 0;
     dto.displayName = preset.name;
     return dto;
   }

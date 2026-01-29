@@ -5,6 +5,7 @@ import { RoleEnum } from "../../../src/roles/roles.enum";
 
 describe("RlsService", () => {
   let service: RlsService;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let _dataSource: DataSource | undefined;
   let mockQueryRunner: any;
 

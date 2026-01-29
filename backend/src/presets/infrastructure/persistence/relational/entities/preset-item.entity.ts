@@ -1,7 +1,7 @@
 import { Entity, Index, PrimaryColumn, ManyToOne, JoinColumn } from "typeorm";
 import { PresetEntity } from "./preset.entity";
 
-@Entity("preset_items")
+@Entity("presets_items")
 @Index("preset_items_preset_index", ["presetId"])
 @Index("preset_items_options_index", ["optionsId"])
 export class PresetItemEntity {

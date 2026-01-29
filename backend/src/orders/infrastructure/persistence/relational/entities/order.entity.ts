@@ -150,14 +150,19 @@ export class OrderEntity {
   })
   measurements: Record<string, any> | null;
 
+  /**
+   * Seat sizes extracted from special_notes field.
+   * Format: ["17", "17,5"] (European decimal notation with comma)
+   * Populated via extract-seat-sizes.sh script
+   */
   @Column({
     name: "seat_sizes",
     type: "jsonb",
     nullable: true,
+    default: null,
     transformer: {
-      to: (value: string[] | null) =>
-        value && value.length > 0 ? JSON.stringify(value) : null,
-      from: (value: string | null) => {
+      to: (value: string[] | null) => value,
+      from: (value: any) => {
         if (value && typeof value === "string") {
           try {
             return JSON.parse(value);
@@ -198,6 +203,29 @@ export class OrderEntity {
   })
   isUrgent: boolean;
 
+  // Legacy boolean flags synced from production data
+  @Column({ type: "boolean", default: false })
+  rushed: boolean;
+
+  @Column({ type: "boolean", default: false })
+  repair: boolean;
+
+  @Column({ type: "boolean", default: false })
+  demo: boolean;
+
+  @Column({ type: "boolean", default: false })
+  sponsored: boolean;
+
+  @Column({ name: "fitter_stock", type: "boolean", default: false })
+  fitterStock: boolean;
+
+  @Column({ name: "custom_order", type: "boolean", default: false })
+  customOrder: boolean;
+
+  // Legacy changed timestamp (Unix timestamp)
+  @Column({ type: "bigint", nullable: true })
+  changed: number | null;
+
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 
@@ -213,7 +241,14 @@ export class OrderEntity {
     this.depositPaid = 0;
     this.balanceOwing = 0;
     this.isUrgent = false;
-    this.seatSizes = null;
     this.customerName = null;
+    // Legacy boolean flags
+    this.rushed = false;
+    this.repair = false;
+    this.demo = false;
+    this.sponsored = false;
+    this.fitterStock = false;
+    this.customOrder = false;
+    this.changed = null;
   }
 }

@@ -18,6 +18,8 @@ export interface OrderTableRow {
   seatSizes?: string[];
   name?: string;
   isUrgent?: boolean;
+  // Allow additional properties from the API response (brandName, modelName, customerName, etc.)
+  [key: string]: any;
 }
 
 export interface HeaderFilters {
@@ -80,18 +82,25 @@ export function buildOrderFilters(headerFilters: HeaderFilters): Record<string, 
     const value = validFilters[key];
     if (value && value !== '') {
       // Map frontend filter keys to API keys if needed
-      if (key === 'orderId') {
+      if (key === 'id') {
+        // ID filter - send as id for exact match
+        filters.id = value;
+      } else if (key === 'orderId') {
         filters.orderId = value;
-      } else if (key === 'reference') {
-        filters.reference = value;
+      } else if (key === 'reference' || key === 'saddle') {
+        // Saddle/reference filter - use searchTerm for general search
+        filters.searchTerm = value;
+      } else if (key === 'searchTerm') {
+        // General search term - searches across customer, factory, fitter, brand, etc.
+        filters.searchTerm = value;
       } else if (key === 'customer') {
-        filters.customerName = value;
+        filters.customer = value;
       } else if (key === 'status') {
         filters.orderStatus = value;
       } else if (key === 'fitter') {
-        filters.fitterName = value;
-      } else if (key === 'supplier') {
-        filters.supplierName = value;
+        filters.fitter = value;
+      } else if (key === 'factory' || key === 'supplier') {
+        filters.factory = value;
       } else if (key === 'urgent') {
         // Convert string boolean to actual boolean for API Platform BooleanFilter
         if (value === 'true') {
@@ -109,50 +118,128 @@ export function buildOrderFilters(headerFilters: HeaderFilters): Record<string, 
   return filters;
 }
 
-// Extract seat sizes from order reference
+// Extract seat sizes from order (handles both snake_case and camelCase)
 export function extractSeatSizes(order: any): string {
   if (!order) return '';
-  
-  // Check for seatSizes array first (from hydra response)
-  if (Array.isArray(order.seatSizes) && order.seatSizes.length > 0) {
-    return order.seatSizes.join(', ');
+
+  // Check for seat_sizes from backend (snake_case, JSONB array)
+  if (Array.isArray(order.seat_sizes) && order.seat_sizes.length > 0) {
+    return order.seat_sizes.map(normalizeSeatSize).join(', ');
   }
-  
-  // Extract from reference if available
+
+  // Check for seatSizes array (camelCase)
+  if (Array.isArray(order.seatSizes) && order.seatSizes.length > 0) {
+    return order.seatSizes.map(normalizeSeatSize).join(', ');
+  }
+
+  // Extract from reference if available (match both dot and comma notation)
   if (order.reference) {
-    const match = order.reference.match(/(\d{2}(?:\.5)?)/g);
+    const match = order.reference.match(/(\d{2}(?:[.,]5)?)/g);
     if (match && match.length > 0) {
-      return match.join(', ');
+      return match.map(normalizeSeatSize).join(', ');
     }
   }
-  
+
   // Fallback to seatSize property
   if (order.seatSize) {
     if (Array.isArray(order.seatSize)) {
-      return order.seatSize.join(', ');
+      return order.seatSize.map(normalizeSeatSize).join(', ');
     }
-    return String(order.seatSize);
+    return normalizeSeatSize(String(order.seatSize));
   }
-  
+
   return '';
+}
+
+// Normalize seat size format (European comma to dot notation for display)
+export function normalizeSeatSize(size: string): string {
+  if (!size) return '';
+  // Convert European comma notation to dot notation (17,5 -> 17.5)
+  return String(size).replace(',', '.');
+}
+
+// Extract seat sizes from text (special_notes or comments)
+export function extractSeatSizesFromText(text: string): string[] {
+  if (!text) return [];
+  const sizes: string[] = [];
+  // Match patterns like "seat size 17.5", "size 18", "17,5 seat", etc.
+  const patterns = [
+    /seat\s*size[:\s]*(\d{1,2}[.,]?\d?)/gi,
+    /size[:\s]*(\d{1,2}[.,]?\d?)/gi,
+    /(\d{1,2}[.,]5?)\s*(?:seat|inch|")/gi,
+  ];
+  for (const pattern of patterns) {
+    const matches = text.matchAll(pattern);
+    for (const match of matches) {
+      const size = match[1];
+      const numericSize = parseFloat(size.replace(',', '.'));
+      // Only include valid seat sizes (14-20 range)
+      if (numericSize >= 14 && numericSize <= 20) {
+        sizes.push(normalizeSeatSize(size));
+      }
+    }
+  }
+  return sizes;
+}
+
+// Extract unique factory names from orders array
+export function extractDynamicFactories(orders: any[]): Array<{label: string, value: string}> {
+  const factories = new Set<string>();
+
+  orders.forEach(order => {
+    // Check various factory/supplier name fields
+    const factoryName = order.factoryName || order.factory_name ||
+                       order.supplierName || order.supplier_name;
+    if (factoryName && typeof factoryName === 'string' && factoryName.trim()) {
+      factories.add(factoryName.trim());
+    } else if (order.factory) {
+      if (typeof order.factory === 'object' && order.factory.name) {
+        factories.add(order.factory.name);
+      } else if (typeof order.factory === 'string' && order.factory.trim()) {
+        factories.add(order.factory.trim());
+      }
+    } else if (order.supplier) {
+      if (typeof order.supplier === 'object' && order.supplier.name) {
+        factories.add(order.supplier.name);
+      } else if (typeof order.supplier === 'string' && order.supplier.trim()) {
+        factories.add(order.supplier.trim());
+      }
+    }
+  });
+
+  return Array.from(factories)
+    .sort((a, b) => a.localeCompare(b))
+    .map(name => ({ label: name, value: name }));
 }
 
 // Extract unique seat sizes from orders array
 export function extractDynamicSeatSizes(orders: any[]): string[] {
   const sizes = new Set<string>();
-  
+
   orders.forEach(order => {
-    if (Array.isArray(order.seatSizes)) {
-      order.seatSizes.forEach((size: any) => sizes.add(String(size)));
+    // Check seat_sizes from backend (JSONB array)
+    if (Array.isArray(order.seat_sizes) && order.seat_sizes.length > 0) {
+      order.seat_sizes.forEach((size: any) => sizes.add(normalizeSeatSize(String(size))));
+    }
+    // Check seatSizes (camelCase)
+    else if (Array.isArray(order.seatSizes) && order.seatSizes.length > 0) {
+      order.seatSizes.forEach((size: any) => sizes.add(normalizeSeatSize(String(size))));
     } else if (order.seatSize) {
-      sizes.add(String(order.seatSize));
-    } else if (order.reference) {
-      const match = order.reference.match(/(\d{2}(?:\.5)?)/g);
-      if (match) match.forEach((size: string) => sizes.add(size));
+      sizes.add(normalizeSeatSize(String(order.seatSize)));
+    }
+    // Extract from special_notes or comments
+    else if (order.special_notes || order.comments) {
+      const extracted = extractSeatSizesFromText(order.special_notes || order.comments);
+      extracted.forEach(size => sizes.add(size));
+    }
+    // Fallback to reference field
+    else if (order.reference) {
+      const match = order.reference.match(/(\d{2}(?:[.,]5)?)/g);
+      if (match) match.forEach((size: string) => sizes.add(normalizeSeatSize(size)));
     }
   });
-  
-  return Array.from(sizes).sort();
+
+  return Array.from(sizes).sort((a, b) => parseFloat(a) - parseFloat(b));
 }
 
 // Process orders for Dashboard display
@@ -191,7 +278,10 @@ export function processOrdersTableData(orders: any[]): OrderTableRow[] {
     const factoryName = getSupplierName(order) || '';
 
     // Ensure all required fields are present and correctly typed
+    // IMPORTANT: Spread original order first to preserve all API fields (brandName, modelName,
+    // customerName, fitterName, etc.) that column render functions expect
     return {
+      ...order,  // Preserve all original API fields for column render functions
       id: Number(order.id) || 0,
       reference: order.reference || '',
       seatSize: order.seatSize || '',
@@ -211,12 +301,23 @@ export function processOrdersTableData(orders: any[]): OrderTableRow[] {
   });
 }
 
-// Process supplier data for dropdown options
+// Process supplier/factory data for dropdown options
 export function processSupplierData(suppliersData: any[]): Array<{label: string, value: string}> {
-  return suppliersData.map((supplier: any) => ({
-    label: supplier.name || supplier.username || 'Unknown Supplier',
-    value: supplier.name || supplier.username || supplier.id
-  }));
+  if (!suppliersData || !Array.isArray(suppliersData)) {
+    return [];
+  }
+  return suppliersData
+    .filter((supplier: any) => supplier) // Filter out null/undefined
+    .map((supplier: any) => {
+      // Support multiple naming conventions: name, displayName, username
+      const label = supplier.name || supplier.displayName || supplier.username ||
+                   (supplier.city ? `Factory in ${supplier.city}` : null) ||
+                   'Unknown Factory';
+      return {
+        label,
+        value: supplier.name || supplier.displayName || supplier.username || String(supplier.id)
+      };
+    });
 }
 
 // Fetch complete order data by INTEGER ID

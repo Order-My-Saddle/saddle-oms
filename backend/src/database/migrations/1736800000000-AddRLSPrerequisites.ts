@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner } from "typeorm";
 
 /**
  * AddRLSPrerequisites Migration
@@ -11,7 +11,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * This migration must run BEFORE EnableRowLevelSecurity migration.
  */
 export class AddRLSPrerequisites1736800000000 implements MigrationInterface {
-  name = 'AddRLSPrerequisites1736800000000';
+  name = "AddRLSPrerequisites1736800000000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // ========================================
@@ -216,7 +216,9 @@ export class AddRLSPrerequisites1736800000000 implements MigrationInterface {
       CREATE INDEX IF NOT EXISTS idx_factory_employees_deleted_at ON factory_employees (deleted_at) WHERE deleted_at IS NOT NULL
     `);
 
-    console.log('✅ RLS prerequisites added: user view and audit columns created');
+    console.log(
+      "✅ RLS prerequisites added: user view and audit columns created",
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -224,7 +226,9 @@ export class AddRLSPrerequisites1736800000000 implements MigrationInterface {
     // 1. DROP INDEXES
     // ========================================
 
-    await queryRunner.query(`DROP INDEX IF EXISTS idx_factory_employees_deleted_at`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS idx_factory_employees_deleted_at`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS idx_factories_deleted_at`);
     await queryRunner.query(`DROP INDEX IF EXISTS idx_fitters_deleted_at`);
     await queryRunner.query(`DROP INDEX IF EXISTS idx_orders_deleted_at`);
@@ -244,51 +248,101 @@ export class AddRLSPrerequisites1736800000000 implements MigrationInterface {
     // 3. DROP AUDIT COLUMNS FROM FACTORY_EMPLOYEES TABLE
     // ========================================
 
-    await queryRunner.query(`ALTER TABLE factory_employees DROP COLUMN IF EXISTS updated_at`);
-    await queryRunner.query(`ALTER TABLE factory_employees DROP COLUMN IF EXISTS created_at`);
-    await queryRunner.query(`ALTER TABLE factory_employees DROP COLUMN IF EXISTS deleted_at`);
-    await queryRunner.query(`ALTER TABLE factory_employees DROP COLUMN IF EXISTS updated_by`);
-    await queryRunner.query(`ALTER TABLE factory_employees DROP COLUMN IF EXISTS created_by`);
+    await queryRunner.query(
+      `ALTER TABLE factory_employees DROP COLUMN IF EXISTS updated_at`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE factory_employees DROP COLUMN IF EXISTS created_at`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE factory_employees DROP COLUMN IF EXISTS deleted_at`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE factory_employees DROP COLUMN IF EXISTS updated_by`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE factory_employees DROP COLUMN IF EXISTS created_by`,
+    );
 
     // ========================================
     // 4. DROP AUDIT COLUMNS FROM FACTORIES TABLE
     // ========================================
 
-    await queryRunner.query(`ALTER TABLE factories DROP COLUMN IF EXISTS updated_at`);
-    await queryRunner.query(`ALTER TABLE factories DROP COLUMN IF EXISTS created_at`);
-    await queryRunner.query(`ALTER TABLE factories DROP COLUMN IF EXISTS deleted_at`);
-    await queryRunner.query(`ALTER TABLE factories DROP COLUMN IF EXISTS updated_by`);
-    await queryRunner.query(`ALTER TABLE factories DROP COLUMN IF EXISTS created_by`);
+    await queryRunner.query(
+      `ALTER TABLE factories DROP COLUMN IF EXISTS updated_at`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE factories DROP COLUMN IF EXISTS created_at`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE factories DROP COLUMN IF EXISTS deleted_at`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE factories DROP COLUMN IF EXISTS updated_by`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE factories DROP COLUMN IF EXISTS created_by`,
+    );
 
     // ========================================
     // 5. DROP AUDIT COLUMNS FROM FITTERS TABLE
     // ========================================
 
-    await queryRunner.query(`ALTER TABLE fitters DROP COLUMN IF EXISTS updated_at`);
-    await queryRunner.query(`ALTER TABLE fitters DROP COLUMN IF EXISTS created_at`);
-    await queryRunner.query(`ALTER TABLE fitters DROP COLUMN IF EXISTS deleted_at`);
-    await queryRunner.query(`ALTER TABLE fitters DROP COLUMN IF EXISTS updated_by`);
-    await queryRunner.query(`ALTER TABLE fitters DROP COLUMN IF EXISTS created_by`);
+    await queryRunner.query(
+      `ALTER TABLE fitters DROP COLUMN IF EXISTS updated_at`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE fitters DROP COLUMN IF EXISTS created_at`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE fitters DROP COLUMN IF EXISTS deleted_at`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE fitters DROP COLUMN IF EXISTS updated_by`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE fitters DROP COLUMN IF EXISTS created_by`,
+    );
 
     // ========================================
     // 6. DROP AUDIT COLUMNS FROM ORDERS TABLE
     // ========================================
 
-    await queryRunner.query(`ALTER TABLE orders DROP COLUMN IF EXISTS updated_at`);
-    await queryRunner.query(`ALTER TABLE orders DROP COLUMN IF EXISTS created_at`);
-    await queryRunner.query(`ALTER TABLE orders DROP COLUMN IF EXISTS deleted_at`);
-    await queryRunner.query(`ALTER TABLE orders DROP COLUMN IF EXISTS updated_by`);
-    await queryRunner.query(`ALTER TABLE orders DROP COLUMN IF EXISTS created_by`);
+    await queryRunner.query(
+      `ALTER TABLE orders DROP COLUMN IF EXISTS updated_at`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE orders DROP COLUMN IF EXISTS created_at`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE orders DROP COLUMN IF EXISTS deleted_at`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE orders DROP COLUMN IF EXISTS updated_by`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE orders DROP COLUMN IF EXISTS created_by`,
+    );
 
     // ========================================
     // 7. DROP AUDIT COLUMNS FROM CUSTOMERS TABLE
     // ========================================
 
-    await queryRunner.query(`ALTER TABLE customers DROP COLUMN IF EXISTS updated_at`);
-    await queryRunner.query(`ALTER TABLE customers DROP COLUMN IF EXISTS created_at`);
-    await queryRunner.query(`ALTER TABLE customers DROP COLUMN IF EXISTS deleted_at`);
-    await queryRunner.query(`ALTER TABLE customers DROP COLUMN IF EXISTS updated_by`);
-    await queryRunner.query(`ALTER TABLE customers DROP COLUMN IF EXISTS created_by`);
+    await queryRunner.query(
+      `ALTER TABLE customers DROP COLUMN IF EXISTS updated_at`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE customers DROP COLUMN IF EXISTS created_at`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE customers DROP COLUMN IF EXISTS deleted_at`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE customers DROP COLUMN IF EXISTS updated_by`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE customers DROP COLUMN IF EXISTS created_by`,
+    );
 
     // ========================================
     // 8. DROP USER VIEW
@@ -296,6 +350,8 @@ export class AddRLSPrerequisites1736800000000 implements MigrationInterface {
 
     await queryRunner.query(`DROP VIEW IF EXISTS "user"`);
 
-    console.log('✅ RLS prerequisites removed: user view and audit columns dropped');
+    console.log(
+      "✅ RLS prerequisites removed: user view and audit columns dropped",
+    );
   }
 }

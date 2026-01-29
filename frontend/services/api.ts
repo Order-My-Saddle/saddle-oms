@@ -339,6 +339,48 @@ export async function fetchEntities({
     });
   }
 
+  // Special handling for factories entity to map backend fields to Supplier interface
+  if (entity === 'factories' && result.data && Array.isArray(result.data)) {
+    // Transform NestJS response format to Hydra format with mapped fields
+    result['hydra:member'] = result.data.map((factory: any) => ({
+      ...factory,
+      name: factory.displayName || factory.name || `Factory ${factory.id}`,
+      email: factory.emailaddress || factory.email,
+      enabled: factory.isActive ?? true,
+      username: factory.emailaddress?.split('@')[0] || `factory${factory.id}`,
+    }));
+    result['hydra:totalItems'] = result.total || result.data.length;
+    // Remove the original data property to avoid confusion
+    delete result.data;
+  }
+
+  // Special handling for fitters entity to transform NestJS response to Hydra format
+  if (entity === 'fitters' && result.data && Array.isArray(result.data)) {
+    result['hydra:member'] = result.data.map((fitter: any) => ({
+      ...fitter,
+      name: fitter.displayName || `Fitter ${fitter.id}`,
+      email: fitter.emailaddress || fitter.email,
+      enabled: fitter.isActive ?? true,
+      username: fitter.emailaddress?.split('@')[0] || `fitter${fitter.id}`,
+    }));
+    result['hydra:totalItems'] = result.total || result.data.length;
+    delete result.data;
+  }
+
+  // Special handling for customers entity to transform NestJS response to Hydra format
+  if (entity === 'customers' && result.data && Array.isArray(result.data)) {
+    result['hydra:member'] = result.data;
+    result['hydra:totalItems'] = result.total || result.data.length;
+    delete result.data;
+  }
+
+  // Generic transformation for any entity returning NestJS format { data: [], total, pages }
+  if (!result['hydra:member'] && result.data && Array.isArray(result.data)) {
+    result['hydra:member'] = result.data;
+    result['hydra:totalItems'] = result.total || result.data.length;
+    delete result.data;
+  }
+
   return result;
 }
 

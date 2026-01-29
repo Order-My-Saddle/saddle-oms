@@ -142,7 +142,6 @@ export class CountryManagerService {
     return countryManagers.map((cm) => this.mapToDto(cm));
   }
 
-
   /**
    * Get country manager statistics
    */

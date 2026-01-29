@@ -3,10 +3,8 @@ import {
   IsOptional,
   IsString,
   IsNumber,
-  IsInt,
   IsDateString,
   ValidateNested,
-  Min,
 } from "class-validator";
 import { Transform, Type, plainToInstance } from "class-transformer";
 import {

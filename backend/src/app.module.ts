@@ -32,10 +32,14 @@ import { EnrichedOrdersModule } from "./enriched-orders/enriched-orders.module";
 import { AuditLoggingModule } from "./audit-logging/audit-logging.module";
 import { BrandModule } from "./brands/brand.module";
 // import { ModelModule } from "./models/model.module";
-// import { LeathertypeModule } from "./leathertypes/leathertype.module";
+import { LeathertypeModule } from "./leathertypes/leathertype.module";
 import { OptionModule } from "./options/option.module";
+import { OptionItemModule } from "./options-items/option-item.module";
+import { SaddleModule } from "./saddles/saddle.module";
+import { SaddleLeatherModule } from "./saddle-leathers/saddle-leather.module";
+import { SaddleOptionsItemModule } from "./saddle-options-items/saddle-options-item.module";
 // import { ExtraModule } from "./extras/extra.module";
-// import { PresetModule } from "./presets/preset.module";
+import { PresetModule } from "./presets/preset.module";
 // import { ProductModule } from "./products/product.module";
 import { CommentsModule } from "./comments/comments.module";
 import { AccessFilterGroupModule } from "./access-filter-groups/access-filter-group.module";
@@ -93,10 +97,14 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
     // Product modules - temporarily disabled pending migration
     BrandModule, // Simplified ✅ - enabled
     // ModelModule, // Simplified ✅ - ready for enable after migration
-    // LeathertypeModule, // Needs enhancement
+    LeathertypeModule, // Legacy entity ✅ - enabled
     OptionModule, // Enhanced with 7-tier pricing ✅ - enabled
+    OptionItemModule, // Option items with 7-tier pricing ✅ - enabled
+    SaddleModule, // Master saddle/product entity ✅ - enabled
+    SaddleLeatherModule, // Saddle-leather associations ✅ - enabled
+    SaddleOptionsItemModule, // Saddle-option-item configurations ✅ - enabled
     // ExtraModule, // Needs implementation
-    // PresetModule, // Needs implementation
+    PresetModule, // Legacy entity ✅ - enabled
     // ProductModule, // Needs implementation
   ],
 })

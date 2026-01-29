@@ -74,33 +74,6 @@ export class FitterDto {
   emailaddress?: string;
 
   @ApiPropertyOptional({
-    description: "Fitter creation date",
-    example: "2024-01-15T10:30:00.000Z",
-  })
-  createdAt?: Date;
-
-  @ApiPropertyOptional({
-    description: "Fitter last update date",
-    example: "2024-01-15T10:30:00.000Z",
-  })
-  updatedAt?: Date;
-
-  @ApiPropertyOptional({
-    description: "ID of user who created this fitter",
-  })
-  createdBy?: number;
-
-  @ApiPropertyOptional({
-    description: "ID of user who last updated this fitter",
-  })
-  updatedBy?: number;
-
-  @ApiPropertyOptional({
-    description: "Soft delete timestamp",
-  })
-  deletedAt?: Date;
-
-  @ApiPropertyOptional({
     description: "Full formatted address",
     example: "123 Main Street, New York, NY, 10001, United States",
   })

@@ -4,7 +4,7 @@ import {
   ConflictException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, Like, IsNull } from "typeorm";
+import { Repository, Like } from "typeorm";
 import { BrandEntity } from "./infrastructure/persistence/relational/entities/brand.entity";
 import { CreateBrandDto } from "./dto/create-brand.dto";
 import { UpdateBrandDto } from "./dto/update-brand.dto";
@@ -27,7 +27,7 @@ export class BrandService {
   async create(createBrandDto: CreateBrandDto): Promise<BrandDto> {
     // Check if brand with this name already exists
     const existingBrand = await this.brandRepository.findOne({
-      where: { name: createBrandDto.name, deletedAt: IsNull() },
+      where: { name: createBrandDto.name },
     });
 
     if (existingBrand) {
@@ -45,7 +45,7 @@ export class BrandService {
    */
   async findOne(id: number): Promise<BrandDto> {
     const brand = await this.brandRepository.findOne({
-      where: { id, deletedAt: IsNull() },
+      where: { id },
     });
 
     if (!brand) {
@@ -63,7 +63,7 @@ export class BrandService {
     limit: number = 10,
     search?: string,
   ): Promise<{ data: BrandDto[]; total: number; pages: number }> {
-    const where: any = { deletedAt: IsNull() };
+    const where: any = {};
 
     if (search) {
       where.name = Like(`%${search}%`);
@@ -88,7 +88,7 @@ export class BrandService {
    */
   async update(id: number, updateBrandDto: UpdateBrandDto): Promise<BrandDto> {
     const brand = await this.brandRepository.findOne({
-      where: { id, deletedAt: IsNull() },
+      where: { id },
     });
 
     if (!brand) {
@@ -98,7 +98,7 @@ export class BrandService {
     // Check for name conflicts if name is being changed
     if (updateBrandDto.name && updateBrandDto.name !== brand.name) {
       const existingBrand = await this.brandRepository.findOne({
-        where: { name: updateBrandDto.name, deletedAt: IsNull() },
+        where: { name: updateBrandDto.name },
       });
       if (existingBrand && existingBrand.id !== brand.id) {
         throw new ConflictException("Brand with this name already exists");
@@ -112,19 +112,18 @@ export class BrandService {
   }
 
   /**
-   * Remove brand (soft delete)
+   * Remove brand (hard delete — brands table has no soft-delete column)
    */
   async remove(id: number): Promise<void> {
     const brand = await this.brandRepository.findOne({
-      where: { id, deletedAt: IsNull() },
+      where: { id },
     });
 
     if (!brand) {
       throw new NotFoundException("Brand not found");
     }
 
-    brand.deletedAt = new Date();
-    await this.brandRepository.save(brand);
+    await this.brandRepository.delete(id);
   }
 
   /**
@@ -132,7 +131,6 @@ export class BrandService {
    */
   async findActiveBrands(): Promise<BrandDto[]> {
     const brands = await this.brandRepository.find({
-      where: { deletedAt: IsNull() },
       order: { name: "ASC" },
     });
 
@@ -146,7 +144,7 @@ export class BrandService {
     const dto = plainToClass(BrandDto, brand, {
       excludeExtraneousValues: true,
     });
-    dto.isActive = brand.deletedAt === null;
+    dto.isActive = true;
     dto.displayName = brand.name;
     return dto;
   }

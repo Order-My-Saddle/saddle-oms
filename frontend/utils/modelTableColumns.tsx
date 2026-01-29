@@ -14,7 +14,7 @@ export function getModelTableColumns(headerFilters: ModelHeaderFilters, setHeade
           value={headerFilters.id || ''}
           onFilter={value => setHeaderFilters('id', value)}
           type="text"
-          entityType="model"
+          entityType="saddle"
         />
       ),
       render: (v: any) => v ?? '',
@@ -28,7 +28,7 @@ export function getModelTableColumns(headerFilters: ModelHeaderFilters, setHeade
           value={headerFilters.name || ''}
           onFilter={value => setHeaderFilters('name', value)}
           type="text"
-          entityType="model"
+          entityType="saddle"
         />
       ),
       render: (v: any) => v ?? '',
@@ -42,7 +42,7 @@ export function getModelTableColumns(headerFilters: ModelHeaderFilters, setHeade
           value={headerFilters.brandName || ''}
           onFilter={value => setHeaderFilters('brandName', value)}
           type="text"
-          entityType="model"
+          entityType="saddle"
         />
       ),
       render: (v: any) => v ?? '',
@@ -56,7 +56,7 @@ export function getModelTableColumns(headerFilters: ModelHeaderFilters, setHeade
           value={headerFilters.sequence || ''}
           onFilter={value => setHeaderFilters('sequence', value)}
           type="text"
-          entityType="model"
+          entityType="saddle"
         />
       ),
       render: (v: any) => v ?? '',
@@ -74,7 +74,7 @@ export function getModelTableColumns(headerFilters: ModelHeaderFilters, setHeade
             { label: 'Active', value: 'true' },
             { label: 'Inactive', value: 'false' }
           ]}
-          entityType="model"
+          entityType="saddle"
         />
       ),
       render: (v: any) => v ? 'Yes' : 'No',

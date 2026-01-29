@@ -1,12 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, IsNull } from "typeorm";
+import { Repository } from "typeorm";
 import { CustomerEntity } from "../entities/customer.entity";
 import { ICustomerRepository } from "../../../../domain/customer.repository";
 import { Customer } from "../../../../domain/customer";
 import { CustomerId } from "../../../../domain/value-objects/customer-id.value-object";
 import { Email } from "../../../../domain/value-objects/email.value-object";
-import { CustomerStatus } from "../../../../domain/value-objects/customer-status.value-object";
 import { CustomerMapper } from "../mappers/customer.mapper";
 
 /**
@@ -14,6 +13,7 @@ import { CustomerMapper } from "../mappers/customer.mapper";
  *
  * Implements the domain repository interface using TypeORM
  * Uses integer IDs to match PostgreSQL schema
+ * Uses `deleted` column (smallint) for soft delete instead of deletedAt
  */
 @Injectable()
 export class CustomerRepository implements ICustomerRepository {
@@ -32,7 +32,7 @@ export class CustomerRepository implements ICustomerRepository {
     const entity = await this.repository.findOne({
       where: {
         id: numericId,
-        deletedAt: IsNull(),
+        deleted: 0,
       },
     });
 
@@ -40,9 +40,9 @@ export class CustomerRepository implements ICustomerRepository {
   }
 
   async findByEmail(email: Email, fitterId?: number): Promise<Customer | null> {
-    const where: any = {
+    const where: Record<string, unknown> = {
       email: email.value,
-      deletedAt: IsNull(),
+      deleted: 0,
     };
 
     if (fitterId !== undefined) {
@@ -58,21 +58,7 @@ export class CustomerRepository implements ICustomerRepository {
     const entities = await this.repository.find({
       where: {
         fitterId,
-        deletedAt: IsNull(),
-      },
-      order: {
-        name: "ASC",
-      },
-    });
-
-    return this.mapper.toDomainArray(entities);
-  }
-
-  async findByStatus(status: CustomerStatus): Promise<Customer[]> {
-    const entities = await this.repository.find({
-      where: {
-        status,
-        deletedAt: IsNull(),
+        deleted: 0,
       },
       order: {
         name: "ASC",
@@ -85,7 +71,7 @@ export class CustomerRepository implements ICustomerRepository {
   async findByCountry(country: string): Promise<Customer[]> {
     const queryBuilder = this.repository
       .createQueryBuilder("customer")
-      .where("customer.deletedAt IS NULL")
+      .where("customer.deleted = 0")
       .andWhere("customer.country ILIKE :country", {
         country: `%${country}%`,
       })
@@ -98,7 +84,7 @@ export class CustomerRepository implements ICustomerRepository {
   async findByCity(city: string): Promise<Customer[]> {
     const queryBuilder = this.repository
       .createQueryBuilder("customer")
-      .where("customer.deletedAt IS NULL")
+      .where("customer.deleted = 0")
       .andWhere("customer.city ILIKE :city", {
         city: `%${city}%`,
       })
@@ -111,9 +97,7 @@ export class CustomerRepository implements ICustomerRepository {
   async findActive(): Promise<Customer[]> {
     const entities = await this.repository.find({
       where: {
-        status: CustomerStatus.ACTIVE,
         deleted: 0,
-        deletedAt: IsNull(),
       },
       order: {
         name: "ASC",
@@ -133,7 +117,10 @@ export class CustomerRepository implements ICustomerRepository {
 
       if (existingEntity) {
         // Update existing entity
-        const updatedEntity = this.mapper.updateEntity(existingEntity, customer);
+        const updatedEntity = this.mapper.updateEntity(
+          existingEntity,
+          customer,
+        );
         await this.repository.save(updatedEntity);
         return;
       }
@@ -147,12 +134,12 @@ export class CustomerRepository implements ICustomerRepository {
   async delete(id: CustomerId): Promise<void> {
     const numericId = id.numericValue;
     if (numericId !== null) {
-      await this.repository.softDelete({ id: numericId });
+      // Soft delete by setting deleted = 1
+      await this.repository.update({ id: numericId }, { deleted: 1 });
     }
   }
 
   async findAll(filters?: {
-    status?: CustomerStatus;
     fitterId?: number;
     country?: string;
     city?: string;
@@ -160,16 +147,10 @@ export class CustomerRepository implements ICustomerRepository {
   }): Promise<Customer[]> {
     const queryBuilder = this.repository
       .createQueryBuilder("customer")
-      .where("customer.deletedAt IS NULL");
-
-    if (filters?.status) {
-      queryBuilder.andWhere("customer.status = :status", {
-        status: filters.status,
-      });
-    }
+      .where("customer.deleted = 0");
 
     if (filters?.fitterId !== undefined) {
-      queryBuilder.andWhere("customer.fitterId = :fitterId", {
+      queryBuilder.andWhere("customer.fitter_id = :fitterId", {
         fitterId: filters.fitterId,
       });
     }
@@ -186,18 +167,6 @@ export class CustomerRepository implements ICustomerRepository {
       });
     }
 
-    if (filters?.isActive === true) {
-      queryBuilder.andWhere("customer.deleted = 0");
-      queryBuilder.andWhere("customer.status = :activeStatus", {
-        activeStatus: CustomerStatus.ACTIVE,
-      });
-    } else if (filters?.isActive === false) {
-      queryBuilder.andWhere(
-        "(customer.deleted != 0 OR customer.status != :activeStatus)",
-        { activeStatus: CustomerStatus.ACTIVE },
-      );
-    }
-
     queryBuilder.orderBy("customer.name", "ASC");
 
     const entities = await queryBuilder.getMany();
@@ -208,7 +177,7 @@ export class CustomerRepository implements ICustomerRepository {
     return this.repository.count({
       where: {
         fitterId,
-        deletedAt: IsNull(),
+        deleted: 0,
       },
     });
   }
@@ -216,9 +185,7 @@ export class CustomerRepository implements ICustomerRepository {
   async countActive(): Promise<number> {
     return this.repository.count({
       where: {
-        status: CustomerStatus.ACTIVE,
         deleted: 0,
-        deletedAt: IsNull(),
       },
     });
   }
@@ -226,9 +193,8 @@ export class CustomerRepository implements ICustomerRepository {
   async findActiveCustomersWithoutFitter(): Promise<Customer[]> {
     const entities = await this.repository.find({
       where: {
-        status: CustomerStatus.ACTIVE,
-        fitterId: IsNull(),
-        deletedAt: IsNull(),
+        fitterId: 0,
+        deleted: 0,
       },
       order: {
         name: "ASC",
@@ -239,9 +205,9 @@ export class CustomerRepository implements ICustomerRepository {
   }
 
   async existsByEmail(email: Email, fitterId?: number): Promise<boolean> {
-    const where: any = {
+    const where: Record<string, unknown> = {
       email: email.value,
-      deletedAt: IsNull(),
+      deleted: 0,
     };
 
     if (fitterId !== undefined) {

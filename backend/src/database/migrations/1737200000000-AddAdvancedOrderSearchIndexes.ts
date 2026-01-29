@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner } from "typeorm";
 
 /**
  * AddAdvancedOrderSearchIndexes Migration
@@ -16,18 +16,26 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *
  * Based on: ARCHIVE/database/migrations/1735977000000-AddAdvancedOrderSearchFields.ts
  */
-export class AddAdvancedOrderSearchIndexes1737200000000 implements MigrationInterface {
-  name = 'AddAdvancedOrderSearchIndexes1737200000000';
+export class AddAdvancedOrderSearchIndexes1737200000000
+  implements MigrationInterface
+{
+  name = "AddAdvancedOrderSearchIndexes1737200000000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // ========================================
     // HELPER: Check if column exists
     // ========================================
-    const columnExists = async (table: string, column: string): Promise<boolean> => {
-      const result = await queryRunner.query(`
+    const columnExists = async (
+      table: string,
+      column: string,
+    ): Promise<boolean> => {
+      const result = await queryRunner.query(
+        `
         SELECT 1 FROM information_schema.columns
         WHERE table_name = $1 AND column_name = $2
-      `, [table, column]);
+      `,
+        [table, column],
+      );
       return result.length > 0;
     };
 
@@ -37,12 +45,12 @@ export class AddAdvancedOrderSearchIndexes1737200000000 implements MigrationInte
 
     // GIN index for full-text search on customer name
     // Note: Orders table may have 'name' or 'customer_name' depending on schema version
-    if (await columnExists('orders', 'customer_name')) {
+    if (await columnExists("orders", "customer_name")) {
       await queryRunner.query(`
         CREATE INDEX IF NOT EXISTS "idx_orders_customer_name_gin"
         ON "orders" USING gin (to_tsvector('english', COALESCE(customer_name, '')))
       `);
-    } else if (await columnExists('orders', 'name')) {
+    } else if (await columnExists("orders", "name")) {
       // Fallback to 'name' column if 'customer_name' doesn't exist
       await queryRunner.query(`
         CREATE INDEX IF NOT EXISTS "idx_orders_name_gin"
@@ -51,7 +59,7 @@ export class AddAdvancedOrderSearchIndexes1737200000000 implements MigrationInte
     }
 
     // GIN index for JSONB containment queries on seat_sizes (if column exists)
-    if (await columnExists('orders', 'seat_sizes')) {
+    if (await columnExists("orders", "seat_sizes")) {
       await queryRunner.query(`
         CREATE INDEX IF NOT EXISTS "idx_orders_seat_sizes_gin"
         ON "orders" USING gin (seat_sizes)
@@ -62,11 +70,13 @@ export class AddAdvancedOrderSearchIndexes1737200000000 implements MigrationInte
     // 2. PARTIAL INDEXES FOR COMMON FILTERS
     // ========================================
 
-    // Partial index for urgent/rushed orders
-    await queryRunner.query(`
-      CREATE INDEX IF NOT EXISTS "idx_orders_urgency"
-      ON "orders" (rushed) WHERE rushed = 1
-    `);
+    // Partial index for urgent/rushed orders (if column exists)
+    if (await columnExists("orders", "rushed")) {
+      await queryRunner.query(`
+        CREATE INDEX IF NOT EXISTS "idx_orders_urgency"
+        ON "orders" (rushed) WHERE rushed = 1
+      `);
+    }
 
     // Partial index for saddle ID lookups
     await queryRunner.query(`
@@ -90,11 +100,19 @@ export class AddAdvancedOrderSearchIndexes1737200000000 implements MigrationInte
       ON "orders" (factory_id, order_time DESC)
     `);
 
-    // Status + urgency + date composite (priority queue)
-    await queryRunner.query(`
-      CREATE INDEX IF NOT EXISTS "idx_orders_status_urgency"
-      ON "orders" (order_status, rushed, order_time DESC)
-    `);
+    // Status + date composite (priority queue)
+    // Note: rushed column may not exist in all schemas
+    if (await columnExists("orders", "rushed")) {
+      await queryRunner.query(`
+        CREATE INDEX IF NOT EXISTS "idx_orders_status_urgency"
+        ON "orders" (order_status, rushed, order_time DESC)
+      `);
+    } else {
+      await queryRunner.query(`
+        CREATE INDEX IF NOT EXISTS "idx_orders_status_date"
+        ON "orders" (order_status, order_time DESC)
+      `);
+    }
 
     // Customer + date composite (customer order history)
     await queryRunner.query(`
@@ -106,12 +124,12 @@ export class AddAdvancedOrderSearchIndexes1737200000000 implements MigrationInte
     // 4. B-TREE INDEX FOR CUSTOMER NAME SEARCH (conditional)
     // ========================================
 
-    if (await columnExists('orders', 'customer_name')) {
+    if (await columnExists("orders", "customer_name")) {
       await queryRunner.query(`
         CREATE INDEX IF NOT EXISTS "idx_orders_customer_name"
         ON "orders" (customer_name)
       `);
-    } else if (await columnExists('orders', 'name')) {
+    } else if (await columnExists("orders", "name")) {
       await queryRunner.query(`
         CREATE INDEX IF NOT EXISTS "idx_orders_name"
         ON "orders" (name)
@@ -127,7 +145,9 @@ export class AddAdvancedOrderSearchIndexes1737200000000 implements MigrationInte
       ON "orders" (saddle_id, order_time DESC)
     `);
 
-    console.log('✅ Added performance indexes to orders table for backend search');
+    console.log(
+      "✅ Added performance indexes to orders table for backend search",
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -141,14 +161,19 @@ export class AddAdvancedOrderSearchIndexes1737200000000 implements MigrationInte
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_orders_name"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_orders_customer_date"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_orders_status_urgency"`);
+    await queryRunner.query(`DROP INDEX IF EXISTS "idx_orders_status_date"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_orders_factory_date"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_orders_fitter_date"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_orders_saddle_id_partial"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_orders_saddle_id_partial"`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_orders_urgency"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_orders_seat_sizes_gin"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_orders_customer_name_gin"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_orders_customer_name_gin"`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_orders_name_gin"`);
 
-    console.log('✅ Removed performance indexes from orders table');
+    console.log("✅ Removed performance indexes from orders table");
   }
 }

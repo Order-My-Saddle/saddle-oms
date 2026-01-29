@@ -2,22 +2,24 @@
 
 export const seatSizes = ['17', '17.5', '18'];
 
-// Order status values from backend enum
+// Order status values - must match database statuses table names exactly
 export const orderStatuses = [
-  'pending',
-  'UNORDERED',
-  'AWAITING_CLIENT_CONFIRMATION',
-  'ORDERED',
-  'APPROVED',
-  'IN_PRODUCTION_P1',
-  'IN_PRODUCTION_P2',
-  'IN_PRODUCTION_P3',
-  'SHIPPED_TO_STOCK_OWNER',
-  'SHIPPED_TO_CUSTOMER',
-  'ON_HOLD',
-  'ON_TRIAL',
-  'CHANGED',
-  'COMPLETED_SALE'
+  'Unordered',
+  'Ordered',
+  'Approved',
+  'In Production P1',
+  'In Production P2',
+  'In Production P3',
+  'On hold',
+  'On trial',
+  'Shipped to Fitter',
+  'Shipped to Customer',
+  'Completed sale',
+  'Changed',
+  'Awaiting Client Confirmation',
+  'Inventory Aiken',
+  'Inventory UK',
+  'Inventory HOLLAND'
 ];
 
 // Legacy statuses for compatibility
