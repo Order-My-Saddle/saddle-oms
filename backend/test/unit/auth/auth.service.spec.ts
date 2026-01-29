@@ -41,6 +41,9 @@ describe("AuthService", () => {
     password: "$2a$10$hashedpassword",
     provider: AuthProvidersEnum.email,
     enabled: true,
+    userType: 1, // fitter
+    isSupervisor: 0,
+    legacyId: 1,
   };
 
   const mockSession: Partial<Session> = {
@@ -264,6 +267,7 @@ describe("AuthService", () => {
         {
           id: mockUser.id,
           role: { id: 1, name: "user" },
+          roles: ["ROLE_USER"],
           username: mockUser.username,
           enabled: mockUser.enabled,
         },
@@ -515,7 +519,7 @@ describe("AuthService", () => {
   });
 
   describe("me", () => {
-    it("should return current user", async () => {
+    it("should return current user with typeName", async () => {
       // Arrange
       const jwtPayload = {
         id: 1,
@@ -523,14 +527,17 @@ describe("AuthService", () => {
         iat: 1234567890,
         exp: 1234567990,
       };
+      const mockRole = { id: 2, name: "supervisor" };
       usersService.findById.mockResolvedValue(mockUser as User);
+      usersService.getUserRole.mockResolvedValue(mockRole);
 
       // Act
       const result = await service.me(jwtPayload);
 
       // Assert
-      expect(result).toEqual(mockUser);
+      expect(result).toEqual({ ...mockUser, typeName: "supervisor" });
       expect(usersService.findById).toHaveBeenCalledWith(1);
+      expect(usersService.getUserRole).toHaveBeenCalledWith(1, "testuser", 1, 0);
     });
 
     it("should return null when user not found", async () => {

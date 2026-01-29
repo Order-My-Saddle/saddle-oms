@@ -121,4 +121,38 @@ export class User {
   })
   @Expose({ groups: ["me", "admin"] })
   provider: string;
+
+  @ApiProperty({
+    type: String,
+    example: "supervisor",
+    description: "Dynamically computed role name (fitter, admin, factory, supervisor, user)",
+    required: false,
+  })
+  typeName?: string;
+
+  @ApiProperty({
+    type: Number,
+    example: 2,
+    description: "User type from credentials table (1=fitter, 2=admin, 3=factory, 4=customsaddler)",
+    required: false,
+  })
+  @Expose({ groups: ["me", "admin"] })
+  userType?: number | null;
+
+  @ApiProperty({
+    type: Number,
+    example: 0,
+    description: "Supervisor flag from credentials table (0=not supervisor, 1=supervisor)",
+    required: false,
+  })
+  @Expose({ groups: ["me", "admin"] })
+  isSupervisor?: number | null;
+
+  @ApiProperty({
+    type: Number,
+    example: 123,
+    description: "Legacy user_id from credentials table",
+    required: false,
+  })
+  legacyId?: number | null;
 }

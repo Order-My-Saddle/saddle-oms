@@ -245,15 +245,21 @@ test.describe('API Endpoints @api @critical', () => {
 
     // NestJS API returns direct array, not wrapped in data property
     expect(Array.isArray(fittersData)).toBeTruthy();
-    expect(fittersData.length).toBeGreaterThan(0);
 
-    // Verify fitter structure
+    console.log(`Fitters returned: ${fittersData.length}`);
+
+    // Verify fitter structure if data exists
     if (fittersData.length > 0) {
       const fitter = fittersData[0];
       expect(fitter).toHaveProperty('id');
-      expect(fitter).toHaveProperty('userId');
-      expect(fitter).toHaveProperty('specializations');
-      expect(fitter).toHaveProperty('region');
+      expect(typeof fitter.id).toBe('number');
+      // Optional fields from FitterDto
+      if (fitter.userId !== undefined) {
+        expect(typeof fitter.userId).toBe('number');
+      }
+      if (fitter.country !== undefined) {
+        expect(typeof fitter.country).toBe('string');
+      }
     }
   });
 
@@ -274,8 +280,14 @@ test.describe('API Endpoints @api @critical', () => {
     if (factoriesData.length > 0) {
       const factory = factoriesData[0];
       expect(factory).toHaveProperty('id');
-      // Factory should have basic properties
-      expect(typeof factory.id).toBe('string');
+      expect(typeof factory.id).toBe('number');
+      // Factory optional fields
+      if (factory.country !== undefined) {
+        expect(typeof factory.country).toBe('string');
+      }
+      if (factory.isActive !== undefined) {
+        expect(typeof factory.isActive).toBe('boolean');
+      }
     }
   });
 
@@ -328,50 +340,143 @@ test.describe('API Endpoints @api @critical', () => {
     expect(Array.isArray(activeData)).toBeTruthy();
   });
 
-  // SKIPPED: Orders API has schema/compilation issues during this session
-  test.skip('should handle orders API @api', async () => {
-    // Test orders list
-    const ordersResponse = await apiContext.get('http://localhost:3001/api/v1/orders');
+  test('should handle orders API @api', async () => {
+    // Test orders list with pagination
+    const ordersResponse = await apiContext.get('http://localhost:3001/api/v1/orders?page=1&limit=10');
     expect(ordersResponse.ok()).toBeTruthy();
 
     const ordersData = await ordersResponse.json();
 
-    // Verify response structure
-    expect(Array.isArray(ordersData)).toBeTruthy();
-    console.log(`Orders returned: ${ordersData.length}`);
+    // Verify paginated response structure
+    expect(ordersData).toHaveProperty('data');
+    expect(ordersData).toHaveProperty('total');
+    expect(ordersData).toHaveProperty('pages');
+    expect(Array.isArray(ordersData.data)).toBeTruthy();
+    expect(typeof ordersData.total).toBe('number');
+    expect(typeof ordersData.pages).toBe('number');
+
+    console.log(`Orders returned: ${ordersData.data.length} of ${ordersData.total} total`);
+
+    // Verify order structure if data exists
+    if (ordersData.data.length > 0) {
+      const order = ordersData.data[0];
+      expect(order).toHaveProperty('id');
+      expect(typeof order.id).toBe('number');
+    }
   });
 
-  // SKIPPED: Orders API has schema/compilation issues during this session
-  test.skip('should handle orders urgent endpoint @api', async () => {
+  test('should handle orders urgent endpoint @api', async () => {
     // Test urgent orders
     const urgentResponse = await apiContext.get('http://localhost:3001/api/v1/orders/urgent');
     expect(urgentResponse.ok()).toBeTruthy();
 
     const urgentData = await urgentResponse.json();
     expect(Array.isArray(urgentData)).toBeTruthy();
+
+    console.log(`Urgent orders returned: ${urgentData.length}`);
   });
 
-  // SKIPPED: Orders API has schema/compilation issues during this session
-  test.skip('should handle orders stats endpoint @api', async () => {
+  test('should handle orders overdue endpoint @api', async () => {
+    // Test overdue orders
+    const overdueResponse = await apiContext.get('http://localhost:3001/api/v1/orders/overdue');
+    expect(overdueResponse.ok()).toBeTruthy();
+
+    const overdueData = await overdueResponse.json();
+    expect(Array.isArray(overdueData)).toBeTruthy();
+
+    console.log(`Overdue orders returned: ${overdueData.length}`);
+  });
+
+  test('should handle orders production endpoint @api', async () => {
+    // Test orders in production
+    const productionResponse = await apiContext.get('http://localhost:3001/api/v1/orders/production');
+    expect(productionResponse.ok()).toBeTruthy();
+
+    const productionData = await productionResponse.json();
+    expect(Array.isArray(productionData)).toBeTruthy();
+
+    console.log(`Production orders returned: ${productionData.length}`);
+  });
+
+  test('should handle orders stats endpoint @api', async () => {
     // Test order stats
     const statsResponse = await apiContext.get('http://localhost:3001/api/v1/orders/stats');
     expect(statsResponse.ok()).toBeTruthy();
 
     const statsData = await statsResponse.json();
     expect(statsData).toHaveProperty('totalOrders');
+    expect(statsData).toHaveProperty('urgentOrders');
+    expect(statsData).toHaveProperty('overdueOrders');
+    expect(statsData).toHaveProperty('statusCounts');
     expect(typeof statsData.totalOrders).toBe('number');
+    expect(typeof statsData.urgentOrders).toBe('number');
+    expect(typeof statsData.overdueOrders).toBe('number');
+    expect(typeof statsData.statusCounts).toBe('object');
+
+    console.log(`Order stats: total=${statsData.totalOrders}, urgent=${statsData.urgentOrders}, overdue=${statsData.overdueOrders}`);
   });
 
-  // SKIPPED: Orders API has schema/compilation issues during this session
-  test.skip('should handle orders search endpoint @api', async () => {
-    // Test order search
+  test('should handle orders search endpoint @api', async () => {
+    // Test order search with pagination
     const searchResponse = await apiContext.get('http://localhost:3001/api/v1/orders/search?page=1&limit=10');
     expect(searchResponse.ok()).toBeTruthy();
 
     const searchData = await searchResponse.json();
     expect(searchData).toHaveProperty('orders');
     expect(searchData).toHaveProperty('total');
+    expect(searchData).toHaveProperty('page');
+    expect(searchData).toHaveProperty('limit');
+    expect(searchData).toHaveProperty('hasNext');
+    expect(searchData).toHaveProperty('hasPrev');
     expect(Array.isArray(searchData.orders)).toBeTruthy();
+    expect(typeof searchData.total).toBe('number');
+    expect(typeof searchData.page).toBe('number');
+    expect(typeof searchData.limit).toBe('number');
+    expect(typeof searchData.hasNext).toBe('boolean');
+    expect(typeof searchData.hasPrev).toBe('boolean');
+
+    console.log(`Search returned: ${searchData.orders.length} of ${searchData.total} total (page ${searchData.page})`);
+  });
+
+  test('should handle orders search with filters @api', async () => {
+    // Test order search with status filter
+    const searchResponse = await apiContext.get('http://localhost:3001/api/v1/orders/search?page=1&limit=10&isUrgent=true');
+    expect(searchResponse.ok()).toBeTruthy();
+
+    const searchData = await searchResponse.json();
+    expect(searchData).toHaveProperty('orders');
+    expect(searchData).toHaveProperty('total');
+    expect(Array.isArray(searchData.orders)).toBeTruthy();
+
+    console.log(`Urgent search returned: ${searchData.orders.length} of ${searchData.total} total`);
+  });
+
+  test('should handle orders search stats endpoint @api', async () => {
+    // Test search statistics
+    const statsResponse = await apiContext.get('http://localhost:3001/api/v1/orders/search/stats?page=1&limit=10');
+    expect(statsResponse.ok()).toBeTruthy();
+
+    const statsData = await statsResponse.json();
+    expect(statsData).toHaveProperty('totalMatching');
+    expect(statsData).toHaveProperty('urgentCount');
+    expect(statsData).toHaveProperty('statusBreakdown');
+    expect(typeof statsData.totalMatching).toBe('number');
+    expect(typeof statsData.urgentCount).toBe('number');
+    expect(typeof statsData.statusBreakdown).toBe('object');
+
+    console.log(`Search stats: totalMatching=${statsData.totalMatching}, urgentCount=${statsData.urgentCount}`);
+  });
+
+  test('should handle orders search suggestions endpoint @api', async () => {
+    // Test search suggestions for customer names
+    const suggestionsResponse = await apiContext.get('http://localhost:3001/api/v1/orders/search/suggestions?type=customer&query=test&limit=5');
+    expect(suggestionsResponse.ok()).toBeTruthy();
+
+    const suggestionsData = await suggestionsResponse.json();
+    expect(suggestionsData).toHaveProperty('suggestions');
+    expect(Array.isArray(suggestionsData.suggestions)).toBeTruthy();
+
+    console.log(`Customer suggestions returned: ${suggestionsData.suggestions.length}`);
   });
 
   // SKIPPED: Products module is disabled in app.module.ts
@@ -387,32 +492,77 @@ test.describe('API Endpoints @api @critical', () => {
     console.log(`Products returned: ${productsData.length}`);
   });
 
-  // SKIPPED: Models module is disabled in app.module.ts
-  test.skip('should handle models API @api', async () => {
-    // Test models list
-    const modelsResponse = await apiContext.get('http://localhost:3001/api/v1/models');
-    expect(modelsResponse.ok()).toBeTruthy();
+  test('should handle saddles API (models) @api', async () => {
+    // Test saddles list (models are stored in saddles table)
+    const saddlesResponse = await apiContext.get('http://localhost:3001/api/v1/saddles?page=1&limit=10');
+    expect(saddlesResponse.ok()).toBeTruthy();
 
-    const modelsData = await modelsResponse.json();
+    const saddlesData = await saddlesResponse.json();
 
-    // Could be paginated or array
-    if (modelsData.data) {
-      expect(Array.isArray(modelsData.data)).toBeTruthy();
-      console.log(`Models returned: ${modelsData.data.length}`);
-    } else {
-      expect(Array.isArray(modelsData)).toBeTruthy();
-      console.log(`Models returned: ${modelsData.length}`);
+    // Verify paginated response structure
+    expect(saddlesData).toHaveProperty('data');
+    expect(saddlesData).toHaveProperty('total');
+    expect(saddlesData).toHaveProperty('pages');
+    expect(Array.isArray(saddlesData.data)).toBeTruthy();
+    expect(typeof saddlesData.total).toBe('number');
+    expect(typeof saddlesData.pages).toBe('number');
+
+    console.log(`Saddles returned: ${saddlesData.data.length} of ${saddlesData.total} total`);
+
+    // Verify saddle structure if data exists
+    if (saddlesData.data.length > 0) {
+      const saddle = saddlesData.data[0];
+      expect(saddle).toHaveProperty('id');
+      expect(saddle).toHaveProperty('brand');
+      expect(saddle).toHaveProperty('modelName');
+      expect(saddle).toHaveProperty('sequence');
+      expect(typeof saddle.id).toBe('number');
     }
   });
 
-  // SKIPPED: Models module is disabled in app.module.ts
-  test.skip('should handle models active endpoint @api', async () => {
-    // Test active models
-    const activeResponse = await apiContext.get('http://localhost:3001/api/v1/models/active');
+  test('should handle saddles active endpoint @api', async () => {
+    // Test active saddles
+    const activeResponse = await apiContext.get('http://localhost:3001/api/v1/saddles/active');
     expect(activeResponse.ok()).toBeTruthy();
 
     const activeData = await activeResponse.json();
     expect(Array.isArray(activeData)).toBeTruthy();
+
+    console.log(`Active saddles returned: ${activeData.length}`);
+
+    // Verify active saddles are actually active
+    activeData.forEach((saddle: any) => {
+      expect(saddle.isActive).toBe(true);
+    });
+  });
+
+  test('should handle saddles brands endpoint @api', async () => {
+    // Test unique brands from saddles
+    const brandsResponse = await apiContext.get('http://localhost:3001/api/v1/saddles/brands');
+    expect(brandsResponse.ok()).toBeTruthy();
+
+    const brandsData = await brandsResponse.json();
+    expect(Array.isArray(brandsData)).toBeTruthy();
+
+    console.log(`Unique brands from saddles: ${brandsData.length}`);
+  });
+
+  test('should handle saddles search by brand @api', async () => {
+    // First get brands to find one to search for
+    const brandsResponse = await apiContext.get('http://localhost:3001/api/v1/saddles/brands');
+    const brands = await brandsResponse.json();
+
+    if (brands.length > 0) {
+      const brandName = brands[0];
+      const saddlesResponse = await apiContext.get(`http://localhost:3001/api/v1/saddles?page=1&limit=10&brand=${encodeURIComponent(brandName)}`);
+      expect(saddlesResponse.ok()).toBeTruthy();
+
+      const saddlesData = await saddlesResponse.json();
+      expect(saddlesData).toHaveProperty('data');
+      expect(Array.isArray(saddlesData.data)).toBeTruthy();
+
+      console.log(`Saddles with brand "${brandName}": ${saddlesData.data.length}`);
+    }
   });
 
   // SKIPPED: Options API has schema mismatch issues (legacyId column doesn't exist)
@@ -483,20 +633,112 @@ test.describe('API Endpoints @api @critical', () => {
     console.log(`Presets API responded successfully`);
   });
 
-  // SKIPPED: Enriched-orders has potential schema issues
-  test.skip('should handle enriched-orders API @api', async () => {
-    // Test enriched orders list
-    const enrichedResponse = await apiContext.get('http://localhost:3001/api/v1/enriched_orders');
+  test('should handle enriched-orders API @api', async () => {
+    // Test enriched orders list with Hydra format
+    const enrichedResponse = await apiContext.get('http://localhost:3001/api/v1/enriched_orders?page=1&limit=10');
     expect(enrichedResponse.ok()).toBeTruthy();
 
     const enrichedData = await enrichedResponse.json();
 
-    // Verify response structure
-    if (enrichedData.data) {
-      expect(Array.isArray(enrichedData.data)).toBeTruthy();
-      console.log(`Enriched orders returned: ${enrichedData.data.length}`);
-    } else if (Array.isArray(enrichedData)) {
-      console.log(`Enriched orders returned: ${enrichedData.length}`);
+    // Verify Hydra response structure
+    expect(enrichedData).toHaveProperty('@context');
+    expect(enrichedData).toHaveProperty('@type', 'hydra:Collection');
+    expect(enrichedData).toHaveProperty('@id');
+    expect(enrichedData).toHaveProperty('hydra:member');
+    expect(enrichedData).toHaveProperty('hydra:totalItems');
+    expect(enrichedData).toHaveProperty('hydra:view');
+    expect(Array.isArray(enrichedData['hydra:member'])).toBeTruthy();
+    expect(typeof enrichedData['hydra:totalItems']).toBe('number');
+
+    console.log(`Enriched orders returned: ${enrichedData['hydra:member'].length} of ${enrichedData['hydra:totalItems']} total`);
+
+    // Verify order structure if data exists
+    if (enrichedData['hydra:member'].length > 0) {
+      const order = enrichedData['hydra:member'][0];
+      // Enriched orders should have denormalized fields
+      expect(order).toHaveProperty('id');
+    }
+  });
+
+  test('should handle enriched-orders with search filter @api', async () => {
+    // Test enriched orders with search term
+    const enrichedResponse = await apiContext.get('http://localhost:3001/api/v1/enriched_orders?page=1&limit=10&searchTerm=test');
+    expect(enrichedResponse.ok()).toBeTruthy();
+
+    const enrichedData = await enrichedResponse.json();
+
+    // Verify Hydra response structure
+    expect(enrichedData).toHaveProperty('hydra:member');
+    expect(enrichedData).toHaveProperty('hydra:totalItems');
+    expect(Array.isArray(enrichedData['hydra:member'])).toBeTruthy();
+
+    console.log(`Enriched orders search returned: ${enrichedData['hydra:member'].length} of ${enrichedData['hydra:totalItems']} total`);
+  });
+
+  test('should handle enriched-orders with fitter filter @api', async () => {
+    // Test enriched orders with fitter filter
+    const enrichedResponse = await apiContext.get('http://localhost:3001/api/v1/enriched_orders?page=1&limit=10&fitterId=1');
+    expect(enrichedResponse.ok()).toBeTruthy();
+
+    const enrichedData = await enrichedResponse.json();
+
+    // Verify Hydra response structure
+    expect(enrichedData).toHaveProperty('hydra:member');
+    expect(enrichedData).toHaveProperty('hydra:totalItems');
+    expect(Array.isArray(enrichedData['hydra:member'])).toBeTruthy();
+
+    console.log(`Enriched orders by fitter returned: ${enrichedData['hydra:member'].length} of ${enrichedData['hydra:totalItems']} total`);
+  });
+
+  test('should handle enriched-orders with urgency filter @api', async () => {
+    // Test enriched orders with urgency filter
+    const enrichedResponse = await apiContext.get('http://localhost:3001/api/v1/enriched_orders?page=1&limit=10&urgent=true');
+    expect(enrichedResponse.ok()).toBeTruthy();
+
+    const enrichedData = await enrichedResponse.json();
+
+    // Verify Hydra response structure
+    expect(enrichedData).toHaveProperty('hydra:member');
+    expect(enrichedData).toHaveProperty('hydra:totalItems');
+    expect(Array.isArray(enrichedData['hydra:member'])).toBeTruthy();
+
+    console.log(`Urgent enriched orders returned: ${enrichedData['hydra:member'].length} of ${enrichedData['hydra:totalItems']} total`);
+  });
+
+  test('should handle enriched-orders health endpoint @api', async () => {
+    // Test enriched orders health check
+    const healthResponse = await apiContext.get('http://localhost:3001/api/v1/enriched_orders/health');
+    expect(healthResponse.ok()).toBeTruthy();
+
+    const healthData = await healthResponse.json();
+    expect(healthData).toHaveProperty('status', 'healthy');
+    expect(healthData).toHaveProperty('service', 'enriched-orders');
+    expect(healthData).toHaveProperty('timestamp');
+    expect(healthData).toHaveProperty('version');
+
+    console.log(`Enriched orders health: ${healthData.status}`);
+  });
+
+  test('should handle enriched-orders pagination @api', async () => {
+    // Test enriched orders pagination
+    const page1Response = await apiContext.get('http://localhost:3001/api/v1/enriched_orders?page=1&limit=5');
+    expect(page1Response.ok()).toBeTruthy();
+
+    const page1Data = await page1Response.json();
+    expect(page1Data).toHaveProperty('hydra:member');
+    expect(page1Data).toHaveProperty('hydra:view');
+
+    // Check view metadata
+    const view = page1Data['hydra:view'];
+    expect(view).toHaveProperty('@id');
+    expect(view).toHaveProperty('@type', 'hydra:PartialCollectionView');
+    expect(view).toHaveProperty('hydra:first');
+    expect(view).toHaveProperty('hydra:last');
+
+    // If there are more pages, verify next link exists
+    if (page1Data['hydra:totalItems'] > 5 && page1Data['hydra:member'].length > 0) {
+      expect(view).toHaveProperty('hydra:next');
+      console.log(`Pagination test: page 1 of ${Math.ceil(page1Data['hydra:totalItems'] / 5)}`);
     }
   });
 

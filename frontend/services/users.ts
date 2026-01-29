@@ -162,7 +162,7 @@ export async function fetchUsers({
     queryParams.append('_refresh', Date.now().toString());
   }
 
-  const url = `${API_URL}/v1/users?${queryParams.toString()}`;
+  const url = `${API_URL}/api/v1/users?${queryParams.toString()}`;
 
   console.log('🔍 fetchUsers: Calling backend URL:', url);
 
@@ -595,7 +595,7 @@ export async function fetchUserCount(): Promise<number> {
     console.log('📊 fetchUserCount: Getting total user count from NestJS backend');
 
     const token = getToken();
-    const url = `${API_URL}/v1/users?page=1&limit=1`;
+    const url = `${API_URL}/api/v1/users?page=1&limit=1`;
 
     const response = await fetch(url, {
       headers: {

@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 /**
  * Order Data Transfer Object
@@ -131,14 +131,51 @@ export class OrderDto {
   })
   isUrgent: boolean;
 
+  // Legacy boolean flags synced from production data
   @ApiProperty({
-    description: "Seat sizes associated with the order",
-    example: ["size-17-5", "size-18"],
-    nullable: true,
-    isArray: true,
-    type: String,
+    description: "Rushed/urgent order flag (legacy)",
+    example: false,
   })
-  seatSizes: string[] | null;
+  rushed: boolean;
+
+  @ApiProperty({
+    description: "Repair order flag",
+    example: false,
+  })
+  repair: boolean;
+
+  @ApiProperty({
+    description: "Demo order flag",
+    example: false,
+  })
+  demo: boolean;
+
+  @ApiProperty({
+    description: "Sponsored order flag",
+    example: false,
+  })
+  sponsored: boolean;
+
+  @ApiProperty({
+    description: "Fitter stock flag",
+    example: false,
+  })
+  fitterStock: boolean;
+
+  @ApiProperty({
+    description: "Custom order flag",
+    example: false,
+  })
+  customOrder: boolean;
+
+  @ApiPropertyOptional({
+    description: "Last changed timestamp (Unix timestamp)",
+    example: 1363137225,
+    nullable: true,
+  })
+  changed: number | null;
+
+  // NOTE: seatSizes removed - legacy system stores seat size in special_notes field
 
   @ApiProperty({
     description: "Customer name for search optimization",

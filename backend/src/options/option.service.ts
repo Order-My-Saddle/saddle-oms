@@ -4,7 +4,7 @@ import {
   ConflictException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, Like, IsNull } from "typeorm";
+import { Repository } from "typeorm";
 import { OptionEntity } from "./infrastructure/persistence/relational/entities/option.entity";
 import { CreateOptionDto } from "./dto/create-option.dto";
 import { UpdateOptionDto } from "./dto/update-option.dto";
@@ -108,7 +108,9 @@ export class OptionService {
       queryBuilder.andWhere("option.type = :type", { type });
     }
 
-    queryBuilder.orderBy("option.sequence", "ASC").addOrderBy("option.name", "ASC");
+    queryBuilder
+      .orderBy("option.sequence", "ASC")
+      .addOrderBy("option.name", "ASC");
 
     const total = await queryBuilder.getCount();
     const options = await queryBuilder
@@ -126,7 +128,10 @@ export class OptionService {
   /**
    * Update option
    */
-  async update(id: number, updateOptionDto: UpdateOptionDto): Promise<OptionDto> {
+  async update(
+    id: number,
+    updateOptionDto: UpdateOptionDto,
+  ): Promise<OptionDto> {
     const option = await this.optionRepository.findOne({
       where: { id, deleted: 0 },
     });
@@ -147,15 +152,23 @@ export class OptionService {
 
     // Update fields that are provided
     if (updateOptionDto.name !== undefined) option.name = updateOptionDto.name;
-    if (updateOptionDto.group !== undefined) option.group = updateOptionDto.group;
+    if (updateOptionDto.group !== undefined)
+      option.group = updateOptionDto.group;
     if (updateOptionDto.type !== undefined) option.type = updateOptionDto.type;
-    if (updateOptionDto.price1 !== undefined) option.price1 = updateOptionDto.price1;
-    if (updateOptionDto.price2 !== undefined) option.price2 = updateOptionDto.price2;
-    if (updateOptionDto.price3 !== undefined) option.price3 = updateOptionDto.price3;
-    if (updateOptionDto.price4 !== undefined) option.price4 = updateOptionDto.price4;
-    if (updateOptionDto.price5 !== undefined) option.price5 = updateOptionDto.price5;
-    if (updateOptionDto.price6 !== undefined) option.price6 = updateOptionDto.price6;
-    if (updateOptionDto.price7 !== undefined) option.price7 = updateOptionDto.price7;
+    if (updateOptionDto.price1 !== undefined)
+      option.price1 = updateOptionDto.price1;
+    if (updateOptionDto.price2 !== undefined)
+      option.price2 = updateOptionDto.price2;
+    if (updateOptionDto.price3 !== undefined)
+      option.price3 = updateOptionDto.price3;
+    if (updateOptionDto.price4 !== undefined)
+      option.price4 = updateOptionDto.price4;
+    if (updateOptionDto.price5 !== undefined)
+      option.price5 = updateOptionDto.price5;
+    if (updateOptionDto.price6 !== undefined)
+      option.price6 = updateOptionDto.price6;
+    if (updateOptionDto.price7 !== undefined)
+      option.price7 = updateOptionDto.price7;
     if (updateOptionDto.priceContrast1 !== undefined)
       option.priceContrast1 = updateOptionDto.priceContrast1;
     if (updateOptionDto.priceContrast2 !== undefined)

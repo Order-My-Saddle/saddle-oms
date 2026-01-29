@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Model } from '@/services/models';
+import { Model, fetchNextSequence } from '@/services/models';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 import { fetchBrands, Brand } from '@/services/brands';
+import { fetchFactories, Factory } from '@/services/factories';
+import { SADDLE_TYPE_OPTIONS, FACTORY_REGIONS, FACTORY_REGION_KEYS, FactoryRegionKey } from '@/utils/saddleConstants';
 
 interface ModelAddModalProps {
   isOpen: boolean;
@@ -21,22 +23,43 @@ export function ModelAddModal({ isOpen, onClose, onSave }: ModelAddModalProps) {
     brandName: '',
     sequence: 0,
     active: true,
+    factoryEu: 0,
+    factoryGb: 0,
+    factoryUs: 0,
+    factoryCa: 0,
+    factoryAud: 0,
+    factoryDe: 0,
+    factoryNl: 0,
+    type: 0,
   });
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [factories, setFactories] = useState<Factory[]>([]);
   const [loadingBrands, setLoadingBrands] = useState(false);
+  const [loadingFactories, setLoadingFactories] = useState(false);
+  const [loadingSequence, setLoadingSequence] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Load brands when modal opens
+  // Load brands, factories, and next sequence when modal opens
   useEffect(() => {
     if (isOpen) {
       loadBrands();
-      // Reset form when modal opens
+      loadFactories();
+      loadNextSequence();
+      // Reset form when modal opens (sequence will be set by loadNextSequence)
       setNewModel({
         name: '',
         brandName: '',
         sequence: 0,
         active: true,
+        factoryEu: 0,
+        factoryGb: 0,
+        factoryUs: 0,
+        factoryCa: 0,
+        factoryAud: 0,
+        factoryDe: 0,
+        factoryNl: 0,
+        type: 0,
       });
       setError('');
     }
@@ -45,17 +68,56 @@ export function ModelAddModal({ isOpen, onClose, onSave }: ModelAddModalProps) {
   const loadBrands = async () => {
     setLoadingBrands(true);
     try {
+      console.log('ModelAddModal: Loading brands...');
       const data = await fetchBrands({
         page: 1,
         orderBy: 'name',
         order: 'asc',
-        extraParams: { active: true }
       });
+      console.log('ModelAddModal: Loaded brands:', data);
       setBrands(data['hydra:member'] || []);
     } catch (error) {
       console.error('Error loading brands:', error);
+      setError('Failed to load brands. Please try again.');
     } finally {
       setLoadingBrands(false);
+    }
+  };
+
+  const loadFactories = async () => {
+    setLoadingFactories(true);
+    try {
+      console.log('ModelAddModal: Loading factories...');
+      const data = await fetchFactories();
+      console.log('ModelAddModal: Loaded factories:', data);
+      setFactories(data['hydra:member'] || []);
+    } catch (error) {
+      console.error('Error loading factories:', error);
+      setError('Failed to load factories. Please try again.');
+    } finally {
+      setLoadingFactories(false);
+    }
+  };
+
+  const loadNextSequence = async () => {
+    setLoadingSequence(true);
+    try {
+      console.log('ModelAddModal: Loading next sequence...');
+      const nextSeq = await fetchNextSequence();
+      console.log('ModelAddModal: Next sequence:', nextSeq);
+      setNewModel(prev => ({
+        ...prev,
+        sequence: nextSeq,
+      }));
+    } catch (error) {
+      console.error('Error loading next sequence:', error);
+      // Default to 1 if we can't get the next sequence
+      setNewModel(prev => ({
+        ...prev,
+        sequence: 1,
+      }));
+    } finally {
+      setLoadingSequence(false);
     }
   };
 
@@ -95,11 +157,21 @@ export function ModelAddModal({ isOpen, onClose, onSave }: ModelAddModalProps) {
     }));
   };
 
+  const handleFactoryChange = (field: FactoryRegionKey, value: string) => {
+    const numValue = value === '0' || value === '' ? 0 : parseInt(value, 10);
+    setNewModel((prev) => ({
+      ...prev,
+      [field]: numValue
+    }));
+  };
+
+  const isLoading = loadingBrands || loadingFactories;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Model</DialogTitle>
+          <DialogTitle>Add New Saddle</DialogTitle>
           <DialogDescription>
             Create a new saddle model below.
           </DialogDescription>
@@ -131,11 +203,22 @@ export function ModelAddModal({ isOpen, onClose, onSave }: ModelAddModalProps) {
                 <SelectValue placeholder={loadingBrands ? "Loading brands..." : "Select brand"} />
               </SelectTrigger>
               <SelectContent>
-                {brands.map((brand) => (
-                  <SelectItem key={brand.id} value={brand.name}>
-                    {brand.name}
-                  </SelectItem>
-                ))}
+                {loadingBrands ? (
+                  <div className="flex items-center justify-center py-2">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Loading...
+                  </div>
+                ) : brands.length === 0 ? (
+                  <div className="py-2 px-3 text-gray-500 text-sm">
+                    No brands available
+                  </div>
+                ) : (
+                  brands.map((brand) => (
+                    <SelectItem key={brand.id} value={brand.name}>
+                      {brand.name}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -145,14 +228,25 @@ export function ModelAddModal({ isOpen, onClose, onSave }: ModelAddModalProps) {
               <label className="block font-semibold text-sm text-gray-600 mb-1">
                 Sequence: <span className="text-red-500">*</span>
               </label>
-              <Input
-                type="number"
-                min="0"
-                value={newModel.sequence || ''}
-                onChange={(e) => handleChange('sequence', parseInt(e.target.value) || 0)}
-                placeholder="Display Order"
-                required
-              />
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0"
+                  value={newModel.sequence || ''}
+                  onChange={(e) => handleChange('sequence', parseInt(e.target.value) || 0)}
+                  placeholder="Display Order"
+                  required
+                  disabled={loadingSequence}
+                />
+                {loadingSequence && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Suggested next sequence: {loadingSequence ? 'Loading...' : newModel.sequence}
+              </p>
             </div>
 
             <div>
@@ -170,6 +264,64 @@ export function ModelAddModal({ isOpen, onClose, onSave }: ModelAddModalProps) {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Saddle Type */}
+          <div>
+            <label className="block font-semibold text-sm text-gray-600 mb-1">Type:</label>
+            <Select
+              value={String(newModel.type ?? 0)}
+              onValueChange={(value) => handleChange('type', parseInt(value, 10))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                {SADDLE_TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={String(option.value)}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Factory Assignments Section */}
+          <div>
+            <label className="block font-semibold text-sm text-gray-600 mb-2">Factory Assignments:</label>
+            {loadingFactories ? (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading factories...
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {FACTORY_REGION_KEYS.map((key) => (
+                  <div key={key}>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">
+                      {FACTORY_REGIONS[key]}
+                    </label>
+                    <Select
+                      value={String(newModel[key as keyof Model] ?? 0)}
+                      onValueChange={(value) => handleFactoryChange(key, value)}
+                      disabled={loadingFactories}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="None" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">None</SelectItem>
+                        {factories.map((factory) => (
+                          <SelectItem key={factory.id} value={String(factory.id)}>
+                            {factory.displayName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -195,10 +347,10 @@ export function ModelAddModal({ isOpen, onClose, onSave }: ModelAddModalProps) {
           </Button>
           <Button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || isLoading}
             className="bg-[#7b2326] hover:bg-[#8b2329] text-white"
           >
-            {saving ? 'Creating...' : 'Create model'}
+            {saving ? 'Creating...' : 'Create saddle'}
           </Button>
         </div>
       </DialogContent>

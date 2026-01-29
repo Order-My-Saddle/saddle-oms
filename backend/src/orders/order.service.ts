@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository, IsNull } from "typeorm";
 import { OrderEntity } from "./infrastructure/persistence/relational/entities/order.entity";
@@ -50,10 +46,21 @@ export class OrderService {
       specialInstructions: createOrderDto.specialNotes,
       totalAmount: (createOrderDto.priceSaddle || 0) / 100, // Convert from cents
       depositPaid: (createOrderDto.priceDeposit || 0) / 100,
-      balanceOwing: ((createOrderDto.priceSaddle || 0) - (createOrderDto.priceDeposit || 0)) / 100,
+      balanceOwing:
+        ((createOrderDto.priceSaddle || 0) -
+          (createOrderDto.priceDeposit || 0)) /
+        100,
       isUrgent: createOrderDto.rushed === 1,
       customerName: createOrderDto.name,
       saddleId: createOrderDto.saddleId || null,
+      // Legacy boolean flags
+      rushed: createOrderDto.rushed === 1,
+      repair: createOrderDto.repair === 1,
+      demo: createOrderDto.demo === 1,
+      sponsored: createOrderDto.sponsored === 1,
+      fitterStock: createOrderDto.fitterStock === 1,
+      customOrder: createOrderDto.customOrder === 1,
+      changed: createOrderDto.changed ?? null,
     });
 
     const savedOrder = await this.orderRepository.save(order);
@@ -175,8 +182,12 @@ export class OrderService {
     if (updateOrderDto.totalAmount !== undefined) {
       order.totalAmount = updateOrderDto.totalAmount;
     }
-    if (updateOrderDto.additionalDeposit !== undefined && updateOrderDto.additionalDeposit > 0) {
-      order.depositPaid = (order.depositPaid || 0) + updateOrderDto.additionalDeposit;
+    if (
+      updateOrderDto.additionalDeposit !== undefined &&
+      updateOrderDto.additionalDeposit > 0
+    ) {
+      order.depositPaid =
+        (order.depositPaid || 0) + updateOrderDto.additionalDeposit;
       order.balanceOwing = order.totalAmount - order.depositPaid;
     }
     if (updateOrderDto.measurements !== undefined) {
@@ -260,7 +271,8 @@ export class OrderService {
     }
 
     order.status = "cancelled";
-    order.specialInstructions = `${order.specialInstructions || ""}\n\nCancellation reason: ${reason}`.trim();
+    order.specialInstructions =
+      `${order.specialInstructions || ""}\n\nCancellation reason: ${reason}`.trim();
 
     const savedOrder = await this.orderRepository.save(order);
     return this.toDto(savedOrder);
@@ -354,6 +366,7 @@ export class OrderService {
 
   /**
    * Get order statistics
+   * Uses raw SQL to query the legacy table structure
    */
   async getOrderStats(): Promise<{
     totalOrders: number;
@@ -362,44 +375,83 @@ export class OrderService {
     averageValue: number;
     statusCounts: Record<string, number>;
   }> {
-    const totalOrders = await this.orderRepository.count({
-      where: { deletedAt: IsNull() },
-    });
-    const urgentOrders = await this.orderRepository.count({
-      where: { isUrgent: true, deletedAt: IsNull() },
-    });
+    const manager = this.orderRepository.manager;
 
-    const now = new Date();
-    const overdueOrders = await this.orderRepository
-      .createQueryBuilder("order")
-      .where("order.deletedAt IS NULL")
-      .andWhere("order.estimatedDeliveryDate < :now", { now })
-      .andWhere("order.status NOT IN (:...completedStatuses)", {
-        completedStatuses: ["delivered", "cancelled", "returned"],
-      })
-      .getCount();
+    // Total orders (excluding soft-deleted)
+    const totalResult = await manager.query(
+      `SELECT COUNT(*) as count FROM orders WHERE deleted_at IS NULL`,
+    );
+    const totalOrders = parseInt(totalResult[0]?.count || "0", 10);
 
-    const avgResult = await this.orderRepository
-      .createQueryBuilder("order")
-      .where("order.deletedAt IS NULL")
-      .select("AVG(order.totalAmount)", "avg")
-      .getRawOne();
-    const averageValue = parseFloat(avgResult?.avg) || 0;
+    // Urgent orders (rushed is boolean in oms_nest database)
+    const urgentResult = await manager.query(
+      `SELECT COUNT(*) as count FROM orders WHERE deleted_at IS NULL AND rushed = true`,
+    );
+    const urgentOrders = parseInt(urgentResult[0]?.count || "0", 10);
 
-    const statusResults = await this.orderRepository
-      .createQueryBuilder("order")
-      .where("order.deletedAt IS NULL")
-      .select("order.status", "status")
-      .addSelect("COUNT(*)", "count")
-      .groupBy("order.status")
-      .getRawMany();
+    // Overdue orders - orders past expected time that aren't completed
+    // order_status < 8 means not completed (legacy status codes)
+    // order_time is unix epoch timestamp
+    const overdueResult = await manager.query(
+      `SELECT COUNT(*) as count FROM orders
+       WHERE deleted_at IS NULL
+       AND order_status < 8
+       AND order_time < EXTRACT(EPOCH FROM NOW() - INTERVAL '30 days')`,
+    );
+    const overdueOrders = parseInt(overdueResult[0]?.count || "0", 10);
+
+    // Average order value (sum of price columns)
+    const avgResult = await manager.query(
+      `SELECT AVG(
+        COALESCE(price_saddle, 0) + COALESCE(price_girth, 0) +
+        COALESCE(price_shipping, 0) + COALESCE(price_tax, 0) +
+        COALESCE(price_additional, 0) - COALESCE(price_tradein, 0) -
+        COALESCE(price_discount, 0) - COALESCE(price_deposit, 0)
+       ) as avg FROM orders WHERE deleted_at IS NULL`,
+    );
+    const averageValue = parseFloat(avgResult[0]?.avg || "0");
+
+    // Status counts (order_status is integer column)
+    const statusResults = await manager.query(
+      `SELECT order_status as status, COUNT(*) as count
+       FROM orders WHERE deleted_at IS NULL
+       GROUP BY order_status`,
+    );
+
+    // Map legacy status codes to frontend-expected status names
+    const statusNameMap: Record<number, string> = {
+      0: "unordered",
+      1: "ordered",
+      2: "approved",
+      3: "in_production_p1",
+      4: "on_hold",
+      5: "shipped_to_fitter",
+      6: "on_trial",
+      7: "completed_sale",
+      8: "changed",
+      9: "in_production_p2",
+      10: "in_production_p3",
+      11: "shipped_to_customer",
+      12: "inventory_aiken",
+      13: "inventory_uk",
+      14: "inventory_holland",
+      15: "awaiting_client_confirmation",
+    };
 
     const statusCounts: Record<string, number> = {};
-    statusResults.forEach((row) => {
-      statusCounts[row.status] = parseInt(row.count, 10);
+    statusResults.forEach((row: { status: number; count: string }) => {
+      const statusName = statusNameMap[row.status] || `status_${row.status}`;
+      statusCounts[statusName] =
+        (statusCounts[statusName] || 0) + parseInt(row.count, 10);
     });
 
-    return { totalOrders, urgentOrders, overdueOrders, averageValue, statusCounts };
+    return {
+      totalOrders,
+      urgentOrders,
+      overdueOrders,
+      averageValue,
+      statusCounts,
+    };
   }
 
   /**
@@ -423,7 +475,15 @@ export class OrderService {
     dto.balanceOwing = order.balanceOwing;
     dto.measurements = order.measurements;
     dto.isUrgent = order.isUrgent;
-    dto.seatSizes = order.seatSizes;
+    // Legacy boolean flags
+    dto.rushed = order.rushed;
+    dto.repair = order.repair;
+    dto.demo = order.demo;
+    dto.sponsored = order.sponsored;
+    dto.fitterStock = order.fitterStock;
+    dto.customOrder = order.customOrder;
+    dto.changed = order.changed;
+    // NOTE: seatSizes removed - legacy system stores seat size in special_notes field
     dto.customerName = order.customerName;
     dto.saddleId = order.saddleId;
     dto.isOverdue = order.estimatedDeliveryDate
@@ -436,9 +496,7 @@ export class OrderService {
         )
       : null;
     dto.paymentPercentage =
-      order.totalAmount > 0
-        ? (order.depositPaid / order.totalAmount) * 100
-        : 0;
+      order.totalAmount > 0 ? (order.depositPaid / order.totalAmount) * 100 : 0;
     dto.createdAt = order.createdAt;
     dto.updatedAt = order.updatedAt;
     return dto;

@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { ICustomerRepository } from "./domain/customer.repository";
 import { Customer } from "./domain/customer";
 import { CustomerId } from "./domain/value-objects/customer-id.value-object";
@@ -84,9 +81,10 @@ export class CustomerService {
     if (filters.email) {
       filteredCustomers = filteredCustomers.filter((customer) => {
         const email = customer.email;
-        return email && email.value
-          .toLowerCase()
-          .includes(filters.email!.toLowerCase());
+        return (
+          email &&
+          email.value.toLowerCase().includes(filters.email!.toLowerCase())
+        );
       });
     }
 

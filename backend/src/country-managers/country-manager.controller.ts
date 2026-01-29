@@ -128,7 +128,6 @@ export class CountryManagerController {
     return this.countryManagerService.getCountryManagerStatistics();
   }
 
-
   @Get("country/:country")
   @ApiOperation({
     summary: "Get country managers by country",

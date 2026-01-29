@@ -199,4 +199,95 @@ export class FilterOrderDto {
     return value;
   })
   requiresDeposit?: boolean;
+
+  // Legacy boolean flag filters
+  @ApiProperty({
+    description: "Filter by rushed orders (legacy)",
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (typeof value === "string") {
+      return value.toLowerCase() === "true";
+    }
+    return value;
+  })
+  rushed?: boolean;
+
+  @ApiProperty({
+    description: "Filter by repair orders",
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (typeof value === "string") {
+      return value.toLowerCase() === "true";
+    }
+    return value;
+  })
+  repair?: boolean;
+
+  @ApiProperty({
+    description: "Filter by demo orders",
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (typeof value === "string") {
+      return value.toLowerCase() === "true";
+    }
+    return value;
+  })
+  demo?: boolean;
+
+  @ApiProperty({
+    description: "Filter by sponsored orders",
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (typeof value === "string") {
+      return value.toLowerCase() === "true";
+    }
+    return value;
+  })
+  sponsored?: boolean;
+
+  @ApiProperty({
+    description: "Filter by fitter stock orders",
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (typeof value === "string") {
+      return value.toLowerCase() === "true";
+    }
+    return value;
+  })
+  fitterStock?: boolean;
+
+  @ApiProperty({
+    description: "Filter by custom orders",
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => {
+    if (typeof value === "string") {
+      return value.toLowerCase() === "true";
+    }
+    return value;
+  })
+  customOrder?: boolean;
 }

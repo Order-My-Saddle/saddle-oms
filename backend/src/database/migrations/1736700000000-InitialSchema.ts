@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner } from "typeorm";
 
 /**
  * Initial Schema Migration
@@ -14,7 +14,7 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * - Audit: Log, DBlog
  */
 export class InitialSchema1736700000000 implements MigrationInterface {
-  name = 'InitialSchema1736700000000';
+  name = "InitialSchema1736700000000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // ========================================
@@ -279,7 +279,8 @@ export class InitialSchema1736700000000 implements MigrationInterface {
         "rushed" SMALLINT NOT NULL DEFAULT 0,
         "oms_version" INTEGER NOT NULL DEFAULT 1,
         "currency" INTEGER NOT NULL DEFAULT 0,
-        "order_data" TEXT NOT NULL
+        "order_data" TEXT NOT NULL,
+        "seat_sizes" JSONB DEFAULT NULL
       )
     `);
 
@@ -408,45 +409,79 @@ export class InitialSchema1736700000000 implements MigrationInterface {
     await queryRunner.query(`
       CREATE INDEX "idx_orders_factory_id" ON "orders" ("factory_id")
       `);
-    await queryRunner.query(`CREATE INDEX "idx_orders_saddle_id" ON "orders" ("saddle_id")`);
-    await queryRunner.query(`CREATE INDEX "idx_orders_order_status" ON "orders" ("order_status")`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_orders_saddle_id" ON "orders" ("saddle_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "idx_orders_order_status" ON "orders" ("order_status")`,
+    );
 
     // Customers indexes
-    await queryRunner.query(`CREATE INDEX "idx_customers_fitter_id" ON "customers" ("fitter_id")`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_customers_fitter_id" ON "customers" ("fitter_id")`,
+    );
 
     // Fitters indexes
-    await queryRunner.query(`CREATE INDEX "idx_fitters_user_id" ON "fitters" ("user_id")`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_fitters_user_id" ON "fitters" ("user_id")`,
+    );
 
     // Credentials indexes
-    await queryRunner.query(`CREATE INDEX "idx_credentials_user_type" ON "credentials" ("user_type")`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_credentials_user_type" ON "credentials" ("user_type")`,
+    );
 
     // FactoryEmployees indexes
-    await queryRunner.query(`CREATE INDEX "idx_factory_employees_factory_id" ON "factory_employees" ("factory_id")`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_factory_employees_factory_id" ON "factory_employees" ("factory_id")`,
+    );
 
     // OptionsItems indexes
-    await queryRunner.query(`CREATE INDEX "idx_options_items_option_id" ON "options_items" ("option_id")`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_options_items_option_id" ON "options_items" ("option_id")`,
+    );
 
     // SaddleLeathers indexes
-    await queryRunner.query(`CREATE INDEX "idx_saddle_leathers_saddle_id" ON "saddle_leathers" ("saddle_id")`);
-    await queryRunner.query(`CREATE INDEX "idx_saddle_leathers_leather_id" ON "saddle_leathers" ("leather_id")`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_saddle_leathers_saddle_id" ON "saddle_leathers" ("saddle_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "idx_saddle_leathers_leather_id" ON "saddle_leathers" ("leather_id")`,
+    );
 
     // SaddleOptionsItems indexes
-    await queryRunner.query(`CREATE INDEX "idx_saddle_options_items_saddle_id" ON "saddle_options_items" ("saddle_id")`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_saddle_options_items_saddle_id" ON "saddle_options_items" ("saddle_id")`,
+    );
 
     // Log indexes
-    await queryRunner.query(`CREATE INDEX "idx_log_order_id" ON "log" ("order_id")`);
-    await queryRunner.query(`CREATE INDEX "idx_log_user_id" ON "log" ("user_id")`);
+    await queryRunner.query(
+      `CREATE INDEX "idx_log_order_id" ON "log" ("order_id")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "idx_log_user_id" ON "log" ("user_id")`,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Drop indexes
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_log_user_id"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_log_order_id"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_saddle_options_items_saddle_id"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_saddle_leathers_leather_id"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_saddle_leathers_saddle_id"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_options_items_option_id"`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_factory_employees_factory_id"`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_saddle_options_items_saddle_id"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_saddle_leathers_leather_id"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_saddle_leathers_saddle_id"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_options_items_option_id"`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_factory_employees_factory_id"`,
+    );
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_credentials_user_type"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_fitters_user_id"`);
     await queryRunner.query(`DROP INDEX IF EXISTS "idx_customers_fitter_id"`);

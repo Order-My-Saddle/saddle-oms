@@ -42,7 +42,6 @@ export class AccessFilterGroupRepository {
     });
   }
 
-
   async update(
     id: number,
     data: Partial<AccessFilterGroupEntity>,

@@ -86,6 +86,15 @@ export class UserEntity {
   @Column({ type: String, nullable: false })
   name: string;
 
+  @Column({ type: "integer", name: "user_type", nullable: true })
+  userType?: number | null;
+
+  @Column({ type: "smallint", name: "is_supervisor", nullable: true })
+  isSupervisor?: number | null;
+
+  @Column({ type: "integer", name: "legacy_id", nullable: true })
+  legacyId?: number | null;
+
   @CreateDateColumn({ name: "created_at" })
   createdAt: Date;
 

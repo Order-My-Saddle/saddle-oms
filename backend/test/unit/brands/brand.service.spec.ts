@@ -1,6 +1,6 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
-import { Repository, Like, IsNull } from "typeorm";
+import { Repository, Like } from "typeorm";
 import { NotFoundException, ConflictException } from "@nestjs/common";
 import { BrandService } from "../../../src/brands/brand.service";
 import { BrandEntity } from "../../../src/brands/infrastructure/persistence/relational/entities/brand.entity";
@@ -15,16 +15,12 @@ describe("BrandService", () => {
   const mockBrandEntity: BrandEntity = {
     id: 101,
     name: "Premium Leather Co",
-    createdAt: new Date("2023-01-01T00:00:00Z"),
-    updatedAt: new Date("2023-01-01T00:00:00Z"),
-    deletedAt: null,
   } as BrandEntity;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const mockBrandDto: BrandDto = {
     id: 101,
     name: "Premium Leather Co",
-    createdAt: new Date("2023-01-01T00:00:00Z"),
-    updatedAt: new Date("2023-01-01T00:00:00Z"),
     isActive: true,
     displayName: "Premium Leather Co",
   };
@@ -37,6 +33,7 @@ describe("BrandService", () => {
       find: jest.fn(),
       findAndCount: jest.fn(),
       update: jest.fn(),
+      delete: jest.fn(),
       softDelete: jest.fn(),
       restore: jest.fn(),
       count: jest.fn(),
@@ -70,9 +67,6 @@ describe("BrandService", () => {
       const newBrandEntity = {
         ...createDto,
         id: 102,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        deletedAt: null,
       };
 
       repository.findOne.mockResolvedValue(null); // No existing brand
@@ -87,7 +81,7 @@ describe("BrandService", () => {
         name: createDto.name,
       });
       expect(repository.findOne).toHaveBeenCalledWith({
-        where: { name: createDto.name, deletedAt: IsNull() },
+        where: { name: createDto.name },
       });
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -110,7 +104,7 @@ describe("BrandService", () => {
         ConflictException,
       );
       expect(repository.findOne).toHaveBeenCalledWith({
-        where: { name: createDto.name, deletedAt: IsNull() },
+        where: { name: createDto.name },
       });
       expect(repository.create).not.toHaveBeenCalled();
       expect(repository.save).not.toHaveBeenCalled();
@@ -132,7 +126,7 @@ describe("BrandService", () => {
         name: mockBrandEntity.name,
       });
       expect(repository.findOne).toHaveBeenCalledWith({
-        where: { id: brandId, deletedAt: IsNull() },
+        where: { id: brandId },
       });
     });
 
@@ -144,7 +138,7 @@ describe("BrandService", () => {
       // Act & Assert
       await expect(service.findOne(brandId)).rejects.toThrow(NotFoundException);
       expect(repository.findOne).toHaveBeenCalledWith({
-        where: { id: brandId, deletedAt: IsNull() },
+        where: { id: brandId },
       });
     });
   });
@@ -171,7 +165,7 @@ describe("BrandService", () => {
         pages: 1,
       });
       expect(repository.findAndCount).toHaveBeenCalledWith({
-        where: { deletedAt: IsNull() },
+        where: {},
         order: { name: "ASC" },
         skip: 0,
         take: 10,
@@ -199,7 +193,7 @@ describe("BrandService", () => {
         pages: 1,
       });
       expect(repository.findAndCount).toHaveBeenCalledWith({
-        where: { deletedAt: IsNull(), name: Like("%Premium%") },
+        where: { name: Like("%Premium%") },
         order: { name: "ASC" },
         skip: 0,
         take: 10,
@@ -218,7 +212,6 @@ describe("BrandService", () => {
       const updatedEntity = {
         ...mockBrandEntity,
         ...updateDto,
-        updatedAt: new Date(),
       };
 
       repository.findOne
@@ -260,12 +253,11 @@ describe("BrandService", () => {
       // Assert
       expect(result.name).toBe(updateDto.name);
       expect(repository.findOne).toHaveBeenCalledWith({
-        where: { id: brandId, deletedAt: IsNull() },
+        where: { id: brandId },
       });
       expect(repository.findOne).toHaveBeenCalledWith({
         where: {
           name: updateDto.name,
-          deletedAt: IsNull(),
         },
       });
     });
@@ -306,25 +298,20 @@ describe("BrandService", () => {
   });
 
   describe("remove", () => {
-    it("should soft delete brand successfully", async () => {
+    it("should hard delete brand successfully", async () => {
       // Arrange
       const brandId = 101;
       repository.findOne.mockResolvedValue(mockBrandEntity);
-      repository.save.mockResolvedValue({
-        ...mockBrandEntity,
-        deletedAt: new Date(),
-      } as BrandEntity);
+      repository.delete.mockResolvedValue({ affected: 1, raw: [] });
 
       // Act
       await service.remove(brandId);
 
       // Assert
       expect(repository.findOne).toHaveBeenCalledWith({
-        where: { id: brandId, deletedAt: IsNull() },
+        where: { id: brandId },
       });
-      expect(repository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ deletedAt: expect.any(Date) }),
-      );
+      expect(repository.delete).toHaveBeenCalledWith(brandId);
     });
 
     it("should throw NotFoundException when brand not found", async () => {
@@ -334,7 +321,7 @@ describe("BrandService", () => {
 
       // Act & Assert
       await expect(service.remove(brandId)).rejects.toThrow(NotFoundException);
-      expect(repository.save).not.toHaveBeenCalled();
+      expect(repository.delete).not.toHaveBeenCalled();
     });
   });
 
@@ -353,7 +340,6 @@ describe("BrandService", () => {
         name: mockBrandEntity.name,
       });
       expect(repository.find).toHaveBeenCalledWith({
-        where: { deletedAt: IsNull() },
         order: { name: "ASC" },
       });
     });

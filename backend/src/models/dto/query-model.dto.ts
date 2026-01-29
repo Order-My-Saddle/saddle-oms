@@ -7,7 +7,11 @@ import {
   ValidateNested,
 } from "class-validator";
 import { Transform, Type, plainToInstance } from "class-transformer";
-import { BaseQueryDto, BaseFilterDto, SortDto } from "../../common/dto/base-query.dto";
+import {
+  BaseQueryDto,
+  BaseFilterDto,
+  SortDto,
+} from "../../common/dto/base-query.dto";
 
 export class FilterModelDto extends BaseFilterDto {
   @ApiPropertyOptional({
@@ -86,9 +90,7 @@ export class QueryModelDto extends BaseQueryDto {
   })
   @IsOptional()
   @Transform(({ value }) => {
-    return value
-      ? plainToInstance(SortModelDto, JSON.parse(value))
-      : undefined;
+    return value ? plainToInstance(SortModelDto, JSON.parse(value)) : undefined;
   })
   @ValidateNested({ each: true })
   @Type(() => SortModelDto)

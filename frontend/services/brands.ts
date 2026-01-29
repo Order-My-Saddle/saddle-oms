@@ -1,74 +1,25 @@
-import { fetchEntities } from './api';
-
 export interface Brand {
   id: string;
   name: string;
-  sequence?: number;
-  active?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  isActive?: boolean;
+  displayName?: string;
 }
 
 export interface BrandsResponse {
   'hydra:member': Brand[];
   'hydra:totalItems': number;
-  'hydra:view'?: {
-    '@id': string;
-    'hydra:first'?: string;
-    'hydra:last'?: string;
-    'hydra:next'?: string;
-    'hydra:previous'?: string;
-  };
 }
 
-export async function fetchBrands({
-  page = 1,
-  searchTerm = '',
-  filters = {},
-  orderBy = 'name',
-  order = 'asc'
-}: {
-  page?: number;
-  searchTerm?: string;
-  filters?: Record<string, string>;
-  orderBy?: string;
-  order?: 'asc' | 'desc';
-} = {}): Promise<BrandsResponse> {
-  console.log('fetchBrands: Called with params:', { page, searchTerm, filters, orderBy, order });
-  
-  // Build filter parameters for API Platform
-  const extraParams: Record<string, string | number | boolean> = {};
-  
-  // Handle individual field filters
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value && value.trim()) {
-      console.log(`fetchBrands: Processing filter ${key}:`, value);
-      // For text fields, use partial matching with API Platform filters
-      if (key === 'name') {
-        extraParams['name[contains]'] = value;
-      } else if (key === 'active') {
-        extraParams['active'] = value === 'true';
-      } else if (key === 'sequence') {
-        extraParams['sequence'] = parseInt(value);
-      }
-      // For other exact matches
-      else {
-        extraParams[key] = value;
-      }
-    }
-  });
-
-  console.log('fetchBrands: Calling fetchEntities with entity "brands" and params:', extraParams);
-
-  return await fetchEntities({
-    entity: 'brands',
-    page,
-    partial: false, // Required for hydra:totalItems in API Platform 2.5.7
-    searchTerm,
-    orderBy,
-    order,
-    extraParams
-  });
+// Internal response type from NestJS backend
+interface NestJSBrandsResponse {
+  data: Array<{
+    id: number;
+    name: string;
+    isActive: boolean;
+    displayName: string;
+  }>;
+  total: number;
+  pages: number;
 }
 
 function getToken() {
@@ -106,6 +57,73 @@ function getToken() {
   return null;
 }
 
+/**
+ * Fetch brands from the NestJS backend
+ */
+export async function fetchBrands({
+  page = 1,
+  searchTerm = '',
+  filters = {},
+  orderBy = 'name',
+  order = 'asc'
+}: {
+  page?: number;
+  searchTerm?: string;
+  filters?: Record<string, string>;
+  orderBy?: string;
+  order?: 'asc' | 'desc';
+} = {}): Promise<BrandsResponse> {
+  console.log('fetchBrands: Called with params:', { page, searchTerm, filters, orderBy, order });
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const token = getToken();
+
+  // Build query parameters
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', '100'); // Get all brands for dropdown
+
+  // Handle search term
+  if (searchTerm) {
+    params.set('search', searchTerm);
+  }
+
+  console.log('fetchBrands: Calling brands endpoint with params:', params.toString());
+
+  const response = await fetch(`${API_URL}/api/v1/brands?${params.toString()}`, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Cache-Control': 'no-cache',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('fetchBrands: Failed to fetch brands:', errorText);
+    throw new Error(`Failed to fetch brands: ${response.status} ${response.statusText}`);
+  }
+
+  const brandData: NestJSBrandsResponse = await response.json();
+  console.log('fetchBrands: Received brand data:', brandData);
+
+  // Transform to Hydra format expected by frontend
+  const brands: Brand[] = brandData.data.map(brand => ({
+    id: String(brand.id),
+    name: brand.name,
+    isActive: brand.isActive,
+    displayName: brand.displayName,
+  }));
+
+  // Return in Hydra format expected by frontend components
+  return {
+    'hydra:member': brands,
+    'hydra:totalItems': brandData.total,
+  };
+}
+
 export async function createBrand(brandData: Partial<Brand>): Promise<Brand> {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const token = getToken();
@@ -131,7 +149,12 @@ export async function createBrand(brandData: Partial<Brand>): Promise<Brand> {
 
   const result = await response.json();
   console.log('Brand creation result:', result);
-  return result;
+  return {
+    id: String(result.id),
+    name: result.name,
+    isActive: result.isActive,
+    displayName: result.displayName,
+  };
 }
 
 export async function updateBrand(id: string, brandData: Partial<Brand>): Promise<Brand> {
@@ -159,7 +182,12 @@ export async function updateBrand(id: string, brandData: Partial<Brand>): Promis
 
   const result = await response.json();
   console.log('Brand update result:', result);
-  return result;
+  return {
+    id: String(result.id),
+    name: result.name,
+    isActive: result.isActive,
+    displayName: result.displayName,
+  };
 }
 
 export async function deleteBrand(id: string): Promise<void> {
@@ -193,17 +221,8 @@ export async function fetchBrandCount(): Promise<number> {
   try {
     console.log('📊 fetchBrandCount: Getting total brand count');
 
-    // Get total count using minimal data transfer (limit=1) with full pagination metadata
-    const result = await fetchEntities({
-      entity: 'brands',
-      page: 1,
-      partial: false, // Required for hydra:totalItems in API Platform 2.5.7
-      extraParams: {
-        'limit': 1, // Minimize data transfer
-      },
-    });
+    const result = await fetchBrands({ page: 1 });
 
-    // Return the total count if available
     if (result['hydra:totalItems'] !== undefined && result['hydra:totalItems'] !== null) {
       console.log('📊 Got total brand count from API:', result['hydra:totalItems']);
       return result['hydra:totalItems'];

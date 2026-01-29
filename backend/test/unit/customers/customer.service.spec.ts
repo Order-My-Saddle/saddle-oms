@@ -1,8 +1,5 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import {
-  NotFoundException,
-  BadRequestException,
-} from "@nestjs/common";
+import { NotFoundException } from "@nestjs/common";
 import { CustomerService } from "../../../src/customers/customer.service";
 import { ICustomerRepository } from "../../../src/customers/domain/customer.repository";
 import { Customer } from "../../../src/customers/domain/customer";

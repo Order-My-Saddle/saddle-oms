@@ -119,7 +119,9 @@ describe("OptionService", () => {
       repository.findOne.mockResolvedValue(mockOptionEntity);
 
       // Act & Assert
-      await expect(service.create(createDto)).rejects.toThrow(ConflictException);
+      await expect(service.create(createDto)).rejects.toThrow(
+        ConflictException,
+      );
       expect(repository.findOne).toHaveBeenCalled();
       expect(repository.save).not.toHaveBeenCalled();
     });
@@ -148,7 +150,9 @@ describe("OptionService", () => {
       repository.findOne.mockResolvedValue(null);
 
       // Act & Assert
-      await expect(service.findOne(optionId)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(optionId)).rejects.toThrow(
+        NotFoundException,
+      );
       expect(repository.findOne).toHaveBeenCalledWith({
         where: { id: optionId, deleted: 0 },
       });

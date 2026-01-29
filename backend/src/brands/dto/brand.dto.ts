@@ -17,20 +17,6 @@ export class BrandDto {
   name: string;
 
   @ApiProperty({
-    description: "Creation timestamp",
-    example: "2024-01-01T00:00:00.000Z",
-  })
-  @Expose()
-  createdAt: Date;
-
-  @ApiProperty({
-    description: "Last update timestamp",
-    example: "2024-01-01T00:00:00.000Z",
-  })
-  @Expose()
-  updatedAt: Date;
-
-  @ApiProperty({
     description: "Whether the brand is active",
     example: true,
   })

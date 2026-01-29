@@ -149,10 +149,15 @@ export async function getEnrichedOrders(params: GetEnrichedOrdersParams = {}) {
     }
   }
   
+  // Extract searchTerm from filters to pass as top-level parameter
+  // This ensures it gets converted to the 'search' parameter the backend expects
+  const searchTermFromFilters = formattedFilters.searchTerm;
+  delete formattedFilters.searchTerm;
+
   // Process filter parameters for API Platform
   // Remove array notation that prevents server-side filtering
   const cleanedFilters: Record<string, any> = {};
-  
+
   Object.keys(formattedFilters).forEach(key => {
     const value = formattedFilters[key];
     if (value !== undefined && value !== null && value !== '') {
@@ -161,7 +166,7 @@ export async function getEnrichedOrders(params: GetEnrichedOrdersParams = {}) {
       cleanedFilters[key] = value;
     }
   });
-  
+
   // Replace formattedFilters with cleaned version
   Object.keys(formattedFilters).forEach(key => delete formattedFilters[key]);
   Object.assign(formattedFilters, cleanedFilters);
@@ -172,15 +177,17 @@ export async function getEnrichedOrders(params: GetEnrichedOrdersParams = {}) {
     // Use the correct format for API Platform sorting
     formattedFilters[`order[${params.orderBy}]`] = order;
   }
-  
-  console.log('enrichedOrders.ts: Final API request parameters:', formattedFilters);
+
+  // Use searchTerm from either the filters or the top-level param
+  const effectiveSearchTerm = searchTermFromFilters || params.searchTerm;
+  console.log('enrichedOrders.ts: Final API request parameters:', formattedFilters, 'searchTerm:', effectiveSearchTerm);
 
   const response = await fetchEntities({
     entity: 'enriched_orders',
     page: params.page,
     partial: params.partial,
     extraParams: formattedFilters,
-    searchTerm: params.searchTerm,
+    searchTerm: effectiveSearchTerm,
   });
   
   console.log('enrichedOrders.ts: API response received:', {

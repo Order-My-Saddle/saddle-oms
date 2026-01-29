@@ -38,7 +38,6 @@ export class DatabaseQueryLogRepository {
     });
   }
 
-
   /**
    * High-performance search with filtering, sorting, and pagination
    */
@@ -340,7 +339,6 @@ export class DatabaseQueryLogRepository {
     if (filters.userId) {
       query.andWhere("dblog.userId = :userId", { userId: filters.userId });
     }
-
 
     // Query filters
     if (filters.query) {

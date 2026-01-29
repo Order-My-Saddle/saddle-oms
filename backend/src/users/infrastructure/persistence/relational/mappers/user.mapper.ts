@@ -22,6 +22,9 @@ export class UserMapper {
     domainEntity.currency = raw.currency;
     domainEntity.name = raw.name;
     domainEntity.provider = raw.provider;
+    domainEntity.userType = raw.userType;
+    domainEntity.isSupervisor = raw.isSupervisor;
+    domainEntity.legacyId = raw.legacyId;
     return domainEntity;
   }
 
@@ -45,6 +48,9 @@ export class UserMapper {
     persistenceEntity.currency = domainEntity.currency;
     persistenceEntity.name = domainEntity.name;
     persistenceEntity.provider = domainEntity.provider;
+    persistenceEntity.userType = domainEntity.userType;
+    persistenceEntity.isSupervisor = domainEntity.isSupervisor;
+    persistenceEntity.legacyId = domainEntity.legacyId;
     return persistenceEntity;
   }
 }

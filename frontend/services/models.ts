@@ -1,5 +1,3 @@
-import { fetchEntities } from './api';
-
 export interface Model {
   id: string;
   name: string;
@@ -10,6 +8,16 @@ export interface Model {
   };
   sequence: number;
   active: boolean;
+  // Factory assignments (factory IDs)
+  factoryEu?: number;
+  factoryGb?: number;
+  factoryUs?: number;
+  factoryCa?: number;
+  factoryAud?: number;
+  factoryDe?: number;
+  factoryNl?: number;
+  // Saddle type: 0=Jumping, 1=Dressage, 2=All-Purpose
+  type?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -17,67 +25,33 @@ export interface Model {
 export interface ModelsResponse {
   'hydra:member': Model[];
   'hydra:totalItems': number;
-  'hydra:view'?: {
-    '@id': string;
-    'hydra:first'?: string;
-    'hydra:last'?: string;
-    'hydra:next'?: string;
-    'hydra:previous'?: string;
-  };
 }
 
-export async function fetchModels({
-  page = 1,
-  searchTerm = '',
-  filters = {},
-  orderBy = 'sequence',
-  order = 'asc'
-}: {
-  page?: number;
-  searchTerm?: string;
-  filters?: Record<string, string>;
-  orderBy?: string;
-  order?: 'asc' | 'desc';
-} = {}): Promise<ModelsResponse> {
-  console.log('fetchModels: Called with params:', { page, searchTerm, filters, orderBy, order });
-  
-  // Build filter parameters for API Platform
-  const extraParams: Record<string, string | number | boolean> = {};
-  
-  // Handle individual field filters
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value && value.trim()) {
-      console.log(`fetchModels: Processing filter ${key}:`, value);
-      // For text fields, use partial matching with API Platform filters
-      if (key === 'name') {
-        extraParams['name[contains]'] = value;
-      } else if (key === 'brandName') {
-        extraParams['brandName[contains]'] = value;
-      } else if (key === 'brand') {
-        extraParams['brand.name[contains]'] = value;
-      } else if (key === 'active') {
-        extraParams['active'] = value === 'true';
-      } else if (key === 'sequence') {
-        extraParams['sequence'] = parseInt(value);
-      }
-      // For other exact matches
-      else {
-        extraParams[key] = value;
-      }
-    }
-  });
-
-  console.log('fetchModels: Calling fetchEntities with entity "models" and params:', extraParams);
-
-  return await fetchEntities({
-    entity: 'models',
-    page,
-    partial: false, // Required for hydra:totalItems in API Platform 2.5.7
-    searchTerm,
-    orderBy,
-    order,
-    extraParams
-  });
+// Internal saddle response type from NestJS backend
+interface SaddleResponse {
+  data: Array<{
+    id: number;
+    brand: string;
+    modelName: string;
+    sequence: number;
+    active: number;
+    isActive: boolean;
+    displayName: string;
+    // Factory assignments
+    factoryEu?: number;
+    factoryGb?: number;
+    factoryUs?: number;
+    factoryCa?: number;
+    factoryAud?: number;
+    factoryDe?: number;
+    factoryNl?: number;
+    // Saddle type
+    type?: number;
+    createdAt?: string;
+    updatedAt?: string;
+  }>;
+  total: number;
+  pages: number;
 }
 
 function getToken() {
@@ -115,52 +89,144 @@ function getToken() {
   return null;
 }
 
+/**
+ * Fetch models (saddles) from the saddles endpoint
+ */
+export async function fetchModels({
+  page = 1,
+  searchTerm = '',
+  filters = {},
+  orderBy = 'sequence',
+  order = 'asc'
+}: {
+  page?: number;
+  searchTerm?: string;
+  filters?: Record<string, string>;
+  orderBy?: string;
+  order?: 'asc' | 'desc';
+} = {}): Promise<ModelsResponse> {
+  console.log('fetchModels: Called with params:', { page, searchTerm, filters, orderBy, order });
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const token = getToken();
+
+  // Build query parameters for the saddles endpoint
+  const params = new URLSearchParams();
+  params.set('page', String(page));
+  params.set('limit', '30');
+
+  // Handle search term
+  if (searchTerm) {
+    params.set('search', searchTerm);
+  }
+
+  // Handle filters - pass all filter parameters to backend
+  if (filters.id) {
+    params.set('id', filters.id);
+  }
+  if (filters.name) {
+    // name in frontend maps to modelName in backend
+    params.set('modelName', filters.name);
+  }
+  if (filters.brand || filters.brandName) {
+    params.set('brand', filters.brand || filters.brandName);
+  }
+  if (filters.sequence) {
+    params.set('sequence', filters.sequence);
+  }
+  if (filters.active === 'true') {
+    params.set('active', 'true');
+  } else if (filters.active === 'false') {
+    params.set('active', 'false');
+  }
+
+  console.log('fetchModels: Calling saddles endpoint with params:', params.toString());
+
+  const response = await fetch(`${API_URL}/api/v1/saddles?${params.toString()}`, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Cache-Control': 'no-cache',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('fetchModels: Failed to fetch saddles:', errorText);
+    throw new Error(`Failed to fetch models: ${response.status} ${response.statusText}`);
+  }
+
+  const saddleData: SaddleResponse = await response.json();
+  console.log('fetchModels: Received saddle data:', saddleData);
+
+  // Transform saddle data to model format expected by frontend
+  const models: Model[] = saddleData.data.map(saddle => ({
+    id: String(saddle.id),
+    name: saddle.modelName,
+    brandName: saddle.brand,
+    brand: {
+      id: saddle.brand, // Using brand name as ID since we don't have separate brand IDs
+      name: saddle.brand,
+    },
+    sequence: saddle.sequence,
+    active: saddle.isActive,
+    // Factory assignments
+    factoryEu: saddle.factoryEu,
+    factoryGb: saddle.factoryGb,
+    factoryUs: saddle.factoryUs,
+    factoryCa: saddle.factoryCa,
+    factoryAud: saddle.factoryAud,
+    factoryDe: saddle.factoryDe,
+    factoryNl: saddle.factoryNl,
+    // Saddle type
+    type: saddle.type,
+    createdAt: saddle.createdAt,
+    updatedAt: saddle.updatedAt,
+  }));
+
+  // Return in Hydra format expected by frontend
+  return {
+    'hydra:member': models,
+    'hydra:totalItems': saddleData.total,
+  };
+}
+
 export async function createModel(modelData: Partial<Model>): Promise<Model> {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const token = getToken();
 
-  // Create BreezeJS-style entity with the correct format for the backend
-  const entity = {
-    name: modelData.name,
-    brandName: modelData.brandName,
+  // Create saddle data from model data
+  const saddleData = {
+    brand: modelData.brandName || '',
+    modelName: modelData.name || '',
     sequence: modelData.sequence || 0,
-    active: modelData.active ?? true,
-    // BreezeJS entity metadata
-    entityAspect: {
-      entityTypeName: "Model:#App.Entity.Modelling",
-      entityState: "Added",
-      originalValuesMap: {},
-      autoGeneratedKey: null,
-      defaultResourceName: "models"
-    }
+    active: modelData.active ? 1 : 0,
+    // Factory values
+    factoryEu: modelData.factoryEu ?? 0,
+    factoryGb: modelData.factoryGb ?? 0,
+    factoryUs: modelData.factoryUs ?? 0,
+    factoryCa: modelData.factoryCa ?? 0,
+    factoryAud: modelData.factoryAud ?? 0,
+    factoryDe: modelData.factoryDe ?? 0,
+    factoryNl: modelData.factoryNl ?? 0,
+    presets: '',
+    type: modelData.type ?? 0,
   };
 
-  // Remove undefined fields
-  Object.keys(entity).forEach(key => {
-    if (key !== 'entityAspect' && entity[key] === undefined) {
-      delete entity[key];
-    }
-  });
+  console.log('Creating saddle (model):', JSON.stringify(saddleData, null, 2));
 
-  // Create the save bundle structure expected by the backend
-  const saveBundle = {
-    entities: [entity]
-  };
-
-  console.log('Attempting model creation with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
-
-  const response = await fetch(`${API_URL}/save`, {
+  const response = await fetch(`${API_URL}/api/v1/saddles`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/ld+json',
-      'Accept': 'application/ld+json',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Cache-Control': 'no-cache',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     credentials: 'include',
-    body: JSON.stringify(saveBundle),
+    body: JSON.stringify(saddleData),
   });
 
   if (!response.ok) {
@@ -172,57 +238,86 @@ export async function createModel(modelData: Partial<Model>): Promise<Model> {
   const result = await response.json();
   console.log('Model creation result:', result);
 
-  // Return the first entity from the response
-  return result.Entities?.[0] || result.entities?.[0] || result;
+  // Transform saddle response to model format
+  return {
+    id: String(result.id),
+    name: result.modelName,
+    brandName: result.brand,
+    brand: {
+      id: result.brand,
+      name: result.brand,
+    },
+    sequence: result.sequence,
+    active: result.isActive,
+    factoryEu: result.factoryEu,
+    factoryGb: result.factoryGb,
+    factoryUs: result.factoryUs,
+    factoryCa: result.factoryCa,
+    factoryAud: result.factoryAud,
+    factoryDe: result.factoryDe,
+    factoryNl: result.factoryNl,
+    type: result.type,
+  };
 }
 
 export async function updateModel(id: string, modelData: Partial<Model>): Promise<Model> {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const token = getToken();
 
-  // Create BreezeJS-style entity with the correct format for the backend
-  const entity = {
-    id: id,
-    name: modelData.name,
-    brandName: modelData.brandName,
-    sequence: modelData.sequence || 0,
-    active: modelData.active ?? true,
-    // BreezeJS entity metadata
-    entityAspect: {
-      entityTypeName: "Model:#App.Entity.Modelling",
-      entityState: "Modified",
-      originalValuesMap: {},
-      autoGeneratedKey: null,
-      defaultResourceName: "models"
-    }
-  };
+  // Create saddle update data from model data
+  const saddleData: Record<string, unknown> = {};
 
-  // Remove undefined fields
-  Object.keys(entity).forEach(key => {
-    if (key !== 'entityAspect' && entity[key] === undefined) {
-      delete entity[key];
-    }
-  });
+  if (modelData.brandName !== undefined) {
+    saddleData.brand = modelData.brandName;
+  }
+  if (modelData.name !== undefined) {
+    saddleData.modelName = modelData.name;
+  }
+  if (modelData.sequence !== undefined) {
+    saddleData.sequence = modelData.sequence;
+  }
+  if (modelData.active !== undefined) {
+    saddleData.active = modelData.active ? 1 : 0;
+  }
+  // Factory assignments
+  if (modelData.factoryEu !== undefined) {
+    saddleData.factoryEu = modelData.factoryEu;
+  }
+  if (modelData.factoryGb !== undefined) {
+    saddleData.factoryGb = modelData.factoryGb;
+  }
+  if (modelData.factoryUs !== undefined) {
+    saddleData.factoryUs = modelData.factoryUs;
+  }
+  if (modelData.factoryCa !== undefined) {
+    saddleData.factoryCa = modelData.factoryCa;
+  }
+  if (modelData.factoryAud !== undefined) {
+    saddleData.factoryAud = modelData.factoryAud;
+  }
+  if (modelData.factoryDe !== undefined) {
+    saddleData.factoryDe = modelData.factoryDe;
+  }
+  if (modelData.factoryNl !== undefined) {
+    saddleData.factoryNl = modelData.factoryNl;
+  }
+  // Saddle type
+  if (modelData.type !== undefined) {
+    saddleData.type = modelData.type;
+  }
 
-  // Create the save bundle structure expected by the backend
-  const saveBundle = {
-    entities: [entity]
-  };
+  console.log('Updating saddle (model):', id, JSON.stringify(saddleData, null, 2));
 
-  console.log('Attempting model update with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
-
-  const response = await fetch(`${API_URL}/save`, {
-    method: 'POST',
+  const response = await fetch(`${API_URL}/api/v1/saddles/${id}`, {
+    method: 'PATCH',
     headers: {
-      'Content-Type': 'application/ld+json',
-      'Accept': 'application/ld+json',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Cache-Control': 'no-cache',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     credentials: 'include',
-    body: JSON.stringify(saveBundle),
+    body: JSON.stringify(saddleData),
   });
 
   if (!response.ok) {
@@ -234,26 +329,79 @@ export async function updateModel(id: string, modelData: Partial<Model>): Promis
   const result = await response.json();
   console.log('Model update result:', result);
 
-  // Return the first entity from the response
-  return result.Entities?.[0] || result.entities?.[0] || result;
+  // Transform saddle response to model format
+  return {
+    id: String(result.id),
+    name: result.modelName,
+    brandName: result.brand,
+    brand: {
+      id: result.brand,
+      name: result.brand,
+    },
+    sequence: result.sequence,
+    active: result.isActive,
+    factoryEu: result.factoryEu,
+    factoryGb: result.factoryGb,
+    factoryUs: result.factoryUs,
+    factoryCa: result.factoryCa,
+    factoryAud: result.factoryAud,
+    factoryDe: result.factoryDe,
+    factoryNl: result.factoryNl,
+    type: result.type,
+  };
 }
 
 export async function deleteModel(id: string): Promise<void> {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const token = getToken();
 
-  const response = await fetch(`${API_URL}/models/${id}`, {
+  console.log('Deleting saddle (model):', id);
+
+  const response = await fetch(`${API_URL}/api/v1/saddles/${id}`, {
     method: 'DELETE',
     headers: {
-      'Accept': 'application/ld+json',
+      'Accept': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     credentials: 'include',
   });
 
   if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Model deletion failed:', errorText);
     throw new Error(`Failed to delete model: ${response.statusText}`);
   }
+}
+
+/**
+ * Get the next available sequence number
+ */
+export async function fetchNextSequence(): Promise<number> {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const token = getToken();
+
+  console.log('fetchNextSequence: Getting next sequence number');
+
+  const response = await fetch(`${API_URL}/api/v1/saddles/next-sequence`, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Cache-Control': 'no-cache',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('fetchNextSequence: Failed to fetch next sequence:', errorText);
+    // Return 1 as default if endpoint fails
+    return 1;
+  }
+
+  const result = await response.json();
+  console.log('fetchNextSequence: Result:', result);
+  return result.nextSequence || 1;
 }
 
 /**
@@ -263,15 +411,8 @@ export async function fetchModelCount(): Promise<number> {
   try {
     console.log('📊 fetchModelCount: Getting total model count');
 
-    // Get total count using minimal data transfer (limit=1) with full pagination metadata
-    const result = await fetchEntities({
-      entity: 'models',
-      page: 1,
-      partial: false, // Required for hydra:totalItems in API Platform 2.5.7
-      extraParams: {
-        'limit': 1, // Minimize data transfer
-      },
-    });
+    // Use fetchModels with minimal data to get total count
+    const result = await fetchModels({ page: 1 });
 
     // Return the total count if available
     if (result['hydra:totalItems'] !== undefined && result['hydra:totalItems'] !== null) {

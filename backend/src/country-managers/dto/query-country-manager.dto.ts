@@ -3,7 +3,6 @@ import {
   IsBoolean,
   IsOptional,
   IsString,
-  IsNumber,
   ValidateNested,
 } from "class-validator";
 import { Transform, Type, plainToInstance } from "class-transformer";
@@ -43,21 +42,10 @@ export class FilterCountryManagerDto extends BaseFilterDto {
 export class SortCountryManagerDto extends SortDto {
   @ApiPropertyOptional({
     description: "Field name to sort by",
-    enum: [
-      "country",
-      "region",
-      "isActive",
-      "createdAt",
-      "updatedAt",
-    ],
+    enum: ["country", "region", "isActive", "createdAt", "updatedAt"],
     example: "country",
   })
-  field:
-    | "country"
-    | "region"
-    | "isActive"
-    | "createdAt"
-    | "updatedAt";
+  field: "country" | "region" | "isActive" | "createdAt" | "updatedAt";
 }
 
 export class QueryCountryManagerDto extends BaseQueryDto {

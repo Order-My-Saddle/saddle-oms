@@ -40,7 +40,7 @@ export class OrderMapper {
       ? { ...domain.measurements }
       : null;
     entity.isUrgent = domain.isUrgent;
-    entity.seatSizes = domain.seatSizes ? [...domain.seatSizes] : null;
+    // NOTE: seatSizes removed - legacy system stores seat size in special_notes field
     entity.customerName = domain.customerName;
     entity.saddleId = domain.saddleId;
     entity.createdAt = domain.createdAt;
@@ -128,10 +128,7 @@ export class OrderMapper {
       value: entity.updatedAt,
       writable: true,
     });
-    Object.defineProperty(order, "_seatSizes", {
-      value: entity.seatSizes ? [...entity.seatSizes] : null,
-      writable: true,
-    });
+    // NOTE: _seatSizes removed - legacy system stores seat size in special_notes field
     Object.defineProperty(order, "_customerName", {
       value: entity.customerName,
       writable: true,

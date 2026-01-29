@@ -1,7 +1,6 @@
 import { Customer } from "./customer";
 import { CustomerId } from "./value-objects/customer-id.value-object";
 import { Email } from "./value-objects/email.value-object";
-import { CustomerStatus } from "./value-objects/customer-status.value-object";
 
 /**
  * Customer Domain Repository Interface
@@ -16,14 +15,12 @@ export abstract class ICustomerRepository {
     fitterId?: number,
   ): Promise<Customer | null>;
   abstract findByFitterId(fitterId: number): Promise<Customer[]>;
-  abstract findByStatus(status: CustomerStatus): Promise<Customer[]>;
   abstract findByCountry(country: string): Promise<Customer[]>;
   abstract findByCity(city: string): Promise<Customer[]>;
   abstract findActive(): Promise<Customer[]>;
   abstract save(customer: Customer): Promise<void>;
   abstract delete(id: CustomerId): Promise<void>;
   abstract findAll(filters?: {
-    status?: CustomerStatus;
     fitterId?: number;
     country?: string;
     city?: string;

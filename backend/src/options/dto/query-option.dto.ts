@@ -7,7 +7,11 @@ import {
   ValidateNested,
 } from "class-validator";
 import { Transform, Type, plainToInstance } from "class-transformer";
-import { BaseQueryDto, BaseFilterDto, SortDto } from "../../common/dto/base-query.dto";
+import {
+  BaseQueryDto,
+  BaseFilterDto,
+  SortDto,
+} from "../../common/dto/base-query.dto";
 
 export class FilterOptionDto extends BaseFilterDto {
   @ApiPropertyOptional({

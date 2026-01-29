@@ -52,9 +52,12 @@ build/
 coverage/
 *.lcov
 .nyc_output/
+e2e/test-results/
 test-results/
 playwright-report/
 playwright/.cache/
+e2e/test-output/
+test-output/
 
 # Logs
 logs/
@@ -133,3 +136,6 @@ backend/src/database/seeds/relational/production-data
 
 # AI DOCS
 ARCHIVE
+
+# Claude Code
+.claude/

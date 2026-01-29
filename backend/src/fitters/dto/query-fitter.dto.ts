@@ -99,8 +99,6 @@ export class SortFitterDto extends SortDto {
       "country",
       "currency",
       "emailaddress",
-      "createdAt",
-      "updatedAt",
     ],
     example: "id",
   })
@@ -111,9 +109,7 @@ export class SortFitterDto extends SortDto {
     | "state"
     | "country"
     | "currency"
-    | "emailaddress"
-    | "createdAt"
-    | "updatedAt";
+    | "emailaddress";
 }
 
 export class QueryFitterDto extends BaseQueryDto {

@@ -3,14 +3,15 @@
  *
  * Represents a saddle brand in the OMS system.
  * Brands can have multiple models associated with them.
+ *
+ * Note: The production brands table does not have audit columns
+ * (created_at, updated_at, deleted_at), so this domain model
+ * is simplified to match.
  */
 export class Brand {
   constructor(
     private readonly _id: number,
     private _name: string,
-    private readonly _createdAt: Date = new Date(),
-    private _updatedAt: Date = new Date(),
-    private _deletedAt: Date | null = null,
   ) {
     this.validateName(_name);
   }
@@ -28,21 +29,13 @@ export class Brand {
   public updateName(name: string): void {
     this.validateName(name);
     this._name = name;
-    this._updatedAt = new Date();
   }
 
   /**
-   * Soft delete brand
-   */
-  public delete(): void {
-    this._deletedAt = new Date();
-  }
-
-  /**
-   * Check if brand is active (not soft deleted)
+   * Check if brand is active (always true since brands table has no soft-delete)
    */
   public isActive(): boolean {
-    return this._deletedAt === null;
+    return true;
   }
 
   /**
@@ -65,17 +58,5 @@ export class Brand {
 
   public get name(): string {
     return this._name;
-  }
-
-  public get createdAt(): Date {
-    return this._createdAt;
-  }
-
-  public get updatedAt(): Date {
-    return this._updatedAt;
-  }
-
-  public get deletedAt(): Date | null {
-    return this._deletedAt;
   }
 }

@@ -242,10 +242,9 @@ export class CacheWarmingService implements OnApplicationBootstrap {
   private async loadBrands(): Promise<any[]> {
     try {
       const result = await this.dataSource.query(`
-        SELECT id, name, description, created_at, updated_at
-        FROM modelling_brand
-        WHERE deleted_at IS NULL
-        ORDER BY name ASC
+        SELECT id, brand_name as name
+        FROM brands
+        ORDER BY brand_name ASC
       `);
       this.logger.debug(`Loaded ${result.length} brands for cache`);
       return result;
@@ -258,10 +257,9 @@ export class CacheWarmingService implements OnApplicationBootstrap {
   private async loadStatuses(): Promise<any[]> {
     try {
       const result = await this.dataSource.query(`
-        SELECT id, name, description, type, created_at, updated_at
-        FROM status
-        WHERE deleted_at IS NULL
-        ORDER BY name ASC
+        SELECT id, name, factory_hidden, factory_alternative_name, sequence
+        FROM statuses
+        ORDER BY sequence ASC
       `);
       this.logger.debug(`Loaded ${result.length} statuses for cache`);
       return result;
@@ -274,10 +272,10 @@ export class CacheWarmingService implements OnApplicationBootstrap {
   private async loadLeatherTypes(): Promise<any[]> {
     try {
       const result = await this.dataSource.query(`
-        SELECT id, name, description, price_modifier, created_at, updated_at
-        FROM leathertype
-        WHERE deleted_at IS NULL
-        ORDER BY name ASC
+        SELECT id, name, sequence
+        FROM leather_types
+        WHERE deleted = 0
+        ORDER BY sequence ASC
       `);
       this.logger.debug(`Loaded ${result.length} leather types for cache`);
       return result;
@@ -290,10 +288,11 @@ export class CacheWarmingService implements OnApplicationBootstrap {
   private async loadOptions(): Promise<any[]> {
     try {
       const result = await this.dataSource.query(`
-        SELECT id, name, description, option_type, price_modifier, created_at, updated_at
-        FROM "option"
-        WHERE deleted_at IS NULL
-        ORDER BY name ASC
+        SELECT id, name, "group", type, sequence,
+               price1, price2, price3, price4, price5, price6, price7
+        FROM options
+        WHERE deleted = 0
+        ORDER BY sequence ASC
         LIMIT 1000
       `);
       this.logger.debug(`Loaded ${result.length} options for cache`);
@@ -306,16 +305,15 @@ export class CacheWarmingService implements OnApplicationBootstrap {
 
   private async loadModels(): Promise<any[]> {
     try {
+      // Load saddles which contain brand and model_name
       const result = await this.dataSource.query(`
-        SELECT m.id, m.name, m.description, m.brand_id, b.name as brand_name,
-               m.created_at, m.updated_at
-        FROM modelling_model m
-        LEFT JOIN modelling_brand b ON m.brand_id = b.id
-        WHERE m.deleted_at IS NULL
-        ORDER BY b.name, m.name ASC
+        SELECT id, brand, model_name, type, sequence, active
+        FROM saddles
+        WHERE deleted = 0 AND active = 1
+        ORDER BY brand, model_name ASC
         LIMIT 1000
       `);
-      this.logger.debug(`Loaded ${result.length} models for cache`);
+      this.logger.debug(`Loaded ${result.length} saddle models for cache`);
       return result;
     } catch (error) {
       this.logger.warn("Failed to load models:", error.message);
@@ -325,13 +323,18 @@ export class CacheWarmingService implements OnApplicationBootstrap {
 
   private async loadRecentOrders(): Promise<any[]> {
     try {
-      const result = await this.dataSource.query(`
-        SELECT id, status, created_at, is_urgent
+      // order_time is stored as Unix timestamp (integer)
+      const sevenDaysAgo = Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60;
+      const result = await this.dataSource.query(
+        `
+        SELECT id, order_status, order_time, rushed as is_urgent
         FROM orders
-        WHERE created_at >= NOW() - INTERVAL '7 days'
-        ORDER BY created_at DESC
+        WHERE order_time >= $1
+        ORDER BY order_time DESC
         LIMIT 100
-      `);
+      `,
+        [sevenDaysAgo],
+      );
       this.logger.debug(`Loaded ${result.length} recent orders for cache`);
       return result;
     } catch (error) {
@@ -343,11 +346,12 @@ export class CacheWarmingService implements OnApplicationBootstrap {
   private async loadActiveFitters(): Promise<any[]> {
     try {
       const result = await this.dataSource.query(`
-        SELECT f.id, u.name, u.email, f.created_at
-        FROM fitter f
-        LEFT JOIN "user" u ON f.user_id = u.id
-        WHERE f.deleted_at IS NULL
-        ORDER BY u.name ASC
+        SELECT f.id, c.full_name as name, f.emailaddress as email,
+               f.city, f.country
+        FROM fitters f
+        LEFT JOIN credentials c ON f.user_id = c.user_id
+        WHERE f.deleted = 0
+        ORDER BY c.full_name ASC
         LIMIT 100
       `);
       this.logger.debug(`Loaded ${result.length} active fitters for cache`);

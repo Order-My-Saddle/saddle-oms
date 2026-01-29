@@ -29,7 +29,8 @@ import { getFitterName, getCustomerName, getSupplierName, getSeatSize, getStatus
 import { getOrderTableColumns } from '../utils/orderTableColumns';
 import { seatSizes, statuses, orderStatuses } from '../utils/orderConstants';
 import { getEnrichedOrders, searchByOrderId } from '../services/enrichedOrders';
-import { useSuppliers, useFitters, useModels } from '../hooks/useEntities';
+import { useFitters, useModels } from '../hooks/useEntities';
+import { extractDynamicFactories, extractDynamicSeatSizes } from '../utils/orderProcessing';
 
 const brands = ['Custom', 'C3'];
 const countries = ['United States', 'Canada', 'United Kingdom'];
@@ -42,12 +43,10 @@ export default function Reports() {
   const [error, setError] = useState('');
   const [headerFilters, setHeaderFilters] = useState<Record<string, string>>({});
   
-  // Fetch suppliers for dropdown
-  const { data: suppliersData } = useSuppliers({ partial: true });
-  const suppliers = suppliersData.map((supplier: any) => ({
-    label: supplier.name || supplier.username || 'Unknown Supplier',
-    value: supplier.name || supplier.username || supplier.id
-  }));
+  // Extract unique factory names from orders for filter dropdown
+  const suppliers = React.useMemo(() => {
+    return extractDynamicFactories(orders);
+  }, [orders]);
   
   // Fetch fitters for dropdown
   const { data: fittersData } = useFitters({ partial: true });

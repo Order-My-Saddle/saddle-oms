@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { FactoryEntity } from "./infrastructure/persistence/relational/entities/factory.entity";
@@ -51,6 +47,7 @@ export class FactoryService {
   async findOne(id: number): Promise<FactoryDto> {
     const factory = await this.factoryRepository.findOne({
       where: { id, deleted: 0 },
+      relations: ["user"],
     });
 
     if (!factory) {
@@ -71,6 +68,7 @@ export class FactoryService {
   ): Promise<{ data: FactoryDto[]; total: number; pages: number }> {
     const queryBuilder = this.factoryRepository
       .createQueryBuilder("factory")
+      .leftJoinAndSelect("factory.user", "user")
       .where("factory.deleted = 0");
 
     if (city) {
@@ -78,7 +76,9 @@ export class FactoryService {
     }
 
     if (country) {
-      queryBuilder.andWhere("factory.country ILIKE :country", { country: `%${country}%` });
+      queryBuilder.andWhere("factory.country ILIKE :country", {
+        country: `%${country}%`,
+      });
     }
 
     queryBuilder.orderBy("factory.city", "ASC");
@@ -99,9 +99,13 @@ export class FactoryService {
   /**
    * Update factory
    */
-  async update(id: number, updateFactoryDto: UpdateFactoryDto): Promise<FactoryDto> {
+  async update(
+    id: number,
+    updateFactoryDto: UpdateFactoryDto,
+  ): Promise<FactoryDto> {
     const factory = await this.factoryRepository.findOne({
       where: { id, deleted: 0 },
+      relations: ["user"],
     });
 
     if (!factory) {
@@ -109,16 +113,26 @@ export class FactoryService {
     }
 
     // Update fields that are provided
-    if (updateFactoryDto.userId !== undefined) factory.userId = updateFactoryDto.userId;
-    if (updateFactoryDto.address !== undefined) factory.address = updateFactoryDto.address;
-    if (updateFactoryDto.zipcode !== undefined) factory.zipcode = updateFactoryDto.zipcode;
-    if (updateFactoryDto.state !== undefined) factory.state = updateFactoryDto.state;
-    if (updateFactoryDto.city !== undefined) factory.city = updateFactoryDto.city;
-    if (updateFactoryDto.country !== undefined) factory.country = updateFactoryDto.country;
-    if (updateFactoryDto.phoneNo !== undefined) factory.phoneNo = updateFactoryDto.phoneNo;
-    if (updateFactoryDto.cellNo !== undefined) factory.cellNo = updateFactoryDto.cellNo;
-    if (updateFactoryDto.currency !== undefined) factory.currency = updateFactoryDto.currency;
-    if (updateFactoryDto.emailaddress !== undefined) factory.emailaddress = updateFactoryDto.emailaddress;
+    if (updateFactoryDto.userId !== undefined)
+      factory.userId = updateFactoryDto.userId;
+    if (updateFactoryDto.address !== undefined)
+      factory.address = updateFactoryDto.address;
+    if (updateFactoryDto.zipcode !== undefined)
+      factory.zipcode = updateFactoryDto.zipcode;
+    if (updateFactoryDto.state !== undefined)
+      factory.state = updateFactoryDto.state;
+    if (updateFactoryDto.city !== undefined)
+      factory.city = updateFactoryDto.city;
+    if (updateFactoryDto.country !== undefined)
+      factory.country = updateFactoryDto.country;
+    if (updateFactoryDto.phoneNo !== undefined)
+      factory.phoneNo = updateFactoryDto.phoneNo;
+    if (updateFactoryDto.cellNo !== undefined)
+      factory.cellNo = updateFactoryDto.cellNo;
+    if (updateFactoryDto.currency !== undefined)
+      factory.currency = updateFactoryDto.currency;
+    if (updateFactoryDto.emailaddress !== undefined)
+      factory.emailaddress = updateFactoryDto.emailaddress;
 
     const savedFactory = await this.factoryRepository.save(factory);
     return this.toDto(savedFactory);
@@ -146,6 +160,7 @@ export class FactoryService {
   async findByUserId(userId: number): Promise<FactoryDto | null> {
     const factory = await this.factoryRepository.findOne({
       where: { userId, deleted: 0 },
+      relations: ["user"],
     });
     return factory ? this.toDto(factory) : null;
   }
@@ -156,6 +171,7 @@ export class FactoryService {
   async findActiveFactories(): Promise<FactoryDto[]> {
     const factories = await this.factoryRepository.find({
       where: { deleted: 0 },
+      relations: ["user"],
       order: { city: "ASC" },
     });
     return factories.map((factory) => this.toDto(factory));
@@ -167,6 +183,7 @@ export class FactoryService {
   async findByCountry(country: string): Promise<FactoryDto[]> {
     const factories = await this.factoryRepository
       .createQueryBuilder("factory")
+      .leftJoinAndSelect("factory.user", "user")
       .where("factory.deleted = 0")
       .andWhere("factory.country ILIKE :country", { country: `%${country}%` })
       .orderBy("factory.city", "ASC")
@@ -180,6 +197,7 @@ export class FactoryService {
   async findByCity(city: string): Promise<FactoryDto[]> {
     const factories = await this.factoryRepository
       .createQueryBuilder("factory")
+      .leftJoinAndSelect("factory.user", "user")
       .where("factory.deleted = 0")
       .andWhere("factory.city ILIKE :city", { city: `%${city}%` })
       .getMany();
@@ -225,7 +243,8 @@ export class FactoryService {
     dto.deleted = factory.deleted;
     dto.isActive = factory.deleted === 0;
     dto.fullAddress = factory.fullAddress;
-    dto.displayName = factory.displayName;
+    dto.displayName = factory.user?.name || factory.displayName;
+    dto.username = factory.user?.username;
     dto.createdAt = factory.createdAt;
     dto.updatedAt = factory.updatedAt;
     return dto;

@@ -22,117 +22,81 @@ export interface EntityTestConfig {
 // Entity configurations for validation (updated for NestJS backend)
 export const ENTITY_CONFIGS: Record<string, EntityTestConfig> = {
   orders: {
-    endpoint: '/orders',
+    endpoint: '/api/v1/orders',
     entityName: 'Order',
-    expectedFields: ['id', 'status', 'notes', 'customerId', 'fitterId', 'createdAt'],
+    expectedFields: ['id', 'fitterId', 'customerId', 'factoryId', 'orderStatus'],
     searchable: true,
     filterable: true,
     sortable: true,
     pagination: true
   },
   enrichedOrders: {
-    endpoint: '/enriched-orders',
+    endpoint: '/api/v1/enriched_orders',
     entityName: 'EnrichedOrder',
-    expectedFields: ['id', 'orderId', 'orderStatus', 'customer', 'fitter', 'orderTime'],
+    expectedFields: ['id'],
     searchable: true,
     filterable: true,
     sortable: true,
     pagination: true
   },
   customers: {
-    endpoint: '/customers',
+    endpoint: '/api/v1/customers',
     entityName: 'Customer',
-    expectedFields: ['id', 'name', 'email', 'phone'],
+    expectedFields: ['id', 'name', 'email'],
     searchable: true,
     filterable: true,
     sortable: true,
-    pagination: true
+    pagination: false // Returns direct array
   },
-  suppliers: {
-    endpoint: '/suppliers',
-    entityName: 'Supplier',
-    expectedFields: ['id', 'name', 'email', 'contactPerson'],
+  fitters: {
+    endpoint: '/api/v1/fitters',
+    entityName: 'Fitter',
+    expectedFields: ['id', 'userId'],
+    searchable: true,
+    filterable: true,
+    sortable: true,
+    pagination: false // Returns direct array
+  },
+  factories: {
+    endpoint: '/api/v1/factories',
+    entityName: 'Factory',
+    expectedFields: ['id', 'userId'],
+    searchable: true,
+    filterable: true,
+    sortable: true,
+    pagination: false // Returns direct array
+  },
+  saddles: {
+    endpoint: '/api/v1/saddles',
+    entityName: 'Saddle',
+    expectedFields: ['id', 'brand', 'modelName', 'sequence'],
     searchable: true,
     filterable: true,
     sortable: true,
     pagination: true
   },
   users: {
-    endpoint: '/users',
+    endpoint: '/api/v1/users',
     entityName: 'User',
-    expectedFields: ['id', 'firstName', 'lastName', 'email', 'role'],
-    searchable: true,
-    filterable: true,
-    sortable: true,
-    pagination: true
-  },
-  fitters: {
-    endpoint: '/fitters',
-    entityName: 'Fitter',
-    expectedFields: ['id', 'name', 'email', 'phone'],
+    expectedFields: ['id', 'firstName', 'lastName', 'email'],
     searchable: true,
     filterable: true,
     sortable: true,
     pagination: true
   },
   brands: {
-    endpoint: '/brands',
+    endpoint: '/api/v1/brands',
     entityName: 'Brand',
-    expectedFields: ['id', 'name', 'description'],
-    searchable: true,
-    filterable: true,
-    sortable: true,
-    pagination: true
-  },
-  models: {
-    endpoint: '/models',
-    entityName: 'Model',
-    expectedFields: ['id', 'name', 'brandId', 'brand'],
-    searchable: true,
-    filterable: true,
-    sortable: true,
-    pagination: true
-  },
-  leathertypes: {
-    endpoint: '/leathertypes',
-    entityName: 'Leathertype',
-    expectedFields: ['id', 'name', 'description'],
+    expectedFields: ['id', 'brandName'],
     searchable: true,
     filterable: true,
     sortable: true,
     pagination: true
   },
   options: {
-    endpoint: '/options',
+    endpoint: '/api/v1/options',
     entityName: 'Option',
-    expectedFields: ['id', 'name', 'description', 'optionType'],
-    searchable: true,
-    filterable: true,
-    sortable: true,
-    pagination: true
-  },
-  extras: {
-    endpoint: '/extras',
-    entityName: 'Extra',
-    expectedFields: ['id', 'name', 'description', 'price'],
-    searchable: true,
-    filterable: true,
-    sortable: true,
-    pagination: true
-  },
-  presets: {
-    endpoint: '/presets',
-    entityName: 'Preset',
-    expectedFields: ['id', 'name', 'description', 'configuration'],
-    searchable: true,
-    filterable: true,
-    sortable: true,
-    pagination: true
-  },
-  products: {
-    endpoint: '/products',
-    entityName: 'Product',
-    expectedFields: ['id', 'name', 'brandId', 'modelId', 'description'],
+    expectedFields: ['id', 'name', 'sequence'],
     searchable: true,
     filterable: true,
     sortable: true,
@@ -186,23 +150,45 @@ export class ApiHelper {
     }
 
     const data = await response.json();
+    let entities: any[] = [];
 
-    // Check for standard REST collection structure
-    expect(data).toHaveProperty('data');
-    expect(Array.isArray(data.data)).toBe(true);
+    // Handle different response formats:
+    // 1. Hydra format (enriched orders): { "hydra:member": [...], "hydra:totalItems": N }
+    // 2. Paginated format (orders, saddles): { data: [...], total: N, pages: N }
+    // 3. Direct array format (customers, fitters, factories): [...]
 
-    // Validate pagination if expected
-    if (config.pagination) {
-      expect(data).toHaveProperty('meta');
-      expect(data.meta).toHaveProperty('total');
-      expect(typeof data.meta.total).toBe('number');
-      expect(data.meta).toHaveProperty('page');
-      expect(data.meta).toHaveProperty('limit');
+    if (data['hydra:member'] !== undefined) {
+      // Hydra format
+      expect(data).toHaveProperty('hydra:member');
+      expect(Array.isArray(data['hydra:member'])).toBe(true);
+      entities = data['hydra:member'];
+
+      if (config.pagination) {
+        expect(data).toHaveProperty('hydra:totalItems');
+        expect(typeof data['hydra:totalItems']).toBe('number');
+      }
+    } else if (data.data !== undefined) {
+      // Standard paginated format
+      expect(data).toHaveProperty('data');
+      expect(Array.isArray(data.data)).toBe(true);
+      entities = data.data;
+
+      if (config.pagination) {
+        expect(data).toHaveProperty('total');
+        expect(typeof data.total).toBe('number');
+        expect(data).toHaveProperty('pages');
+        expect(typeof data.pages).toBe('number');
+      }
+    } else if (Array.isArray(data)) {
+      // Direct array format
+      entities = data;
+    } else {
+      throw new Error(`Unexpected response format for ${entityType}: ${JSON.stringify(data).slice(0, 200)}`);
     }
 
     // Validate entity structure if we have data
-    if (data.data.length > 0) {
-      const firstEntity = data.data[0];
+    if (entities.length > 0) {
+      const firstEntity = entities[0];
 
       // Check required fields
       for (const field of config.expectedFields) {

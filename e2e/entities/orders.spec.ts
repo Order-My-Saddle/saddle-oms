@@ -21,11 +21,11 @@ test.describe('Orders Entity Management', () => {
     await expect(page.locator('h1, [data-testid="page-title"]')).toBeVisible();
 
     // Wait for API call to be made
-    const apiCall = await apiHelper.getLastApiRequest('/entity/enriched_orders');
+    const apiCall = await apiHelper.getLastApiRequest('/api/v1/enriched_orders');
     expect(apiCall).toBeTruthy();
 
     // Verify API response structure
-    const response = await apiHelper.waitForApiResponse('/entity/enriched_orders');
+    const response = await apiHelper.waitForApiResponse('/api/v1/enriched_orders');
     await apiHelper.validateEntityResponse('orders', { json: () => response });
   });
 
@@ -95,7 +95,7 @@ test.describe('Orders Entity Management', () => {
       await page.waitForTimeout(1000); // Debounce delay
 
       // Check if API call was made with search parameter
-      const searchRequest = apiHelper.getLastApiRequest('/entity/enriched_orders');
+      const searchRequest = apiHelper.getLastApiRequest('/api/v1/enriched_orders');
       if (searchRequest) {
         apiHelper.validateSearchParam(searchRequest.url(), 'test');
       }
@@ -141,7 +141,7 @@ test.describe('Orders Entity Management', () => {
         await page.waitForTimeout(1000);
 
         // Check if API call was made with filter
-        const filterRequest = apiHelper.getLastApiRequest('/entity/enriched_orders');
+        const filterRequest = apiHelper.getLastApiRequest('/api/v1/enriched_orders');
         if (filterRequest) {
           // The exact filter parameter depends on implementation
           const url = filterRequest.url();
@@ -178,7 +178,7 @@ test.describe('Orders Entity Management', () => {
         await page.waitForTimeout(1000);
 
         // Check if API call was made with sort parameter
-        const sortRequest = apiHelper.getLastApiRequest('/entity/enriched_orders');
+        const sortRequest = apiHelper.getLastApiRequest('/api/v1/enriched_orders');
         if (sortRequest) {
           const url = sortRequest.url();
           expect(url).toMatch(/(order|sort|\$orderby)/i);
@@ -226,7 +226,7 @@ test.describe('Orders Entity Management', () => {
         await page.waitForTimeout(1000);
 
         // Check if API call was made with pagination parameter
-        const pageRequest = apiHelper.getLastApiRequest('/entity/enriched_orders');
+        const pageRequest = apiHelper.getLastApiRequest('/api/v1/enriched_orders');
         if (pageRequest) {
           apiHelper.validatePaginationParams(pageRequest.url(), 2);
         }
@@ -297,7 +297,7 @@ test.describe('Orders Entity Management', () => {
     await authHelper.waitForPageLoad();
 
     // Get the API response
-    const response = await apiHelper.waitForApiResponse('/entity/enriched_orders');
+    const response = await apiHelper.waitForApiResponse('/api/v1/enriched_orders');
 
     // Validate using our helper
     await apiHelper.validateEntityResponse('orders', { json: () => response });

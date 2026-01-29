@@ -94,7 +94,9 @@ export class OptionController {
   @ApiOperation({ summary: "Get options by type" })
   @ApiParam({ name: "type", description: "Option type (integer)" })
   @ApiResponse({ status: 200, type: [OptionDto] })
-  async findByType(@Param("type", ParseIntPipe) type: number): Promise<OptionDto[]> {
+  async findByType(
+    @Param("type", ParseIntPipe) type: number,
+  ): Promise<OptionDto[]> {
     return this.optionService.findByType(type);
   }
 

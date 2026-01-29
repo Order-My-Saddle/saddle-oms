@@ -11,6 +11,7 @@ interface Status {
 interface DashboardOrderStatusFlowProps {
   onStatusClick?: (status: string) => void;
   onTotalOrders?: React.Dispatch<React.SetStateAction<number>>;
+  selectedStatus?: string;
 }
 
 const STATUS_GROUPS = [
@@ -40,22 +41,23 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 // Map the status keys to the actual database values for filtering
+// These MUST match the exact names in the statuses table
 const STATUS_FILTER_MAPPING: Record<string, string> = {
-  UNORDERED: 'UNORDERED',
-  ORDERED: 'ORDERED',
-  APPROVED: 'APPROVED',
-  IN_PRODUCTION_P1: 'IN_PRODUCTION_P1',
-  IN_PRODUCTION_P2: 'IN_PRODUCTION_P2',
-  IN_PRODUCTION_P3: 'IN_PRODUCTION_P3',
-  SHIPPED_TO_STOCK_OWNER: 'SHIPPED_TO_STOCK_OWNER',
-  SHIPPED_TO_CUSTOMER: 'SHIPPED_TO_CUSTOMER',
-  INVENTORY: 'INVENTORY',
-  ON_HOLD: 'ON_HOLD',
-  ON_TRIAL: 'ON_TRIAL',
-  COMPLETED_SALE: 'COMPLETED_SALE',
+  UNORDERED: 'Unordered',
+  ORDERED: 'Ordered',
+  APPROVED: 'Approved',
+  IN_PRODUCTION_P1: 'In Production P1',
+  IN_PRODUCTION_P2: 'In Production P2',
+  IN_PRODUCTION_P3: 'In Production P3',
+  SHIPPED_TO_STOCK_OWNER: 'Shipped to Fitter',
+  SHIPPED_TO_CUSTOMER: 'Shipped to Customer',
+  INVENTORY: 'Inventory',
+  ON_HOLD: 'On hold',
+  ON_TRIAL: 'On trial',
+  COMPLETED_SALE: 'Completed sale',
 };
 
-export default function DashboardOrderStatusFlow({ onStatusClick, onTotalOrders }: DashboardOrderStatusFlowProps) {
+export default function DashboardOrderStatusFlow({ onStatusClick, onTotalOrders, selectedStatus }: DashboardOrderStatusFlowProps) {
   const [statuses, setStatuses] = useState<Record<string, Status>>({});
   const [totalOrders, setTotalOrders] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -134,23 +136,25 @@ export default function DashboardOrderStatusFlow({ onStatusClick, onTotalOrders 
             {group.map((statusKey, rowIdx) => {
               const status = statuses[statusKey];
               if (!status) return null;
+              const filterValue = STATUS_FILTER_MAPPING[status.key] || status.key;
+              const isActive = selectedStatus === filterValue;
               return (
                 <div
                   key={statusKey}
                   onClick={() => {
-                    const filterValue = STATUS_FILTER_MAPPING[status.key] || status.key;
                     console.log('DashboardOrderStatusFlow: Clicking status:', status.key, 'with label:', status.label, 'mapped to filter:', filterValue);
-                    onStatusClick?.(filterValue);
+                    // Toggle: if already selected, clear it; otherwise select it
+                    onStatusClick?.(isActive ? '' : filterValue);
                   }}
                   style={{
-                    background: '#fff',
+                    background: isActive ? '#7b2326' : '#fff',
                     border: '2px solid #fff',
                     borderRadius: 6,
                     minWidth: 120,
                     minHeight: 38,
                     padding: '4px 14px 4px 12px',
                     fontWeight: 600,
-                    color: '#7b2326',
+                    color: isActive ? '#fff' : '#7b2326',
                     fontSize: 15,
                     boxShadow: '0 2px 6px rgba(123,35,38,0.07)',
                     cursor: onStatusClick ? 'pointer' : 'default',
@@ -162,25 +166,29 @@ export default function DashboardOrderStatusFlow({ onStatusClick, onTotalOrders 
                     marginLeft: 0,
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.background = '#7b2326';
-                    e.currentTarget.style.color = '#fff';
-                    // Aantallen ook rood op hover
-                    const count = e.currentTarget.querySelector('.schemecount');
-                    if(count && count instanceof HTMLElement) {
-                      count.style.background = '#7b2326';
-                      count.style.color = '#fff';
-                      count.style.borderColor = '#fff';
+                    if (!isActive) {
+                      e.currentTarget.style.background = '#7b2326';
+                      e.currentTarget.style.color = '#fff';
+                      // Aantallen ook rood op hover
+                      const count = e.currentTarget.querySelector('.schemecount');
+                      if(count && count instanceof HTMLElement) {
+                        count.style.background = '#7b2326';
+                        count.style.color = '#fff';
+                        count.style.borderColor = '#fff';
+                      }
                     }
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.background = '#fff';
-                    e.currentTarget.style.color = '#7b2326';
-                    // Reset count kleur
-                    const count = e.currentTarget.querySelector('.schemecount');
-                    if(count && count instanceof HTMLElement) {
-                      count.style.background = '#fff';
-                      count.style.color = '#5B1C15';
-                      count.style.borderColor = '#fff';
+                    if (!isActive) {
+                      e.currentTarget.style.background = '#fff';
+                      e.currentTarget.style.color = '#7b2326';
+                      // Reset count kleur
+                      const count = e.currentTarget.querySelector('.schemecount');
+                      if(count && count instanceof HTMLElement) {
+                        count.style.background = '#fff';
+                        count.style.color = '#5B1C15';
+                        count.style.borderColor = '#fff';
+                      }
                     }
                   }}
                 >
@@ -208,8 +216,8 @@ export default function DashboardOrderStatusFlow({ onStatusClick, onTotalOrders 
                     borderWidth: 2,
                     borderColor: '#fff',
                     borderStyle: 'solid',
-                    backgroundColor: '#fff',
-                    color: '#5B1C15',
+                    backgroundColor: isActive ? '#7b2326' : '#fff',
+                    color: isActive ? '#fff' : '#5B1C15',
                     fontSize: '10px',
                     lineHeight: 1,
                     minWidth: 22,

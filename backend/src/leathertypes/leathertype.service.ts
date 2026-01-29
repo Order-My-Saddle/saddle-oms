@@ -4,7 +4,7 @@ import {
   ConflictException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, Like } from "typeorm";
+import { Repository } from "typeorm";
 import { LeathertypeEntity } from "./infrastructure/persistence/relational/entities/leathertype.entity";
 import { CreateLeathertypeDto } from "./dto/create-leathertype.dto";
 import { UpdateLeathertypeDto } from "./dto/update-leathertype.dto";

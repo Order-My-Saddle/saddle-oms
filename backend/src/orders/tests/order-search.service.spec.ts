@@ -34,7 +34,15 @@ describe("OrderSearchService", () => {
     balanceOwing: 1750.0,
     measurements: null,
     isUrgent: false,
-    seatSizes: ["size-17-5"],
+    // Legacy boolean flags
+    rushed: false,
+    repair: false,
+    demo: false,
+    sponsored: false,
+    fitterStock: false,
+    customOrder: false,
+    changed: null,
+    // NOTE: seatSizes removed - legacy system stores seat size in special_notes field
     customerName: "John Smith",
     saddleId: "saddle-123",
     createdAt: new Date("2023-01-01"),
@@ -85,33 +93,31 @@ describe("OrderSearchService", () => {
         {
           provide: OrderMapper,
           useValue: {
-            toDomain: jest
-              .fn()
-              .mockReturnValue(
-                new (Order as any)(
-                  OrderId.fromString("123e4567-e89b-12d3-a456-426614174000"),
-                  "123e4567-e89b-12d3-a456-426614174000",
-                  "ORD-2023-001",
-                  OrderStatus.PENDING,
-                  OrderPriority.NORMAL,
-                  null,
-                  null,
-                  { brand: "Prestige" },
-                  null,
-                  new Date("2024-03-15"),
-                  null,
-                  2500.0,
-                  750.0,
-                  1750.0,
-                  null,
-                  false,
-                  new Date("2023-01-01"),
-                  new Date("2023-01-01"),
-                  ["size-17-5"],
-                  "John Smith",
-                  "saddle-123",
-                ),
+            toDomain: jest.fn().mockReturnValue(
+              new (Order as any)(
+                OrderId.fromString("123e4567-e89b-12d3-a456-426614174000"),
+                "123e4567-e89b-12d3-a456-426614174000",
+                "ORD-2023-001",
+                OrderStatus.PENDING,
+                OrderPriority.NORMAL,
+                null,
+                null,
+                { brand: "Prestige" },
+                null,
+                new Date("2024-03-15"),
+                null,
+                2500.0,
+                750.0,
+                1750.0,
+                null,
+                false,
+                new Date("2023-01-01"),
+                new Date("2023-01-01"),
+                // NOTE: seatSizes param removed - legacy system stores seat size in special_notes
+                "John Smith",
+                "saddle-123",
               ),
+            ),
           },
         },
       ],
@@ -173,17 +179,7 @@ describe("OrderSearchService", () => {
       );
     });
 
-    it("should search by seat size using JSONB containment", async () => {
-      const searchDto = new OrderSearchDto();
-      searchDto.seatSizeId = "size-17-5";
-
-      await service.searchOrders(searchDto);
-
-      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-        "order.seatSizes @> :seatSizeArray",
-        { seatSizeArray: JSON.stringify(["size-17-5"]) },
-      );
-    });
+    // NOTE: Test for seatSize search removed - legacy system stores seat size in special_notes field
 
     it("should search by urgency flag", async () => {
       const searchDto = new OrderSearchDto();

@@ -6,6 +6,7 @@ import { OrderService } from "../../../src/orders/order.service";
 import { OrderEntity } from "../../../src/orders/infrastructure/persistence/relational/entities/order.entity";
 import { CreateOrderDto } from "../../../src/orders/dto/create-order.dto";
 import { UpdateOrderDto } from "../../../src/orders/dto/update-order.dto";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { OrderDto } from "../../../src/orders/dto/order.dto";
 
 describe("OrderService", () => {
@@ -32,6 +33,14 @@ describe("OrderService", () => {
     balanceOwing: 2000.0,
     measurements: { wither: "5.5", shoulder: "8.0" },
     isUrgent: false,
+    // Legacy boolean flags
+    rushed: false,
+    repair: false,
+    demo: false,
+    sponsored: false,
+    fitterStock: false,
+    customOrder: false,
+    changed: null,
     seatSizes: ["17.5"],
     customerName: "John Smith",
     saddleId: 789,
@@ -41,7 +50,13 @@ describe("OrderService", () => {
   } as OrderEntity;
 
   const createMockQueryBuilder = (
-    mockResults: { getMany?: OrderEntity[]; getOne?: OrderEntity | null; getCount?: number; getRawOne?: any; getRawMany?: any[] } = {},
+    mockResults: {
+      getMany?: OrderEntity[];
+      getOne?: OrderEntity | null;
+      getCount?: number;
+      getRawOne?: any;
+      getRawMany?: any[];
+    } = {},
   ) => ({
     where: jest.fn().mockReturnThis(),
     andWhere: jest.fn().mockReturnThis(),
@@ -52,10 +67,16 @@ describe("OrderService", () => {
     select: jest.fn().mockReturnThis(),
     addSelect: jest.fn().mockReturnThis(),
     groupBy: jest.fn().mockReturnThis(),
-    getMany: jest.fn().mockResolvedValue(mockResults.getMany || [mockOrderEntity]),
+    getMany: jest
+      .fn()
+      .mockResolvedValue(mockResults.getMany || [mockOrderEntity]),
     getOne: jest.fn().mockResolvedValue(mockResults.getOne || mockOrderEntity),
     getCount: jest.fn().mockResolvedValue(mockResults.getCount ?? 1),
-    getRawOne: jest.fn().mockResolvedValue(mockResults.getRawOne || { count: "1", total: "2500" }),
+    getRawOne: jest
+      .fn()
+      .mockResolvedValue(
+        mockResults.getRawOne || { count: "1", total: "2500" },
+      ),
     getRawMany: jest.fn().mockResolvedValue(mockResults.getRawMany || []),
   });
 
@@ -70,6 +91,9 @@ describe("OrderService", () => {
       count: jest.fn(),
       softDelete: jest.fn(),
       createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
+      manager: {
+        query: jest.fn(),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -124,7 +148,11 @@ describe("OrderService", () => {
         rushed: 1,
       };
 
-      const urgentOrder = { ...mockOrderEntity, isUrgent: true, priority: "urgent" };
+      const urgentOrder = {
+        ...mockOrderEntity,
+        isUrgent: true,
+        priority: "urgent",
+      };
       repository.create.mockReturnValue(urgentOrder as OrderEntity);
       repository.save.mockResolvedValue(urgentOrder as OrderEntity);
 
@@ -227,7 +255,14 @@ describe("OrderService", () => {
       const status = "pending";
 
       // Act
-      const result = await service.findAll(page, limit, fitterId, customerId, factoryId, status);
+      const result = await service.findAll(
+        page,
+        limit,
+        fitterId,
+        customerId,
+        factoryId,
+        status,
+      );
 
       // Assert
       expect(result).toBeDefined();
@@ -366,7 +401,8 @@ describe("OrderService", () => {
       const cancelledOrder = {
         ...mockOrderEntity,
         status: "cancelled",
-        specialInstructions: `${mockOrderEntity.specialInstructions}\n\nCancellation reason: ${reason}`.trim(),
+        specialInstructions:
+          `${mockOrderEntity.specialInstructions}\n\nCancellation reason: ${reason}`.trim(),
       };
 
       repository.findOne.mockResolvedValue(mockOrderEntity);
@@ -546,21 +582,18 @@ describe("OrderService", () => {
 
   describe("getOrderStats", () => {
     it("should return order statistics", async () => {
-      // Arrange
-      repository.count
-        .mockResolvedValueOnce(150) // total orders
-        .mockResolvedValueOnce(12); // urgent orders
-
-      const statusQueryBuilder = createMockQueryBuilder({
-        getCount: 8,
-        getRawOne: { avg: "2750.5" },
-        getRawMany: [
-          { status: "pending", count: "45" },
-          { status: "in_production", count: "35" },
-          { status: "delivered", count: "50" },
-        ],
-      });
-      repository.createQueryBuilder.mockReturnValue(statusQueryBuilder as any);
+      // Arrange - mock the raw SQL queries used by getOrderStats
+      (repository.manager.query as jest.Mock)
+        .mockResolvedValueOnce([{ count: "150" }]) // total orders
+        .mockResolvedValueOnce([{ count: "12" }]) // urgent orders (rushed = true)
+        .mockResolvedValueOnce([{ count: "8" }]) // overdue orders
+        .mockResolvedValueOnce([{ avg: "2750.5" }]) // average value
+        .mockResolvedValueOnce([
+          // status counts (order_status integer column)
+          { status: 0, count: "45" }, // unordered
+          { status: 3, count: "35" }, // in_production_p1
+          { status: 7, count: "50" }, // completed_sale
+        ]);
 
       // Act
       const result = await service.getOrderStats();
@@ -569,6 +602,13 @@ describe("OrderService", () => {
       expect(result).toBeDefined();
       expect(result.totalOrders).toBe(150);
       expect(result.urgentOrders).toBe(12);
+      expect(result.overdueOrders).toBe(8);
+      expect(result.averageValue).toBe(2750.5);
+      expect(result.statusCounts).toEqual({
+        unordered: 45,
+        in_production_p1: 35,
+        completed_sale: 50,
+      });
     });
   });
 
@@ -587,10 +627,14 @@ describe("OrderService", () => {
     it("should handle repository errors gracefully", async () => {
       // Arrange
       const orderId = 12345;
-      repository.findOne.mockRejectedValue(new Error("Database connection error"));
+      repository.findOne.mockRejectedValue(
+        new Error("Database connection error"),
+      );
 
       // Act & Assert
-      await expect(service.findOne(orderId)).rejects.toThrow("Database connection error");
+      await expect(service.findOne(orderId)).rejects.toThrow(
+        "Database connection error",
+      );
     });
   });
 });

@@ -193,12 +193,12 @@ export class RlsService {
       // Note: "user" view aliases credentials table, so we check credentials
       const tables = [
         "credentials", // "user" view points to this table
-        "customers",   // Note: plural
+        "customers", // Note: plural
         "orders",
         "fitters",
         "factories",
         "factory_employees",
-        "log",         // Note: was "audit_log" in old schema
+        "log", // Note: was "audit_log" in old schema
       ];
       const results: {
         table: string;
@@ -259,7 +259,10 @@ export class RlsService {
     }[] = [];
     // Note: "user" view aliases credentials table
     const tables = [
-      { name: "credentials", query: 'SELECT COUNT(*) as count FROM credentials' },
+      {
+        name: "credentials",
+        query: "SELECT COUNT(*) as count FROM credentials",
+      },
       { name: "customers", query: "SELECT COUNT(*) as count FROM customers" },
       { name: "orders", query: 'SELECT COUNT(*) as count FROM "orders"' },
       { name: "fitters", query: "SELECT COUNT(*) as count FROM fitters" },
@@ -766,7 +769,10 @@ export class RlsService {
         `INSERT INTO log (user_id, user_type, order_id, text, time)
          VALUES ($1, 0, 0, $2, EXTRACT(EPOCH FROM NOW())::INTEGER)
          ON CONFLICT DO NOTHING`,
-        [userId, `RLS_CONTEXT_SET: ${JSON.stringify({ userRole, factoryId, fitterId })}`],
+        [
+          userId,
+          `RLS_CONTEXT_SET: ${JSON.stringify({ userRole, factoryId, fitterId })}`,
+        ],
       );
     } catch (error) {
       // Audit table may not exist, that's okay

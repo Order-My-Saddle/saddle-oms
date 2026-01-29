@@ -12,16 +12,15 @@ import { usePagination } from '@/hooks';
 import { getFitterName, getCustomerName, getSupplierName, getSeatSize, getStatus, getUrgent, getDate } from '../utils/orderHydration';
 import { getOrderTableColumns } from '../utils/orderTableColumns';
 import { seatSizes, statuses } from '../utils/orderConstants';
-import { 
-  buildOrderFilters, 
-  extractDynamicSeatSizes, 
-  processOrdersTableData, 
-  processSupplierData,
+import {
+  buildOrderFilters,
+  extractDynamicSeatSizes,
+  extractDynamicFactories,
+  processOrdersTableData,
   fetchCompleteOrderData,
-  type OrderTableRow 
+  type OrderTableRow
 } from '../utils/orderProcessing';
 import { getEnrichedOrders, searchByOrderId } from '@/services/enrichedOrders';
-import { useSuppliers } from '@/hooks/useEntities';
 
 // Base order interface that matches the API response
 export interface Order {
@@ -64,9 +63,6 @@ export default function Orders() {
   const [orderDataError, setOrderDataError] = useState<string | null>(null);
   const [useComprehensiveEdit, setUseComprehensiveEdit] = useState(true); // Toggle for new comprehensive editor
   
-  // Fetch suppliers for dropdown
-  const { data: suppliersData } = useSuppliers({ partial: true });
-  const suppliers = processSupplierData(suppliersData);
 
   // Use the same filter approach as Dashboard/Reports for consistency
   const [headerFilters, setHeaderFilters] = useState<Record<string, string>>({});
@@ -89,18 +85,24 @@ export default function Orders() {
     // Set a new timeout to update filters after user stops typing
     const timeout = setTimeout(() => {
       if (term.trim() === '') {
-        // If search is cleared, remove the orderId filter
+        // If search is cleared, remove the orderId and searchTerm filters
         setIsSearching(false);
         setSearchMessage("");
-        setHeaderFilters(prev => ({ ...prev, orderId: '' }));
+        setHeaderFilters(prev => ({ ...prev, orderId: '', searchTerm: '' }));
       } else if (/^\d+$/.test(term.trim())) {
-        // Only update filters if the search term is a number (order ID)
-        // Use exact orderId match for more precise search results
+        // If the search term is a number, search by order ID
         const exactOrderId = term.trim();
         console.log('Searching for exact order ID:', exactOrderId);
         setIsSearching(true);
         setSearchMessage(`Searching for order ID: ${exactOrderId}...`);
-        setHeaderFilters(prev => ({ ...prev, orderId: exactOrderId }));
+        setHeaderFilters(prev => ({ ...prev, orderId: exactOrderId, searchTerm: '' }));
+      } else {
+        // If the search term is text, search across multiple fields (customer, factory, fitter, brand, etc.)
+        const searchValue = term.trim();
+        console.log('Searching for:', searchValue);
+        setIsSearching(true);
+        setSearchMessage(`Searching for: "${searchValue}"...`);
+        setHeaderFilters(prev => ({ ...prev, orderId: '', searchTerm: searchValue }));
       }
       // Reset to first page when searching
       setPage(1);
@@ -136,8 +138,9 @@ export default function Orders() {
       // Build comprehensive filters from headerFilters using shared utility
       const filters = buildOrderFilters(headerFilters);
       
-      // Check if we're searching for a specific orderId
+      // Check if we're searching for a specific orderId or using general search term
       const isSearchingForOrderId = filters.orderId && /^\d+$/.test(filters.orderId);
+      const isSearchingWithSearchTerm = filters.searchTerm && filters.searchTerm.length > 0;
       
       // Instead of sorting by ID, sort by orderId which is more meaningful to users
       // Get orders with server-side sorting by orderId in descending order
@@ -179,8 +182,16 @@ export default function Orders() {
           // Automatically clear the message after 3 seconds
           setTimeout(() => setSearchMessage(''), 3000);
         }
+      } else if (isSearchingWithSearchTerm) {
+        if (apiOrders.length === 0) {
+          setSearchMessage(`No orders found for: "${filters.searchTerm}"`);
+        } else {
+          setSearchMessage(`Found ${apiOrders.length} order${apiOrders.length === 1 ? '' : 's'} for: "${filters.searchTerm}"`);
+          // Automatically clear the message after 3 seconds
+          setTimeout(() => setSearchMessage(''), 3000);
+        }
       } else {
-        // Clear search message if not searching for a specific ID
+        // Clear search message if not searching
         setSearchMessage('');
       }
       
@@ -190,6 +201,8 @@ export default function Orders() {
       setTotalItems(0);
       if (headerFilters.orderId) {
         setSearchMessage(`Error searching for order: ${err.message || 'Unknown error'}`);
+      } else if (headerFilters.searchTerm) {
+        setSearchMessage(`Error searching: ${err.message || 'Unknown error'}`);
       }
     } finally {
       setLoading(false);
@@ -218,6 +231,11 @@ export default function Orders() {
   // Extract unique seat sizes from orders using shared utility
   const dynamicSeatSizes = React.useMemo(() => {
     return extractDynamicSeatSizes(orders);
+  }, [orders]);
+
+  // Extract unique factory names from orders for filter dropdown
+  const dynamicFactories = React.useMemo(() => {
+    return extractDynamicFactories(orders);
   }, [orders]);
 
   // Handle filter changes
@@ -274,6 +292,7 @@ export default function Orders() {
                 setHeaderFilters({});
                 setPage(1);
                 setSearchTerm('');
+                setSearchMessage('');
               }}
               className="inline-flex items-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
             >
@@ -312,7 +331,7 @@ className="btn-primary"
       <div className="space-y-4">
         <EntityTable
           entities={processedOrders}
-          columns={getOrderTableColumns(headerFilters, handleFilterChange, suppliers, dynamicSeatSizes)}
+          columns={getOrderTableColumns(headerFilters, handleFilterChange, dynamicFactories, dynamicSeatSizes)}
           onView={handleViewDetails}
           onEdit={handleEditOrder}
           onDelete={handleDeleteOrder}

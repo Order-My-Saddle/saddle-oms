@@ -3,7 +3,6 @@ import {
   IsBoolean,
   IsOptional,
   IsString,
-  IsNumber,
   ValidateNested,
 } from "class-validator";
 import { Transform, Type, plainToInstance } from "class-transformer";

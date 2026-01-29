@@ -9,6 +9,7 @@ describe("EnrichedOrdersService", () => {
   let dataSource: DataSource;
   let queryRunner: any;
   let configService: jest.Mocked<ConfigService>;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let _productionCacheService: jest.Mocked<ProductionCacheService> | undefined;
 
   const mockEnrichedOrderData = [
@@ -114,11 +115,11 @@ describe("EnrichedOrdersService", () => {
         limit: 10,
       };
 
-      // Mock the direct dataSource.query calls
-      const mockDS = dataSource as any;
-      mockDS.query
-        .mockResolvedValueOnce([{ total: "150" }]) // Count query first
-        .mockResolvedValueOnce(mockEnrichedOrderData); // Data query second
+      // Mock the queryRunner.query calls (service uses queryRunner, not dataSource.query)
+      queryRunner.query
+        .mockResolvedValueOnce([]) // RLS set_config call
+        .mockResolvedValueOnce([{ total: "150" }]) // Count query
+        .mockResolvedValueOnce(mockEnrichedOrderData); // Data query
 
       // Act
       const result = await service.getEnrichedOrders(queryDto);
@@ -141,8 +142,9 @@ describe("EnrichedOrdersService", () => {
         },
       });
 
-      const mockDataSource2 = dataSource as any;
-      expect(mockDataSource2.query).toHaveBeenCalledTimes(2);
+      expect(queryRunner.query).toHaveBeenCalledTimes(3);
+      expect(queryRunner.connect).toHaveBeenCalled();
+      expect(queryRunner.release).toHaveBeenCalled();
     });
   });
 
@@ -151,11 +153,11 @@ describe("EnrichedOrdersService", () => {
       // Trigger a call that uses configuration
       const queryDto = { page: 1, limit: 5 };
 
-      // Mock query responses
-      const mockDataSource3 = dataSource as any;
-      mockDataSource3.query
-        .mockResolvedValueOnce([{ total: "10" }])
-        .mockResolvedValueOnce([]);
+      // Mock queryRunner.query responses (service uses queryRunner, not dataSource.query)
+      queryRunner.query
+        .mockResolvedValueOnce([]) // RLS set_config call
+        .mockResolvedValueOnce([{ total: "10" }]) // Count query
+        .mockResolvedValueOnce([]); // Data query
 
       await service.getEnrichedOrders(queryDto);
 

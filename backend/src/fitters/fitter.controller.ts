@@ -122,9 +122,7 @@ export class FitterController {
     description: "Fitters retrieved successfully",
     type: [FitterDto],
   })
-  async findByCountry(
-    @Param("country") country: string,
-  ): Promise<FitterDto[]> {
+  async findByCountry(@Param("country") country: string): Promise<FitterDto[]> {
     return this.fitterService.findByCountry(country);
   }
 

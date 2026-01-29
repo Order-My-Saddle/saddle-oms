@@ -6,7 +6,10 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from "typeorm";
+import { UserEntity } from "../../../../../users/infrastructure/persistence/relational/entities/user.entity";
 
 /**
  * Factory TypeORM Entity
@@ -50,8 +53,17 @@ export class FactoryEntity {
   @Column({ name: "currency", type: "integer", nullable: true })
   currency: number | null;
 
-  @Column({ name: "emailaddress", type: "varchar", length: 255, nullable: true })
+  @Column({
+    name: "emailaddress",
+    type: "varchar",
+    length: 255,
+    nullable: true,
+  })
   emailaddress: string | null;
+
+  @ManyToOne(() => UserEntity, { eager: false })
+  @JoinColumn({ name: "user_id", referencedColumnName: "id" })
+  user?: UserEntity;
 
   @Column({ name: "deleted", type: "smallint", default: 0 })
   deleted: number;
@@ -71,13 +83,20 @@ export class FactoryEntity {
   }
 
   get fullAddress(): string {
-    const parts = [this.address, this.city, this.state, this.zipcode, this.country].filter(
-      (part) => part && part.trim() !== "",
-    );
+    const parts = [
+      this.address,
+      this.city,
+      this.state,
+      this.zipcode,
+      this.country,
+    ].filter((part) => part && part.trim() !== "");
     return parts.join(", ");
   }
 
   get displayName(): string {
+    if (this.user?.name) {
+      return this.user.name;
+    }
     return this.city ? `Factory in ${this.city}` : `Factory #${this.id}`;
   }
 

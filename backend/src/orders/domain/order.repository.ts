@@ -149,6 +149,5 @@ export interface IOrderRepository {
   findProductionOrders(filters?: any): Promise<Order[]>;
   bulkCreate(orders: Order[]): Promise<Order[]>;
 
-  // Production analytics methods
-  getSeatSizeSummary(): Promise<any>;
+  // NOTE: getSeatSizeSummary removed - legacy system stores seat size in special_notes field
 }

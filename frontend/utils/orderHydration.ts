@@ -17,27 +17,30 @@ export function renderEntity(entity: any, type: 'customer' | 'factory' | 'fitter
 }
 
 export function getFitterName(order: any) {
-  // For enriched orders, use the direct fitterName field first
-  if (order.fitterName && typeof order.fitterName === 'string' && order.fitterName.trim()) {
-    return order.fitterName;
+  // For enriched orders, use the direct fitterName field first (camelCase or snake_case)
+  const fitterName = order.fitterName || order.fitter_name;
+  if (fitterName && typeof fitterName === 'string' && fitterName.trim()) {
+    return fitterName;
   }
   // Fallback to nested object or other formats
   return renderEntity(order.fitter, 'fitter');
 }
 
 export function getCustomerName(order: any) {
-  // For enriched orders, use the direct customerName field first
-  if (order.customerName && typeof order.customerName === 'string' && order.customerName.trim()) {
-    return order.customerName;
+  // For enriched orders, use the direct customerName field first (camelCase or snake_case)
+  const customerName = order.customerName || order.customer_name;
+  if (customerName && typeof customerName === 'string' && customerName.trim()) {
+    return customerName;
   }
   // Fallback to nested object or other formats
   return renderEntity(order.customer, 'customer');
 }
 
 export function getFactoryName(order: any) {
-  // For enriched orders, use the direct factoryName field first
-  if (order.factoryName && typeof order.factoryName === 'string' && order.factoryName.trim()) {
-    return order.factoryName;
+  // For enriched orders, use the direct factoryName field first (camelCase or snake_case)
+  const factoryName = order.factoryName || order.factory_name;
+  if (factoryName && typeof factoryName === 'string' && factoryName.trim()) {
+    return factoryName;
   }
   // Fallback to supplierName for backwards compatibility
   if (order.supplierName && typeof order.supplierName === 'string' && order.supplierName.trim()) {
@@ -46,6 +49,9 @@ export function getFactoryName(order: any) {
   // Fallback to nested object or other formats
   return renderEntity(order.factory || order.supplier, 'factory');
 }
+
+// Alias for backward compatibility (suppliers renamed to factories)
+export const getSupplierName = getFactoryName;
 export function getSeatSize(order: any) {
   const ref = order.reference || '';
   const match = ref.match(/(\d{2}(?:\.5)?)/);

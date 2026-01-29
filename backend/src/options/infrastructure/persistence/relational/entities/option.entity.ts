@@ -1,11 +1,8 @@
 import {
   Column,
-  CreateDateColumn,
   Entity,
   Index,
   PrimaryGeneratedColumn,
-  UpdateDateColumn,
-  DeleteDateColumn,
 } from "typeorm";
 
 /**
@@ -33,47 +30,47 @@ export class OptionEntity {
   type: number;
 
   // 7-tier pricing structure
-  @Column({ name: "price_1", type: "integer", default: 0 })
+  @Column({ name: "price1", type: "integer", default: 0 })
   price1: number;
 
-  @Column({ name: "price_2", type: "integer", default: 0 })
+  @Column({ name: "price2", type: "integer", default: 0 })
   price2: number;
 
-  @Column({ name: "price_3", type: "integer", default: 0 })
+  @Column({ name: "price3", type: "integer", default: 0 })
   price3: number;
 
-  @Column({ name: "price_4", type: "integer", default: 0 })
+  @Column({ name: "price4", type: "integer", default: 0 })
   price4: number;
 
-  @Column({ name: "price_5", type: "integer", default: 0 })
+  @Column({ name: "price5", type: "integer", default: 0 })
   price5: number;
 
-  @Column({ name: "price_6", type: "integer", default: 0 })
+  @Column({ name: "price6", type: "integer", default: 0 })
   price6: number;
 
-  @Column({ name: "price_7", type: "integer", default: 0 })
+  @Column({ name: "price7", type: "integer", default: 0 })
   price7: number;
 
   // Contrast pricing tiers
-  @Column({ name: "price_contrast_1", type: "integer", default: 0 })
+  @Column({ name: "price_contrast1", type: "integer", default: 0 })
   priceContrast1: number;
 
-  @Column({ name: "price_contrast_2", type: "integer", default: 0 })
+  @Column({ name: "price_contrast2", type: "integer", default: 0 })
   priceContrast2: number;
 
-  @Column({ name: "price_contrast_3", type: "integer", default: 0 })
+  @Column({ name: "price_contrast3", type: "integer", default: 0 })
   priceContrast3: number;
 
-  @Column({ name: "price_contrast_4", type: "integer", default: 0 })
+  @Column({ name: "price_contrast4", type: "integer", default: 0 })
   priceContrast4: number;
 
-  @Column({ name: "price_contrast_5", type: "integer", default: 0 })
+  @Column({ name: "price_contrast5", type: "integer", default: 0 })
   priceContrast5: number;
 
-  @Column({ name: "price_contrast_6", type: "integer", default: 0 })
+  @Column({ name: "price_contrast6", type: "integer", default: 0 })
   priceContrast6: number;
 
-  @Column({ name: "price_contrast_7", type: "integer", default: 0 })
+  @Column({ name: "price_contrast7", type: "integer", default: 0 })
   priceContrast7: number;
 
   @Column({ name: "sequence", type: "smallint", default: 0 })
@@ -85,18 +82,9 @@ export class OptionEntity {
   @Column({ name: "deleted", type: "smallint", default: 0 })
   deleted: number;
 
-  @CreateDateColumn({ name: "created_at", type: "timestamp" })
-  createdAt: Date;
-
-  @UpdateDateColumn({ name: "updated_at", type: "timestamp" })
-  updatedAt: Date;
-
-  @DeleteDateColumn({ name: "deleted_at", nullable: true })
-  deletedAt?: Date;
-
   // Computed properties for business logic
   get isActive(): boolean {
-    return this.deleted === 0 && !this.deletedAt;
+    return this.deleted === 0;
   }
 
   /**

@@ -114,17 +114,33 @@ export class AuthService {
     //   hash,
     // });
 
-    // Resolve user role based on business logic (fitter table, admin usernames, etc.)
+    // Resolve user role based on database fields (user_type and supervisor)
     const userRole = await this.usersService.getUserRole(
       user.id,
       user.username,
+      user.userType,
+      user.isSupervisor,
     );
+
+    // Convert role object to roles array format expected by frontend
+    // Frontend expects: roles: ["ROLE_ADMIN", "ROLE_FITTER", etc.]
+    const roleNameToFrontend: Record<string, string> = {
+      fitter: "ROLE_FITTER",
+      admin: "ROLE_ADMIN",
+      factory: "ROLE_SUPPLIER", // Note: backend "factory" maps to frontend "SUPPLIER"
+      customsaddler: "ROLE_USER",
+      supervisor: "ROLE_SUPERVISOR",
+      user: "ROLE_USER",
+    };
+    const frontendRole =
+      roleNameToFrontend[userRole.name.toLowerCase()] || "ROLE_USER";
 
     // Simple token for testing (without session management)
     const token = await this.jwtService.signAsync(
       {
         id: user.id,
-        role: userRole,
+        role: userRole, // Keep original for backend use
+        roles: [frontendRole], // Add array format for frontend
         username: user.username,
         enabled: user.enabled,
       },
@@ -431,7 +447,22 @@ export class AuthService {
   }
 
   async me(userJwtPayload: JwtPayloadType): Promise<NullableType<User>> {
-    return this.usersService.findById(userJwtPayload.id);
+    const user = await this.usersService.findById(userJwtPayload.id);
+    if (!user) return null;
+
+    // Get dynamically computed role based on database fields (user_type and supervisor)
+    const role = await this.usersService.getUserRole(
+      user.id,
+      user.username,
+      user.userType,
+      user.isSupervisor,
+    );
+
+    // Return user with typeName for frontend role mapping
+    return {
+      ...user,
+      typeName: role.name,
+    };
   }
 
   async update(

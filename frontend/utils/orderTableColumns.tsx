@@ -38,7 +38,18 @@ export function getOrderTableColumns(
         />
       ),
       render: (_: any, row: any) => {
-        if (row?.saddleSpecifications) {
+        if (!row) return '-';
+        // For enriched orders, use brand_name and model_name directly
+        const brandName = row.brandName || row.brand_name;
+        const modelName = row.modelName || row.model_name;
+        if (brandName || modelName) {
+          const parts = [];
+          if (brandName) parts.push(brandName);
+          if (modelName) parts.push(modelName);
+          return parts.join(' - ') || '-';
+        }
+        // Fallback to saddleSpecifications
+        if (row.saddleSpecifications) {
           const specs = row.saddleSpecifications;
           const parts = [];
           if (specs.brand) parts.push(specs.brand);
@@ -47,7 +58,7 @@ export function getOrderTableColumns(
           if (specs.color) parts.push(specs.color);
           return parts.join(' ') || '-';
         }
-        return row?.reference || row?.saddle || '-';
+        return row.reference || row.saddle || '-';
       },
     },
     {
@@ -69,26 +80,63 @@ export function getOrderTableColumns(
         if (!row) return '-';
         let seatSizes: string[] = [];
 
-        // First check saddleSpecifications.seatSize from backend
-        if (row.saddleSpecifications?.seatSize) {
+        // Helper to normalize European comma to dot notation
+        const normalize = (s: string) => String(s).replace(',', '.');
+
+        // Helper to extract seat sizes from text (special_notes or comments)
+        const extractFromText = (text: string): string[] => {
+          if (!text) return [];
+          const sizes: string[] = [];
+          // Match patterns like "seat size 17.5", "size 18", "17,5 seat", etc.
+          const patterns = [
+            /seat\s*size[:\s]*(\d{1,2}[.,]?\d?)/gi,
+            /size[:\s]*(\d{1,2}[.,]?\d?)/gi,
+            /(\d{1,2}[.,]5?)\s*(?:seat|inch|")/gi,
+          ];
+          for (const pattern of patterns) {
+            const matches = text.matchAll(pattern);
+            for (const match of matches) {
+              const size = match[1];
+              const numericSize = parseFloat(size.replace(',', '.'));
+              // Only include valid seat sizes (14-20 range)
+              if (numericSize >= 14 && numericSize <= 20) {
+                sizes.push(normalize(size));
+              }
+            }
+          }
+          return sizes;
+        };
+
+        // First check seat_sizes from backend (snake_case JSONB array)
+        if (Array.isArray(row.seat_sizes) && row.seat_sizes.length > 0) {
+          seatSizes = row.seat_sizes.map((s: any) => normalize(String(s)));
+        }
+        // Check saddleSpecifications.seatSize
+        else if (row.saddleSpecifications?.seatSize) {
           if (Array.isArray(row.saddleSpecifications.seatSize)) {
-            seatSizes = row.saddleSpecifications.seatSize.map(String);
+            seatSizes = row.saddleSpecifications.seatSize.map((s: any) => normalize(String(s)));
           } else {
-            seatSizes = [String(row.saddleSpecifications.seatSize)];
+            seatSizes = [normalize(String(row.saddleSpecifications.seatSize))];
           }
         }
-        // Fallback to legacy fields
+        // Fallback to seatSizes (camelCase)
         else if (Array.isArray(row.seatSizes) && row.seatSizes.length > 0) {
-          seatSizes = row.seatSizes.map(String);
+          seatSizes = row.seatSizes.map((s: any) => normalize(String(s)));
         } else if (row.seatSize) {
           if (Array.isArray(row.seatSize)) {
-            seatSizes = row.seatSize.map(String);
+            seatSizes = row.seatSize.map((s: any) => normalize(String(s)));
           } else {
-            seatSizes = [String(row.seatSize)];
+            seatSizes = [normalize(String(row.seatSize))];
           }
-        } else if (row.reference) {
-          const match = row.reference.match(/(\d{2}(?:\.5)?)/g);
-          if (match && match.length > 0) seatSizes = match;
+        }
+        // Extract from special_notes or comments field
+        else if (row.special_notes || row.comments) {
+          seatSizes = extractFromText(row.special_notes || row.comments);
+        }
+        // Fallback to reference field
+        else if (row.reference) {
+          const match = row.reference.match(/(\d{2}(?:[.,]5)?)/g);
+          if (match && match.length > 0) seatSizes = match.map(normalize);
         }
 
         seatSizes = Array.from(new Set(seatSizes));
@@ -108,9 +156,10 @@ export function getOrderTableColumns(
       ),
       render: (_: any, row: any) => {
         if (!row) return '-';
-        // For enriched orders, use the direct customerName field first
-        if (row.customerName && typeof row.customerName === 'string' && row.customerName.trim()) {
-          return row.customerName;
+        // For enriched orders, use the direct customerName field first (camelCase or snake_case)
+        const customerName = row.customerName || row.customer_name;
+        if (customerName && typeof customerName === 'string' && customerName.trim()) {
+          return customerName;
         }
         // Fallback to customer object or computed field
         if (row.customer) {
@@ -129,8 +178,8 @@ export function getOrderTableColumns(
       key: 'date',
       title: 'DATE',
       render: (_: any, row: any) => {
-        // Backend sends createdAt as the primary date field
-        const dateStr = row?.createdAt || row?.orderTime || row?.date || '';
+        // Backend sends created_at (snake_case) or createdAt (camelCase)
+        const dateStr = row?.created_at || row?.createdAt || row?.orderTime || row?.date || '';
         if (!dateStr) return '-';
         try {
           const date = new Date(dateStr);
@@ -167,11 +216,11 @@ export function getOrderTableColumns(
         />
       ),
       render: (val: any, row: any) => {
-        // Backend uses isUrgent boolean field
-        const urgentValue = row?.isUrgent ?? val ?? row?.urgent;
+        // Backend uses urgency (0/1) or isUrgent (boolean)
+        const urgentValue = row?.urgency ?? row?.isUrgent ?? val ?? row?.urgent;
         if (urgentValue === null || urgentValue === undefined || urgentValue === '') return 'No';
-        if (urgentValue === true || urgentValue === 'true' || urgentValue === 'Yes') return 'Yes';
-        if (urgentValue === false || urgentValue === 'false' || urgentValue === 'No') return 'No';
+        if (urgentValue === 1 || urgentValue === true || urgentValue === 'true' || urgentValue === 'Yes') return 'Yes';
+        if (urgentValue === 0 || urgentValue === false || urgentValue === 'false' || urgentValue === 'No') return 'No';
         return typeof urgentValue === 'boolean' ? (urgentValue ? 'Yes' : 'No') : String(urgentValue);
       },
     },
@@ -188,9 +237,10 @@ export function getOrderTableColumns(
       ),
       render: (_: any, row: any) => {
         if (!row) return '-';
-        // For enriched orders, use the direct fitterName field first
-        if (row.fitterName && typeof row.fitterName === 'string' && row.fitterName.trim()) {
-          return row.fitterName;
+        // For enriched orders, use the direct fitterName field first (camelCase or snake_case)
+        const fitterName = row.fitterName || row.fitter_name;
+        if (fitterName && typeof fitterName === 'string' && fitterName.trim()) {
+          return fitterName;
         }
         // Fallback to fitter object or computed field
         if (row.fitter) {
@@ -218,9 +268,10 @@ export function getOrderTableColumns(
       ),
       render: (_: any, row: any) => {
         if (!row) return '-';
-        // For enriched orders, use the direct factoryName field first
-        if (row.factoryName && typeof row.factoryName === 'string' && row.factoryName.trim()) {
-          return row.factoryName;
+        // For enriched orders, use the direct factoryName field first (camelCase or snake_case)
+        const factoryName = row.factoryName || row.factory_name;
+        if (factoryName && typeof factoryName === 'string' && factoryName.trim()) {
+          return factoryName;
         }
         // Fallback to supplierName for backwards compatibility
         if (row.supplierName && typeof row.supplierName === 'string' && row.supplierName.trim()) {

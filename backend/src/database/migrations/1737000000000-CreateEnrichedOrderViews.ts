@@ -1,21 +1,23 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner } from "typeorm";
 
 /**
  * CreateEnrichedOrderViews Migration
  *
  * Creates materialized views for efficient order querying:
  * 1. enriched_order_view - Pre-computed order data with customer, fitter, factory, and saddle details
- * 2. order_edit_view - Aggregated order lines, comments, and pricing for editing
+ * 2. order_edit_view - Aggregated order details for editing
  *
  * Performance benefits:
  * - Pre-joined data eliminates runtime joins
  * - Concurrent refresh support via unique index
  * - Automatic refresh function for scheduled updates
  *
- * This migration should run AFTER EnableRowLevelSecurity.
+ * IMPORTANT: Uses legacy schema column names from InitialSchema migration.
  */
-export class CreateEnrichedOrderViews1737000000000 implements MigrationInterface {
-  name = 'CreateEnrichedOrderViews1737000000000';
+export class CreateEnrichedOrderViews1737000000000
+  implements MigrationInterface
+{
+  name = "CreateEnrichedOrderViews1737000000000";
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // ========================================
@@ -92,10 +94,10 @@ export class CreateEnrichedOrderViews1737000000000 implements MigrationInterface
         c.cell_no as customer_cell,
         c.horse_name as customer_horse_name,
 
-        -- Fitter fields
+        -- Fitter fields (join via credentials for name)
         f.id as fitter_id,
-        fu.full_name as fitter_name,
-        fu.user_name as fitter_username,
+        fc.full_name as fitter_name,
+        fc.user_name as fitter_username,
         f.emailaddress as fitter_email,
         f.address as fitter_address,
         f.city as fitter_city,
@@ -105,10 +107,10 @@ export class CreateEnrichedOrderViews1737000000000 implements MigrationInterface
         f.phone_no as fitter_phone,
         f.cell_no as fitter_cell,
 
-        -- Factory fields
+        -- Factory fields (join via credentials for name)
         fa.id as factory_id,
-        fau.full_name as factory_name,
-        fau.user_name as factory_username,
+        fac.full_name as factory_name,
+        fac.user_name as factory_username,
         fa.emailaddress as factory_email,
         fa.address as factory_address,
         fa.city as factory_city,
@@ -130,23 +132,17 @@ export class CreateEnrichedOrderViews1737000000000 implements MigrationInterface
 
         -- Status information
         st.name as status_name,
-        st.sequence as status_sequence,
-
-        -- Timestamps for cache invalidation
-        o.created_at,
-        o.updated_at
+        st.sequence as status_sequence
 
       FROM orders o
       LEFT JOIN customers c ON o.customer_id = c.id
       LEFT JOIN fitters f ON o.fitter_id = f.id
-      LEFT JOIN credentials fu ON f.user_id = fu.user_id
+      LEFT JOIN credentials fc ON f.user_id = fc.user_id
       LEFT JOIN factories fa ON o.factory_id = fa.id
-      LEFT JOIN credentials fau ON fa.user_id = fau.user_id
+      LEFT JOIN credentials fac ON fa.user_id = fac.user_id
       LEFT JOIN saddles s ON o.saddle_id = s.id
       LEFT JOIN leather_types lt ON o.leather_id = lt.id
       LEFT JOIN statuses st ON o.order_status = st.id
-
-      WHERE o.deleted_at IS NULL
     `);
 
     // Create unique index for CONCURRENT refresh
@@ -177,12 +173,6 @@ export class CreateEnrichedOrderViews1737000000000 implements MigrationInterface
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_enriched_order_view_urgent
-      ON enriched_order_view (is_urgent)
-      WHERE is_urgent = 1
-    `);
-
-    await queryRunner.query(`
       CREATE INDEX idx_enriched_order_view_order_time
       ON enriched_order_view (order_time DESC)
     `);
@@ -209,9 +199,8 @@ export class CreateEnrichedOrderViews1737000000000 implements MigrationInterface
         o.id as order_id,
         o.order_status,
         o.order_time,
-        o.special_notes,
-        o.serial_number,
         o.fitter_reference,
+        o.special_notes,
 
         -- Customer info
         c.id as customer_id,
@@ -219,11 +208,11 @@ export class CreateEnrichedOrderViews1737000000000 implements MigrationInterface
 
         -- Fitter info
         f.id as fitter_id,
-        fu.full_name as fitter_name,
+        fc.full_name as fitter_name,
 
         -- Factory info
         fa.id as factory_id,
-        fau.full_name as factory_name,
+        fac.full_name as factory_name,
 
         -- Saddle info
         s.id as saddle_id,
@@ -247,22 +236,16 @@ export class CreateEnrichedOrderViews1737000000000 implements MigrationInterface
         o.price_additional,
 
         -- Order data (contains configuration details)
-        o.order_data,
-
-        -- Timestamps
-        o.created_at,
-        o.updated_at
+        o.order_data
 
       FROM orders o
       LEFT JOIN customers c ON o.customer_id = c.id
       LEFT JOIN fitters f ON o.fitter_id = f.id
-      LEFT JOIN credentials fu ON f.user_id = fu.user_id
+      LEFT JOIN credentials fc ON f.user_id = fc.user_id
       LEFT JOIN factories fa ON o.factory_id = fa.id
-      LEFT JOIN credentials fau ON fa.user_id = fau.user_id
+      LEFT JOIN credentials fac ON fa.user_id = fac.user_id
       LEFT JOIN saddles s ON o.saddle_id = s.id
       LEFT JOIN leather_types lt ON o.leather_id = lt.id
-
-      WHERE o.deleted_at IS NULL
     `);
 
     // Create unique index for CONCURRENT refresh
@@ -326,36 +309,54 @@ export class CreateEnrichedOrderViews1737000000000 implements MigrationInterface
     `);
 
     // Grant permissions on functions
-    await queryRunner.query(`GRANT EXECUTE ON FUNCTION refresh_enriched_order_view() TO PUBLIC`);
-    await queryRunner.query(`GRANT EXECUTE ON FUNCTION refresh_order_edit_view() TO PUBLIC`);
-    await queryRunner.query(`GRANT EXECUTE ON FUNCTION refresh_all_order_views() TO PUBLIC`);
+    await queryRunner.query(
+      `GRANT EXECUTE ON FUNCTION refresh_enriched_order_view() TO PUBLIC`,
+    );
+    await queryRunner.query(
+      `GRANT EXECUTE ON FUNCTION refresh_order_edit_view() TO PUBLIC`,
+    );
+    await queryRunner.query(
+      `GRANT EXECUTE ON FUNCTION refresh_all_order_views() TO PUBLIC`,
+    );
 
-    console.log('✅ Enriched order views created with refresh functions');
+    console.log("✅ Enriched order views created with refresh functions");
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // ========================================
     // 1. DROP TRIGGER FUNCTION
     // ========================================
-    await queryRunner.query(`DROP FUNCTION IF EXISTS trigger_refresh_enriched_views() CASCADE`);
+    await queryRunner.query(
+      `DROP FUNCTION IF EXISTS trigger_refresh_enriched_views() CASCADE`,
+    );
 
     // ========================================
     // 2. DROP REFRESH FUNCTIONS
     // ========================================
-    await queryRunner.query(`DROP FUNCTION IF EXISTS refresh_all_order_views()`);
-    await queryRunner.query(`DROP FUNCTION IF EXISTS refresh_order_edit_view()`);
-    await queryRunner.query(`DROP FUNCTION IF EXISTS refresh_enriched_order_view()`);
+    await queryRunner.query(
+      `DROP FUNCTION IF EXISTS refresh_all_order_views()`,
+    );
+    await queryRunner.query(
+      `DROP FUNCTION IF EXISTS refresh_order_edit_view()`,
+    );
+    await queryRunner.query(
+      `DROP FUNCTION IF EXISTS refresh_enriched_order_view()`,
+    );
 
     // ========================================
     // 3. DROP ORDER EDIT VIEW
     // ========================================
-    await queryRunner.query(`DROP MATERIALIZED VIEW IF EXISTS order_edit_view CASCADE`);
+    await queryRunner.query(
+      `DROP MATERIALIZED VIEW IF EXISTS order_edit_view CASCADE`,
+    );
 
     // ========================================
     // 4. DROP ENRICHED ORDER VIEW
     // ========================================
-    await queryRunner.query(`DROP MATERIALIZED VIEW IF EXISTS enriched_order_view CASCADE`);
+    await queryRunner.query(
+      `DROP MATERIALIZED VIEW IF EXISTS enriched_order_view CASCADE`,
+    );
 
-    console.log('✅ Enriched order views removed');
+    console.log("✅ Enriched order views removed");
   }
 }

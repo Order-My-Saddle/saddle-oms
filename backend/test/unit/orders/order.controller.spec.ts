@@ -35,11 +35,18 @@ describe("OrderController", () => {
       back: "12.5",
     },
     isUrgent: false,
+    // Legacy boolean flags
+    rushed: false,
+    repair: false,
+    demo: false,
+    sponsored: false,
+    fitterStock: false,
+    customOrder: false,
+    changed: null,
     actualDeliveryDate: null,
     isOverdue: false,
     daysUntilDelivery: 105,
     paymentPercentage: 20.0,
-    seatSizes: ["17.5"],
     customerName: "John Smith",
     saddleId: 789,
     createdAt: new Date("2023-12-01"),
@@ -135,7 +142,7 @@ describe("OrderController", () => {
       const minimalCreateDto: CreateOrderDto = {
         customerId: 67890,
       };
-      const minimalOrderDto = { ...mockOrderDto, ...minimalCreateDto };
+      const minimalOrderDto: OrderDto = { ...mockOrderDto, customerId: 67890 };
       orderService.create.mockResolvedValue(minimalOrderDto);
 
       // Act
@@ -475,7 +482,10 @@ describe("OrderController", () => {
       const updateDto: UpdateOrderDto = {
         status: "in_production",
       };
-      const partiallyUpdatedOrder = { ...mockOrderDto, status: "in_production" };
+      const partiallyUpdatedOrder = {
+        ...mockOrderDto,
+        status: "in_production",
+      };
       orderService.update.mockResolvedValue(partiallyUpdatedOrder);
 
       // Act

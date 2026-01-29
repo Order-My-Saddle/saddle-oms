@@ -135,13 +135,8 @@ export class OrderSearchService {
       });
     }
 
-    // Seat size ID search using JSONB containment
-    if (searchDto.seatSizeId) {
-      // PostgreSQL JSONB containment query - very efficient with GIN index
-      queryBuilder.andWhere("order.seatSizes @> :seatSizeArray", {
-        seatSizeArray: JSON.stringify([searchDto.seatSizeId]),
-      });
-    }
+    // NOTE: seatSizeId search removed - legacy system stores seat size in special_notes field
+    // Use searchTerm to search in special_notes instead
 
     // Urgency flag (uses boolean index)
     if (searchDto.isUrgent !== undefined) {
@@ -217,7 +212,7 @@ export class OrderSearchService {
     if (searchDto.customer) summary.customer = searchDto.customer;
     if (searchDto.orderId) summary.orderId = searchDto.orderId;
     if (searchDto.orderNumber) summary.orderNumber = searchDto.orderNumber;
-    if (searchDto.seatSizeId) summary.seatSizeId = searchDto.seatSizeId;
+    // NOTE: seatSizeId removed from summary - legacy system stores seat size in special_notes
     if (searchDto.isUrgent !== undefined) summary.isUrgent = searchDto.isUrgent;
     if (searchDto.saddleId) summary.saddleId = searchDto.saddleId;
     if (searchDto.fitterId) summary.fitterId = searchDto.fitterId;

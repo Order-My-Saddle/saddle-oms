@@ -30,7 +30,7 @@ export class Order {
     private _isUrgent: boolean = false,
     private readonly _createdAt: Date = new Date(),
     private _updatedAt: Date = new Date(),
-    private _seatSizes: string[] | null = null,
+    // NOTE: _seatSizes removed - legacy system stores seat size in special_notes field
     private _customerName: string | null = null,
     private _saddleId: number | null = null,
   ) {
@@ -359,9 +359,7 @@ export class Order {
     return this._updatedAt;
   }
 
-  public get seatSizes(): string[] | null {
-    return this._seatSizes ? [...this._seatSizes] : null;
-  }
+  // NOTE: seatSizes getter removed - legacy system stores seat size in special_notes field
 
   public get customerName(): string | null {
     return this._customerName;
@@ -371,13 +369,7 @@ export class Order {
     return this._saddleId;
   }
 
-  /**
-   * Update seat sizes
-   */
-  public updateSeatSizes(seatSizes: string[]): void {
-    this._seatSizes = seatSizes ? [...seatSizes] : null;
-    this._updatedAt = new Date();
-  }
+  // NOTE: updateSeatSizes method removed - legacy system stores seat size in special_notes field
 
   /**
    * Update customer name (for search optimization)

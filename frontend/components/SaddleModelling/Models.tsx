@@ -142,15 +142,15 @@ export default function Models() {
 
   return (
     <div className="p-8 space-y-6">
-      <PageHeader 
-        title="Models" 
-        description="Manage your saddle models" 
+      <PageHeader
+        title="Saddles"
+        description="Manage your saddle models"
         actions={
           <Button onClick={handleAddModel} className="bg-[#7b2326] hover:bg-[#8b2329] text-white">
             <Plus className="mr-2 h-4 w-4" />
-            Add Model
+            Add Saddle
           </Button>
-        } 
+        }
       />
 
 
@@ -170,7 +170,7 @@ export default function Models() {
         }}
         loading={loading}
         error={error}
-        entityType="model"
+        entityType="saddle"
         onView={handleViewModel}
         onEdit={handleEditModel}
         onDelete={handleDeleteModel}
