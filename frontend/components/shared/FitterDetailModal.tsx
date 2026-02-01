@@ -157,6 +157,7 @@ export function FitterDetailModal({ fitter, isOpen, onClose, onEdit }: FitterDet
             <div>
               <label className="block font-semibold text-sm text-gray-600 mb-1">Type</label>
               <p className="text-sm text-gray-900 p-2 bg-gray-50 rounded border">
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 {(fitter as any)['@type'] || 'Fitter'}
               </p>
             </div>

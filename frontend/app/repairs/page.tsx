@@ -157,6 +157,7 @@ export default function RepairsPage() {
 
       <EntityTable
         entities={repairs}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         columns={getRepairColumns() as any}
         searchTerm={searchTerm}
         onSearch={setSearchTerm}

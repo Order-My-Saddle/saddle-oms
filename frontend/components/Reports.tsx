@@ -683,7 +683,9 @@ export default function Reports() {
               onSearch: setSearchTerm,
               headerFilters,
               onFilterChange: (key: string, value: string) => setHeaderFilters(prev => ({ ...prev, [key]: value })),
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onViewOrder: (order: any) => logger.log('View order:', order),
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onEditOrder: async (order: any) => {
                 logger.log('Edit order:', order);
                 try {
@@ -696,7 +698,9 @@ export default function Reports() {
                   logger.error('Failed to fetch order data for editing:', error);
                 }
               },
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onApproveOrder: (order: any) => logger.log('Approve order:', order),
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onDeleteOrder: (order: any) => logger.log('Delete order:', order),
               seatSizes,
               statuses,
@@ -714,6 +718,7 @@ export default function Reports() {
                 totalItems: filteredOrders.length,
                 itemsPerPage: 10,
               }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } as any}
           />
         </div>

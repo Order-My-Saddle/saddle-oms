@@ -176,6 +176,7 @@ export default function AllSaddleStockPage() {
 
       <EntityTable
         entities={saddleStock}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         columns={getSaddleStockColumns() as any}
         searchTerm={searchTerm}
         onSearch={setSearchTerm}

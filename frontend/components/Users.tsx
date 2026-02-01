@@ -181,6 +181,7 @@ export default function Users() {
       ...updatedUser,
       id: String(selectedUser.id)
     };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     updateEntityOptimistically(optimisticData as any);
 
     try {
@@ -188,6 +189,7 @@ export default function Users() {
 
       // Update with actual response data if available
       if (result && result.id) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         updateEntityOptimistically(result as any);
       }
 

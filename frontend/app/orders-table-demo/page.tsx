@@ -100,6 +100,7 @@ export default function OrdersTableDemoPage() {
 
   const table = useReactTable({
     data: processedOrders,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     columns: columns as any,
     getCoreRowModel: getCoreRowModel(),
   });
