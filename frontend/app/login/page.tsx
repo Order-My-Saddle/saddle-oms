@@ -76,6 +76,7 @@ export default function LoginPage() {
           alignItems: 'center',
         }}
       >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/logo-with-text.png" alt="Custom Saddlery" style={{ width: 120, margin: '0 auto' }} />
         <Suspense fallback={<div>Loading...</div>}>
           <LoginForm />

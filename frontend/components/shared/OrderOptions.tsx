@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface OrderOptionsProps {
-  options: Record<string, any>;
+  options: Record<string, React.ReactNode>;
 }
 
 export function OrderOptions({ options }: OrderOptionsProps) {

@@ -35,6 +35,7 @@ export default function EntitiesDemo() {
       ) : (
         <>
           <ul>
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {customers.map((c: any) => (
               <li key={c.id}>{c.name} ({c.email})</li>
             ))}
@@ -56,6 +57,7 @@ export default function EntitiesDemo() {
         <div>Loading fitters...</div>
       ) : (
         <ul>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {fitters.map((f: any) => (
             <li key={f.id}>{f.username || f.name}</li>
           ))}
@@ -67,6 +69,7 @@ export default function EntitiesDemo() {
         <div>Loading users...</div>
       ) : (
         <ul>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {users.map((u: any) => (
             <li key={u.id}>{u.email || u.username}</li>
           ))}
@@ -78,6 +81,7 @@ export default function EntitiesDemo() {
         <div>Loading brands...</div>
       ) : (
         <ul>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           {brands.map((b: any) => (
             <li key={b.id}>{b.name}</li>
           ))}

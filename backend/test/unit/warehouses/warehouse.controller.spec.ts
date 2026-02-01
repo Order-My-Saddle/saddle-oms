@@ -163,7 +163,7 @@ describe("WarehouseController", () => {
       service.findAll.mockResolvedValue(paginatedResult);
 
       // Act
-      const result = await controller.findAll(query);
+      await controller.findAll(query);
 
       // Assert
       expect(service.findAll).toHaveBeenCalledWith(query);

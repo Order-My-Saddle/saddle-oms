@@ -9,8 +9,6 @@ import { OrderMapper } from "../../../src/orders/infrastructure/persistence/rela
 describe("OrderSearchService", () => {
   let service: OrderSearchService;
   let repository: jest.Mocked<Repository<OrderEntity>>;
-  let dtoMapper: jest.Mocked<DtoMapper>;
-  let domainMapper: jest.Mocked<OrderMapper>;
 
   const mockOrderEntity = {
     id: 1,
@@ -91,8 +89,6 @@ describe("OrderSearchService", () => {
 
     service = module.get<OrderSearchService>(OrderSearchService);
     repository = module.get(getRepositoryToken(OrderEntity));
-    dtoMapper = module.get(DtoMapper);
-    domainMapper = module.get(OrderMapper);
   });
 
   afterEach(() => {

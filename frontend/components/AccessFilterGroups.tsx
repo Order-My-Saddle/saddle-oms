@@ -7,7 +7,7 @@ import { EntityTable } from '@/components/shared/EntityTable';
 import { useTableFilters, usePagination, useEntityData } from '@/hooks';
 import { getAccessFilterGroupTableColumns } from '@/utils/accessFilterGroupsTableColumns';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { createAccessFilterGroup, updateAccessFilterGroup, deleteAccessFilterGroup, type AccessFilterGroup } from '@/services/access-filter-groups';
+import { deleteAccessFilterGroup, type AccessFilterGroup } from '@/services/access-filter-groups';
 import { toast } from 'sonner';
 import { logger } from '@/utils/logger';
 
@@ -15,6 +15,7 @@ export default function AccessFilterGroups() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Modal states
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedAccessFilterGroup, setSelectedAccessFilterGroup] = useState<AccessFilterGroup | null>(null);
 
   // Use our hooks for filters and pagination
@@ -27,6 +28,7 @@ export default function AccessFilterGroups() {
     loading,
     error,
     refetch,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     updateEntityOptimistically,
     removeEntityOptimistically
   } = useEntityData<AccessFilterGroup>({

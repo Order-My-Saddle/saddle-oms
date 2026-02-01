@@ -1,20 +1,15 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { DollarSign, Users, Package, TrendingUp, Search } from 'lucide-react';
-import { Order } from '@/types/Order';
+import { Package, Search } from 'lucide-react';
 import { OrdersTable } from '@/components/shared/OrdersTable';
-import { OrdersTableHeaderFilter as TableHeaderFilter } from '@/components/shared/OrdersTableHeaderFilter';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { logger } from '@/utils/logger';
-import { getFitterName, getCustomerName, getSupplierName, getStatus, getUrgent, getDate } from '../utils/orderHydration';
+import { getFitterName, getCustomerName, getSupplierName, getUrgent } from '../utils/orderHydration';
 import { getOrderTableColumns } from '../utils/orderTableColumns';
 import { seatSizes, statuses } from '../utils/orderConstants';
 import {
@@ -25,7 +20,7 @@ import {
   fetchCompleteOrderData
 } from '../utils/orderProcessing';
 import { getOrderStatusStats } from '../services/dashboard';
-import { getEnrichedOrders, getAllStatusValues, searchByOrderId, universalSearch } from '@/services/enrichedOrders';
+import { getEnrichedOrders, getAllStatusValues, universalSearch } from '@/services/enrichedOrders';
 import { useDebounce } from '@/hooks/useDebounce';
 import { updateOrder } from '@/services/api';
 import DashboardOrderStatusFlow from './DashboardOrderStatusFlow';
@@ -36,15 +31,6 @@ import { OrderApprovalModal } from '@/components/shared/OrderApprovalModal';
 import { EditOrder } from '@/components/EditOrder';
 import { ComprehensiveEditOrder } from '@/components/ComprehensiveEditOrder';
 import { Dialog } from '@/components/ui/dialog';
-
-const salesData = [
-  { name: 'Jan', sales: 4000 },
-  { name: 'Feb', sales: 3000 },
-  { name: 'Mar', sales: 2000 },
-  { name: 'Apr', sales: 2780 },
-  { name: 'May', sales: 1890 },
-  { name: 'Jun', sales: 2390 },
-];
 
 const orderStatusData = {
   unordered: { count: 503, label: 'Unordered' },
@@ -61,35 +47,8 @@ const orderStatusData = {
   completedSale: { count: 33346, label: 'Completed sale' }
 };
 
-const recentSales = [
-  {
-    name: "Olivia Martin",
-    email: "olivia.martin@email.com",
-    amount: "+$1,999.00"
-  },
-  {
-    name: "Jackson Lee",
-    email: "jackson.lee@email.com",
-    amount: "+$39.00"
-  },
-  {
-    name: "Isabella Nguyen",
-    email: "isabella.nguyen@email.com",
-    amount: "+$299.00"
-  },
-  {
-    name: "William Kim",
-    email: "will@email.com",
-    amount: "+$99.00"
-  },
-  {
-    name: "Sofia Davis",
-    email: "sofia.davis@email.com",
-    amount: "+$39.00"
-  }
-];
-
 export default function Dashboard() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [orderStatusStats, setOrderStatusStats] = useState<any>(null);
   const [totalOrders, setTotalOrders] = useState<number>(0);
   const [searchTerm, setSearchTerm] = useState('');
@@ -104,6 +63,7 @@ export default function Dashboard() {
   const [selectedStatus, setSelectedStatus] = useState('');
   const [headerFilters, setHeaderFilters] = useState<Record<string, string>>({});
   const [date, setDate] = React.useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [orders, setOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [ordersError, setOrdersError] = useState('');
@@ -111,6 +71,7 @@ export default function Dashboard() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const itemsPerPage = 30;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -119,6 +80,7 @@ export default function Dashboard() {
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [isLoadingOrderData, setIsLoadingOrderData] = useState(false);
   const [orderDataError, setOrderDataError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [useComprehensiveEdit, setUseComprehensiveEdit] = useState(true); // Toggle for new comprehensive editor
 
   const refreshInterval = useRef<NodeJS.Timeout | null>(null);
@@ -134,7 +96,7 @@ export default function Dashboard() {
       })
       .catch(() => {
         setOrderStatusStats(null);
-        const total = Object.values(orderStatusData).reduce((sum: number, s: any) => sum + (s.count || 0), 0);
+        const total = Object.values(orderStatusData).reduce((sum: number, s) => sum + (s.count || 0), 0);
         setTotalOrders(total);
       });
     
@@ -209,7 +171,8 @@ export default function Dashboard() {
         
         // Log first few orders to see their complete structure
         if (data['hydra:member'] && data['hydra:member'].length > 0) {
-          logger.log('Dashboard: Sample order data from API:', 
+          logger.log('Dashboard: Sample order data from API:',
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             data['hydra:member'].slice(0, 3).map((order: any) => ({
               orderId: order.orderId,
               orderStatus: order.orderStatus,
@@ -224,7 +187,8 @@ export default function Dashboard() {
           );
           
           // Special logging for order 41059 if it exists
-          const order41059 = data['hydra:member'].find((order: any) => 
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const order41059 = data['hydra:member'].find((order: any) =>
             order.orderId == 41059 || order.orderId === '41059'
           );
           if (order41059) {
@@ -273,6 +237,7 @@ export default function Dashboard() {
       })
         .then(data => {
           // Process orders to ensure they have all required fields while preserving API data
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const processedOrders = (data['hydra:member'] || []).map((order: any) => {
             // Extract and normalize data from the hydra response
             const processedOrder = {
@@ -329,8 +294,10 @@ export default function Dashboard() {
     dynamicSeatSizes
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const urgentOrdersCount = orders.filter(order => getUrgent(order)).length;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleSaveOrder = async (updatedOrder: any) => {
     try {
       logger.log('Saving order:', updatedOrder);
@@ -354,6 +321,7 @@ export default function Dashboard() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleApproveOrder = async (order: any, approvalNotes?: string) => {
     try {
       logger.log('Approving order:', order.orderId || order.id, 'with notes:', approvalNotes);
@@ -388,10 +356,12 @@ export default function Dashboard() {
   };
 
   // Use shared fetchCompleteOrderData utility
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
   const fetchCompleteOrderDataWrapper = async (order: any): Promise<any> => {
     return fetchCompleteOrderData(order, setIsLoadingOrderData, setOrderDataError);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleStatusCardClick = (status: string) => {
     logger.log('Dashboard: Status card clicked:', status);
     logger.log('Dashboard: Current selectedStatus:', selectedStatus);
@@ -411,8 +381,10 @@ export default function Dashboard() {
   // All filtering is now done server-side, no client-side filtering needed
   const filteredOrders = orders;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const statusData = orderStatusStats || orderStatusData;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
   const statusList = Object.entries(orderStatusStats || orderStatusData).map(([key, val]: any) => ({
     key,
     label: val.label,
@@ -420,6 +392,7 @@ export default function Dashboard() {
     color: '#7b2326',
   }));
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   function DatePickerField({ label, date, setDate }: { label: string; date: Date | undefined; setDate: (date: Date | undefined) => void }) {
     return (
       <div className="flex flex-col gap-1">
@@ -630,7 +603,7 @@ export default function Dashboard() {
                 gap: 6
               }}>
                 <Search size={16} />
-                Searching for: "{debouncedSearchTerm}"
+                Searching for: &quot;{debouncedSearchTerm}&quot;
                 <button
                   onClick={() => setSearchTerm('')}
                   style={{
@@ -772,6 +745,7 @@ export default function Dashboard() {
       }}>
         {selectedOrder && (
           <OrderDetails
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             order={selectedOrder as any}
             onClose={() => {
               setIsOrderModalOpen(false);

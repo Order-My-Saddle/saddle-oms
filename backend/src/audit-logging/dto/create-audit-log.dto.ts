@@ -78,7 +78,8 @@ export class CreateAuditLogDto {
   orderStatusTo?: number;
 
   @ApiPropertyOptional({
-    description: "Entity type for general-purpose logging (e.g. Order, Customer)",
+    description:
+      "Entity type for general-purpose logging (e.g. Order, Customer)",
     example: "Order",
   })
   @IsOptional()

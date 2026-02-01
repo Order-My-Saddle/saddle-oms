@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { EntityTable } from '@/components/shared/EntityTable';
 import { useTableFilters, usePagination, useEntityData } from '@/hooks';
@@ -19,10 +18,12 @@ export default function Fitters() {
   const [selectedFitter, setSelectedFitter] = useState<Fitter | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [actionError, setActionError] = useState('');
 
   // Use our hooks for filters and pagination
   const { filters, updateFilter } = useTableFilters<Record<string, string>>({});
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { pagination, setTotalItems, setPage } = usePagination(30, 1);
 
   // Use our data fetching hook

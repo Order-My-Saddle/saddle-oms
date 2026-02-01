@@ -9,7 +9,10 @@ import { Reflector } from "@nestjs/core";
 import { Observable } from "rxjs";
 import { tap } from "rxjs/operators";
 import { AuditLoggingService } from "../audit-logging.service";
-import { AUDIT_LOG_KEY, AuditLogOptions } from "../decorators/audit-log.decorator";
+import {
+  AUDIT_LOG_KEY,
+  AuditLogOptions,
+} from "../decorators/audit-log.decorator";
 import { inferEntityFromRoute } from "../utils/route-entity-map";
 
 const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -87,9 +90,7 @@ export class AuditLogInterceptor implements NestInterceptor {
       }
     }
 
-    const actionDescription = entityId
-      ? `${action} ${entityId}`
-      : action;
+    const actionDescription = entityId ? `${action} ${entityId}` : action;
 
     await this.auditLoggingService.logAction(
       typeof user.id === "string" ? parseInt(user.id, 10) || 0 : user.id,

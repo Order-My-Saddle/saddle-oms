@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Model } from '@/services/models';
 import { Button } from '@/components/ui/button';
 import { fetchFactories, Factory, createFactoryLookup } from '@/services/factories';
-import { getSaddleTypeLabel, FACTORY_REGIONS, FACTORY_REGION_KEYS, FactoryRegionKey } from '@/utils/saddleConstants';
+import { getSaddleTypeLabel, FACTORY_REGIONS, FACTORY_REGION_KEYS } from '@/utils/saddleConstants';
 import { Loader2 } from 'lucide-react';
 import { logger } from '@/utils/logger';
 
@@ -17,6 +17,7 @@ interface ModelDetailModalProps {
 }
 
 export function ModelDetailModal({ model, isOpen, onClose, onEdit }: ModelDetailModalProps) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [factories, setFactories] = useState<Factory[]>([]);
   const [factoryLookup, setFactoryLookup] = useState<Map<number, string>>(new Map());
   const [loadingFactories, setLoadingFactories] = useState(false);

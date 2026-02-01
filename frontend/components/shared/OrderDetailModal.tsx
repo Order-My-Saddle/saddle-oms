@@ -25,7 +25,7 @@ export function OrderDetailModal({ order, isOpen, onClose }: OrderDetailModalPro
     }
   };
 
-  const extractSeatSizes = (order: any): string => {
+  const extractSeatSizes = (order: Order): string => {
     if (!order) return '';
     
     // Check for seatSizes array first (from hydra response)

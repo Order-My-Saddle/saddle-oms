@@ -192,7 +192,7 @@ export default function Factories() {
   // Handle create supplier (for create modal)
   const handleCreateSupplier = async (newSupplier: Partial<Supplier>) => {
     try {
-      const result = await createSupplier(newSupplier);
+      await createSupplier(newSupplier);
 
       // Close modal on success
       setShowCreateModal(false);

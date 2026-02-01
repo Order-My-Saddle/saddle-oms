@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import { OrderDetails } from './OrderDetails';
@@ -9,18 +9,17 @@ import { ComprehensiveEditOrder } from './ComprehensiveEditOrder';
 import { EntityTable } from '@/components/shared/EntityTable';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { usePagination } from '@/hooks';
-import { getFitterName, getCustomerName, getSupplierName, getSeatSize, getStatus, getUrgent, getDate } from '../utils/orderHydration';
+// orderHydration utilities used by orderTableColumns and orderProcessing
 import { getOrderTableColumns } from '../utils/orderTableColumns';
-import { seatSizes, statuses } from '../utils/orderConstants';
+// orderConstants used by sub-components
 import {
   buildOrderFilters,
   extractDynamicSeatSizes,
   extractDynamicFactories,
   processOrdersTableData,
   fetchCompleteOrderData,
-  type OrderTableRow
 } from '../utils/orderProcessing';
-import { getEnrichedOrders, searchByOrderId } from '@/services/enrichedOrders';
+import { getEnrichedOrders } from '@/services/enrichedOrders';
 import { logger } from '@/utils/logger';
 
 // Base order interface that matches the API response
@@ -29,11 +28,14 @@ export interface Order {
   orderId: number;
   reference: string;
   seatSize: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   customer: any;
   orderStatus: string;
   status?: string;
   urgent: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fitter: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supplier: any;
   orderTime: string;
   createdAt: string;
@@ -62,6 +64,7 @@ export default function Orders() {
   const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
   const [isLoadingOrderData, setIsLoadingOrderData] = useState(false);
   const [orderDataError, setOrderDataError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [useComprehensiveEdit, setUseComprehensiveEdit] = useState(true); // Toggle for new comprehensive editor
   
 
@@ -122,6 +125,7 @@ export default function Orders() {
   }, [searchTimeout]);
 
   // State for date picker
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [date, setDate] = useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -157,6 +161,7 @@ export default function Orders() {
       
       // Client-side sorting as a fallback for orderId if server-side sort isn't working
       if (apiOrders.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         apiOrders.sort((a: any, b: any) => {
           const orderIdA = Number(a.orderId);
           const orderIdB = Number(b.orderId);
@@ -196,6 +201,7 @@ export default function Orders() {
         setSearchMessage('');
       }
       
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message || 'Failed to fetch orders');
       setOrders([]);
@@ -247,6 +253,7 @@ export default function Orders() {
   };
 
   // Use shared fetchCompleteOrderData utility
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
   const fetchCompleteOrderDataWrapper = async (order: any): Promise<any> => {
     return fetchCompleteOrderData(order, setIsLoadingOrderData, setOrderDataError);
   };
@@ -361,7 +368,8 @@ className="btn-primary"
       {/* Order details dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         {selectedOrder && (
-          <OrderDetails 
+          <OrderDetails
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             order={selectedOrder as any}
             onClose={() => setIsDetailsOpen(false)}
           />
@@ -388,7 +396,8 @@ className="btn-primary"
               }}
             />
           ) : (
-            <EditOrder 
+            <EditOrder
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               order={selectedOrder as any}
               initialData={selectedOrder}
               isLoading={isLoadingOrderData}

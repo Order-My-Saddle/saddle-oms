@@ -37,7 +37,7 @@ describe("AuditLogInterceptor", () => {
     user?: any;
     params?: any;
     body?: any;
-    handler?: Function;
+    handler?: () => void;
   }): ExecutionContext {
     const handler = overrides.handler || (() => {});
     return {
@@ -198,7 +198,11 @@ describe("AuditLogInterceptor", () => {
     const handler = () => {};
     jest.spyOn(reflector, "get").mockImplementation((key, target) => {
       if (key === AUDIT_LOG_KEY && target === handler) {
-        return { entity: "Order", action: "update_order", trackStatusChange: true };
+        return {
+          entity: "Order",
+          action: "update_order",
+          trackStatusChange: true,
+        };
       }
       return undefined;
     });

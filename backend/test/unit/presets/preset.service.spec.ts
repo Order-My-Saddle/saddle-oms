@@ -6,7 +6,6 @@ import { PresetService } from "../../../src/presets/preset.service";
 import { PresetEntity } from "../../../src/presets/infrastructure/persistence/relational/entities/preset.entity";
 import { CreatePresetDto } from "../../../src/presets/dto/create-preset.dto";
 import { UpdatePresetDto } from "../../../src/presets/dto/update-preset.dto";
-import { PresetDto } from "../../../src/presets/dto/preset.dto";
 
 describe("PresetService", () => {
   let service: PresetService;

@@ -12,10 +12,11 @@ import { logger } from '@/utils/logger';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 
-const getDisplayValue = (value: any): string => {
+const getDisplayValue = (value: unknown): string => {
   if (value === null || value === undefined) return '-';
   if (typeof value === 'object') {
-    return value.name || value.title || JSON.stringify(value);
+    const obj = value as Record<string, unknown>;
+    return (obj.name as string) || (obj.title as string) || JSON.stringify(value);
   }
   return String(value);
 };

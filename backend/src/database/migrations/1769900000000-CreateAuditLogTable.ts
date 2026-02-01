@@ -37,9 +37,7 @@ export class CreateAuditLogTable1769900000000 implements MigrationInterface {
       `CREATE INDEX IF NOT EXISTS "IDX_audit_log_status_change" ON "audit_log" ("order_status_from", "order_status_to")`,
     );
 
-    console.log(
-      "✅ audit_log table created with indexes",
-    );
+    console.log("✅ audit_log table created with indexes");
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

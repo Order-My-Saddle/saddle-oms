@@ -7,7 +7,7 @@ export interface FormFieldProps {
   label: string;
   name: string;
   type?: string;
-  value: any;
+  value: string | number | readonly string[];
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   error?: string;
   required?: boolean;

@@ -1,15 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 
-import {
-  FindOptionsWhere,
-  Repository,
-  In,
-  ILike,
-  Not,
-  IsNull,
-  SelectQueryBuilder,
-} from "typeorm";
+import { Repository, In, SelectQueryBuilder } from "typeorm";
 import { UserEntity } from "../entities/user.entity";
 import { NullableType } from "../../../../../utils/types/nullable.type";
 import { FilterUserDto, SortUserDto } from "../../../../dto/query-user.dto";

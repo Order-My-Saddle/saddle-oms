@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface OrderSaddleInfoProps {
-  saddle: Record<string, any>;
+  saddle: Record<string, React.ReactNode>;
 }
 
 export function OrderSaddleInfo({ saddle }: OrderSaddleInfoProps) {

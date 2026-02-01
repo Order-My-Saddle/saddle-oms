@@ -506,7 +506,11 @@ export class OrderController {
   }
 
   @Patch(":id")
-  @AuditLog({ entity: "Order", action: "update_order", trackStatusChange: true })
+  @AuditLog({
+    entity: "Order",
+    action: "update_order",
+    trackStatusChange: true,
+  })
   @ApiOperation({
     summary: "Update order",
     description:

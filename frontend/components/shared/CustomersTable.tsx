@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { DataTable } from '@/components/shared/DataTable';
 import { getCustomerTableColumns, CustomerHeaderFilters, CustomerFilterChangeHandler } from '@/utils/customerTableColumns';
 

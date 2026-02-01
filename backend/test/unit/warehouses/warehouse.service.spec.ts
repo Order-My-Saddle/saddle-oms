@@ -1,7 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { NotFoundException } from "@nestjs/common";
-import { Repository, Like } from "typeorm";
+import { Repository } from "typeorm";
 import { WarehouseService } from "../../../src/warehouses/warehouse.service";
 import { Warehouse } from "../../../src/warehouses/warehouse.entity";
 
@@ -227,7 +227,7 @@ describe("WarehouseService", () => {
       repository.findAndCount.mockResolvedValue([[mockWarehouse], 1]);
 
       // Act
-      const result = await service.findAll(query);
+      await service.findAll(query);
 
       // Assert
       expect(repository.findAndCount).toHaveBeenCalledWith(

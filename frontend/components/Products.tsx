@@ -1,6 +1,6 @@
 "use client";
 
-import { PageHeader, StatusBadge } from './shared';
+import { PageHeader } from './shared';
 import { Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { EntityTable } from '@/components/shared/EntityTable';

@@ -247,7 +247,11 @@ export class CustomerController {
   }
 
   @Post(":customerId/assign-fitter/:fitterId")
-  @AuditLog({ entity: "Customer", action: "assign_fitter", idParam: "customerId" })
+  @AuditLog({
+    entity: "Customer",
+    action: "assign_fitter",
+    idParam: "customerId",
+  })
   @ApiOperation({
     summary: "Assign fitter to customer",
     description: "Assign a fitter to a customer for management",

@@ -9,7 +9,11 @@ import { AuditLogInterceptor } from "./interceptors/audit-log.interceptor";
 @Module({
   imports: [AuditLoggingRelationalPersistenceModule],
   controllers: [AuditLoggingController, DatabaseQueryLogController],
-  providers: [AuditLoggingService, DatabaseQueryLogService, AuditLogInterceptor],
+  providers: [
+    AuditLoggingService,
+    DatabaseQueryLogService,
+    AuditLogInterceptor,
+  ],
   exports: [
     AuditLoggingService,
     DatabaseQueryLogService,

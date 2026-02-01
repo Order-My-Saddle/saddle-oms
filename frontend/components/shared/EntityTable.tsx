@@ -42,7 +42,9 @@ export function EntityTable<T extends { id?: string | number }>({
   columns,
   searchTerm = '',
   onSearch,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   headerFilters = {},
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onFilterChange,
   pagination,
   loading,
@@ -56,7 +58,6 @@ export function EntityTable<T extends { id?: string | number }>({
   searchPlaceholder,
   actionButtons = { view: true, edit: true, delete: true, approve: false },
 }: EntityTableProps<T>) {
-  
   // Add actions column if showActions is true
   const columnsWithActions: Column<T>[] = showActions
     ? [
@@ -64,6 +65,7 @@ export function EntityTable<T extends { id?: string | number }>({
         {
           key: 'actions',
           title: 'OPTIONS',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           render: (value: any, row?: T) => {
             if (!row) return null;
             

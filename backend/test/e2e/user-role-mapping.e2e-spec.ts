@@ -19,8 +19,7 @@
 
 import { Test, TestingModule } from "@nestjs/testing";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { Repository, DataSource } from "typeorm";
-import { getRepositoryToken } from "@nestjs/typeorm";
+import { DataSource } from "typeorm";
 import { ConfigModule } from "@nestjs/config";
 
 import { UserEntity } from "../../src/users/infrastructure/persistence/relational/entities/user.entity";
@@ -51,8 +50,6 @@ const OLD_HARDCODED_SUPERVISORS = ["sadmin", "superadmin", "adamwhitehouse"];
 describe("User Role Mapping E2E Tests", () => {
   let moduleRef: TestingModule;
   let dataSource: DataSource;
-  let userRepository: Repository<UserEntity>;
-  let fitterRepository: Repository<FitterEntity>;
   let usersService: UsersService;
 
   beforeAll(async () => {
@@ -88,12 +85,6 @@ describe("User Role Mapping E2E Tests", () => {
     }).compile();
 
     dataSource = moduleRef.get<DataSource>(DataSource);
-    userRepository = moduleRef.get<Repository<UserEntity>>(
-      getRepositoryToken(UserEntity),
-    );
-    fitterRepository = moduleRef.get<Repository<FitterEntity>>(
-      getRepositoryToken(FitterEntity),
-    );
     usersService = moduleRef.get<UsersService>(UsersService);
   });
 
@@ -206,7 +197,7 @@ describe("User Role Mapping E2E Tests", () => {
       }
     });
 
-    it("adamwhitehouse should be admin, not supervisor (has supervisor=0 in DB)", async () => {
+    it("should assign admin role to adamwhitehouse, not supervisor (has supervisor=0 in DB)", async () => {
       const users = await dataSource.query(`
         SELECT username, legacy_id, user_type, is_supervisor
         FROM "user"
@@ -380,7 +371,7 @@ describe("User Role Mapping E2E Tests", () => {
   });
 
   describe("Role Priority Verification", () => {
-    it("supervisor flag should take priority over user_type", async () => {
+    it("should prioritize supervisor flag over user_type", async () => {
       // All 9 supervisors have user_type=2 (admin) but supervisor=1
       // They should get supervisor role, not admin
       const supervisorsWithAdminType = await dataSource.query(`

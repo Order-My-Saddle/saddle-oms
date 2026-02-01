@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface OrderFitterInfoProps {
-  fitter: Record<string, any>;
+  fitter: Record<string, React.ReactNode>;
 }
 
 export function OrderFitterInfo({ fitter }: OrderFitterInfoProps) {

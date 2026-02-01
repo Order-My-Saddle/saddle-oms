@@ -1,7 +1,6 @@
 "use client";
 import React, { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { login } from '../api/login';
 import { useAuth } from '../context/AuthContext';
 import { loginSchema, validateData, sanitizeString } from '../schemas/validation';
 import { logger } from '@/utils/logger';

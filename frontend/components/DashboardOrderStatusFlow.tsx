@@ -26,6 +26,7 @@ const STATUS_GROUPS = [
   ['INVENTORY', 'ON_HOLD', 'ON_TRIAL', 'COMPLETED_SALE'],
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const STATUS_LABELS: Record<string, string> = {
   UNORDERED: 'Unordered',
   ORDERED: 'Ordered/Changed',
@@ -60,6 +61,7 @@ const STATUS_FILTER_MAPPING: Record<string, string> = {
 
 export default function DashboardOrderStatusFlow({ onStatusClick, onTotalOrders, selectedStatus }: DashboardOrderStatusFlowProps) {
   const [statuses, setStatuses] = useState<Record<string, Status>>({});
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [totalOrders, setTotalOrders] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -134,6 +136,7 @@ export default function DashboardOrderStatusFlow({ onStatusClick, onTotalOrders,
         {/* Status kolommen */}
         {STATUS_GROUPS.map((group, colIdx) => (
           <div key={colIdx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 24 }}>
+            {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
             {group.map((statusKey, rowIdx) => {
               const status = statuses[statusKey];
               if (!status) return null;

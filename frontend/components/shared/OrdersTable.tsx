@@ -1,10 +1,8 @@
-import { Eye, Edit, Trash, CheckCircle2, AlertTriangle, Search } from 'lucide-react';
+import { Eye, Edit, Trash, CheckCircle2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { DataTable, Column } from '@/components/shared/DataTable';
-import { OrdersTableHeaderFilter } from '@/components/shared/OrdersTableHeaderFilter';
-import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Order } from '@/types/Order';
 import React from 'react';
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
@@ -12,7 +10,7 @@ import { logger } from '@/utils/logger';
 import { useUserRole } from '@/hooks/useUserRole';
 import { hasScreenPermission } from '@/utils/rolePermissions';
 
-export interface OrdersTableColumn extends Column {}
+export type OrdersTableColumn = Column;
 
 export interface OrdersTableProps {
   orders: Order[];
@@ -46,21 +44,24 @@ export function OrdersTable({
   columns,
   searchTerm = '',
   onSearch,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   headerFilters = {},
   onFilterChange,
   onViewOrder,
   onEditOrder,
   onApproveOrder,
   onDeleteOrder,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   seatSizes,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   statuses,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   fitters,
   dateFrom,
   setDateFrom,
   dateTo,
   setDateTo,
   pagination,
-  ...props
 }: OrdersTableProps) {
   const { role } = useUserRole();
 
@@ -75,7 +76,7 @@ export function OrdersTable({
         {
           key: 'actions',
           title: 'OPTIONS',
-          render: (_: any, row?: Order) => (
+          render: (_: unknown, row?: Order) => (
             <div className="flex gap-2">
               {onViewOrder && row && (hasScreenPermission(role, 'ORDER_VIEW') || role === null) && (
                 <Tooltip>

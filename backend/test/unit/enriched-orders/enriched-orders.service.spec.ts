@@ -6,7 +6,6 @@ import { ProductionCacheService } from "../../../src/cache/production-cache.serv
 
 describe("EnrichedOrdersService", () => {
   let service: EnrichedOrdersService;
-  let dataSource: DataSource;
   let queryRunner: any;
   let configService: jest.Mocked<ConfigService>;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -98,7 +97,6 @@ describe("EnrichedOrdersService", () => {
     }).compile();
 
     service = module.get<EnrichedOrdersService>(EnrichedOrdersService);
-    dataSource = module.get<DataSource>(DataSource);
     configService = module.get(ConfigService);
     _productionCacheService = module.get(ProductionCacheService);
   });

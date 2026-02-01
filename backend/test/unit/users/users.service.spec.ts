@@ -35,11 +35,6 @@ describe("UsersService", () => {
     updatedAt: new Date(),
   };
 
-  const mockRole = {
-    id: RoleEnum.user,
-    name: "user",
-  };
-
   beforeEach(async () => {
     usersRepository = {
       create: jest.fn(),

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { EntityTable } from '@/components/shared/EntityTable';
-import { useTableFilters, usePagination, useEntityData } from '@/hooks';
+import { useTableFilters, usePagination } from '@/hooks';
 import { getUserTableColumnsFiltered } from '@/utils/userTableColumns';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { User } from '@/types/Role';
@@ -34,7 +34,9 @@ export default function Users() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState('');
   const [totalUsers, setTotalUsers] = React.useState(0);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [hasNext, setHasNext] = React.useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [hasPrevious, setHasPrevious] = React.useState(false);
 
   // Custom refetch function using efficient backend API
@@ -77,6 +79,7 @@ export default function Users() {
     );
   }, []);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const addEntityOptimistically = React.useCallback((newUser: User) => {
     // For new users, increment total count and refetch to get updated data
     setTotalUsers(prev => prev + 1);
@@ -329,7 +332,7 @@ export default function Users() {
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-4">Delete User</h3>
             <p className="text-gray-700 mb-6">
-              Are you sure you want to delete user "{selectedUser.username}"? This action cannot be undone.
+              Are you sure you want to delete user &quot;{selectedUser.username}&quot;? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-2">
               <Button

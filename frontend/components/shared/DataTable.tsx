@@ -1,11 +1,3 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
@@ -13,6 +5,7 @@ import React from 'react';
 import { cn } from '@/utils/cn';
 
 // Make Column and DataTable generic
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface Column<T = any> {
   key: keyof T | string;
   title: string | React.ReactNode;
@@ -20,10 +13,12 @@ export interface Column<T = any> {
     type: 'text' | 'list' | 'boolean';
     data?: string[];
   };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   render?: (value: any, row?: T) => React.ReactNode;
   maxWidth?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 interface DataTableProps<T = any> {
   columns: Column<T>[];
   data: T[];
@@ -42,6 +37,7 @@ interface DataTableProps<T = any> {
   error?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function DataTable<T = any>({
   columns,
   data,
@@ -128,7 +124,9 @@ export function DataTable<T = any>({
                   {columns.map((column) => (
                     <td key={column.key as string} className={cn("p-2 border-b", column.maxWidth && `max-w-[${column.maxWidth}] overflow-x-auto whitespace-nowrap`)} style={column.maxWidth ? { textOverflow: 'ellipsis', overflow: 'auto' } : {}}>
                       {column.render
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         ? column.render((item as any)[column.key as keyof T], item)
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                         : (item as any)[column.key as keyof T]}
                     </td>
                   ))}

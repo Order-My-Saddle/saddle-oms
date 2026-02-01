@@ -158,7 +158,16 @@ export class AuthService {
     const userId =
       typeof user.id === "string" ? parseInt(user.id, 10) || 0 : user.id;
     this.auditLoggingService
-      .logAction(userId, "user_login", undefined, undefined, undefined, 1, "User", String(user.id))
+      .logAction(
+        userId,
+        "user_login",
+        undefined,
+        undefined,
+        undefined,
+        1,
+        "User",
+        String(user.id),
+      )
       .catch(() => {
         // Silently ignore audit log failures
       });

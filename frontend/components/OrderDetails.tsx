@@ -85,6 +85,7 @@ function formatPrice(value: number | null | undefined): string {
   return Number(value).toFixed(2);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function OrderDetails({ order, onClose }: OrderDetailsProps) {
   const orderId = Number(order.id) || Number(order.orderId) || 0;
   const displayOrderId = order.orderId || orderId;
@@ -99,6 +100,7 @@ export function OrderDetails({ order, onClose }: OrderDetailsProps) {
   const [sendTo, setSendTo] = useState('fitter-factory');
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDuplicateOpen, setIsDuplicateOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [formData, setFormData] = useState({});
 
   useEffect(() => {

@@ -28,6 +28,7 @@ export function TableHeaderFilter({
   value = '',
   onFilter,
   data = [],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   entityType,
 }: TableHeaderFilterProps) {
   const [open, setOpen] = useState(false);

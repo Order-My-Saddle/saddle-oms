@@ -15,7 +15,7 @@ interface OrderEditModalProps {
   order: Order | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (updatedOrder: any) => void;
+  onSave: (updatedOrder: Record<string, unknown>) => void;
 }
 
 const STATUS_OPTIONS = [
@@ -34,7 +34,7 @@ const STATUS_OPTIONS = [
 ];
 
 export function OrderEditModal({ order, isOpen, onClose, onSave }: OrderEditModalProps) {
-  const [editedOrder, setEditedOrder] = useState<any>({});
+  const [editedOrder, setEditedOrder] = useState<Record<string, unknown>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -87,8 +87,8 @@ export function OrderEditModal({ order, isOpen, onClose, onSave }: OrderEditModa
     }
   };
 
-  const handleChange = (field: string, value: any) => {
-    setEditedOrder((prev: any) => ({
+  const handleChange = (field: string, value: unknown) => {
+    setEditedOrder((prev: Record<string, unknown>) => ({
       ...prev,
       [field]: value
     }));

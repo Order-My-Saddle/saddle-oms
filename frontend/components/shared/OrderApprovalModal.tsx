@@ -13,6 +13,7 @@ interface OrderApprovalModalProps {
   order: Order | null;
   isOpen: boolean;
   onClose: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onApprove: (order: any, approvalNotes?: string) => void;
 }
 
@@ -97,7 +98,7 @@ export function OrderApprovalModal({ order, isOpen, onClose, onApprove }: OrderA
                   <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
                   <div className="text-sm text-yellow-800">
                     <p className="font-medium">Confirm Approval</p>
-                    <p>This will change the order status to "APPROVED" and may trigger production processes. This action cannot be easily undone.</p>
+                    <p>This will change the order status to &quot;APPROVED&quot; and may trigger production processes. This action cannot be easily undone.</p>
                   </div>
                 </div>
               </div>

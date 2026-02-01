@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import {
-  Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -30,7 +29,7 @@ interface CustomerFormProps {
     phone: string;
   };
   onClose: () => void;
-  onSave?: (customer: any) => void;
+  onSave?: (customer: Record<string, unknown>) => void;
 }
 
 const defaultFormData = {

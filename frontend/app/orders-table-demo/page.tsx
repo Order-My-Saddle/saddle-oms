@@ -10,18 +10,18 @@ import { getCustomerName, getFitterName, getSupplierName } from '@/utils/orderHy
 type Order = {
   orderId: string;
   reference: string;
-  customer: any;
+  customer: string | { name: string } | null;
   seatSize: string;
   orderStatus: string;
   urgent: boolean;
-  fitter: any;
-  supplier: any;
+  fitter: string | { name: string } | null;
+  supplier: string | { name: string } | null;
   orderTime: string;
 };
 
 // Helper type guard for objects with a name property
-function hasName(obj: any): obj is { name: string } {
-  return obj && typeof obj === 'object' && 'name' in obj;
+function hasName(obj: unknown): obj is { name: string } {
+  return !!obj && typeof obj === 'object' && 'name' in obj;
 }
 
 const columns: ColumnDef<Order>[] = [
@@ -78,7 +78,7 @@ export default function OrdersTableDemoPage() {
   }, []);
 
   // Normaliseer de data net als in /orders
-  const processedOrders = (orders || []).map((order: any) => ({
+  const processedOrders = (orders || []).map((order: Order & Record<string, unknown>) => ({
     ...order,
     id: order.id || order.orderId || '',
     orderId: order.orderId || order.id || '',

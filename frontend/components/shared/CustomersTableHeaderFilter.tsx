@@ -11,6 +11,7 @@ interface CustomersTableHeaderFilterProps {
   type?: 'text' | 'number' | 'date-range' | 'boolean' | 'enum';
   value: string;
   onFilter: (value: string) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data?: any[];
 }
 

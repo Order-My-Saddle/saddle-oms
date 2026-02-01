@@ -16,6 +16,7 @@ export default function Warehouses() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   
@@ -181,7 +182,7 @@ export default function Warehouses() {
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-4">Delete Warehouse</h3>
             <p className="text-gray-700 mb-6">
-              Are you sure you want to delete warehouse "{selectedWarehouse.name || selectedWarehouse.username}"? This action cannot be undone.
+              Are you sure you want to delete warehouse &quot;{selectedWarehouse.name || selectedWarehouse.username}&quot;? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-2">
               <Button

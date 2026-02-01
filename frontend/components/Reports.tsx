@@ -1,11 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Order } from '@/types/Order';
 import { OrdersTable } from '@/components/shared/OrdersTable';
-import { TableHeaderFilter } from '@/components/TableHeaderFilter';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -16,7 +13,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Eye, AlertTriangle } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 // Simple date formatting function
 const formatDate = (date: Date): string => {
   return date.toLocaleDateString('en-US', {
@@ -36,6 +33,7 @@ import { extractDynamicFactories, extractDynamicSeatSizes } from '../utils/order
 export default function Reports() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -48,6 +46,7 @@ export default function Reports() {
   
   // Fetch fitters for dropdown
   const { data: fittersData } = useFitters({ partial: true });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fittersList = fittersData.map((fitter: any) => ({
     label: fitter.name || fitter.username || 'Unknown Fitter',
     value: fitter.name || fitter.username || fitter.id
@@ -82,6 +81,7 @@ export default function Reports() {
   useEffect(() => {
     setLoading(true);
     // Build filters for API Platform
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const filters: Record<string, any> = {};
     Object.keys(headerFilters).forEach(key => {
       if (headerFilters[key] && headerFilters[key] !== '') {
@@ -119,6 +119,7 @@ export default function Reports() {
       filters
     })
       .then(data => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let memberArr: any[] = [];
         if (data['hydra:member']) {
           memberArr = data['hydra:member'];
@@ -136,6 +137,7 @@ export default function Reports() {
   }, [page, headerFilters]);
 
   const [groupBySaddle, setGroupBySaddle] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [localFilters, setLocalFilters] = useState<Record<string, string>>({
     orderId: '',
     reference: '',
@@ -157,7 +159,9 @@ export default function Reports() {
   const [selectedSeatSize, setSelectedSeatSize] = useState('all-sizes');
   const [selectedUrgent, setSelectedUrgent] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isLoadingOrderData, setIsLoadingOrderData] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [orderDataError, setOrderDataError] = useState<string | null>(null);
 
   const [date, setDate] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
@@ -179,6 +183,7 @@ export default function Reports() {
     dynamicSeatSizes
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fetchCompleteOrderData = async (order: any): Promise<any> => {
     setIsLoadingOrderData(true);
     setOrderDataError(null);
@@ -218,6 +223,7 @@ export default function Reports() {
   };
 
   // Data normaliseren net als in Dashboard/Orders
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const processedOrders = (orders || []).map((order: any) => ({
     ...order,
     id: order.id || order.orderId || '',

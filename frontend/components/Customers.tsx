@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { EntityTable } from '@/components/shared/EntityTable';
-import { useTableFilters, usePagination } from '@/hooks';
+import { useTableFilters } from '@/hooks';
 import { getCustomerTableColumns } from '@/utils/customerTableColumns';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { fetchCustomers, updateCustomer, deleteCustomer, createCustomer, type Customer } from '@/services/customers';

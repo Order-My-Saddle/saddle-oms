@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface OrderPriceInfoProps {
-  price: Record<string, any>;
+  price: Record<string, number | string | React.ReactNode> & { total: number };
   formatCurrency: (amount: number) => string;
 }
 

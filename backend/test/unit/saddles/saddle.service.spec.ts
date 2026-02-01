@@ -6,7 +6,6 @@ import { SaddleService } from "../../../src/saddles/saddle.service";
 import { SaddleEntity } from "../../../src/saddles/infrastructure/persistence/relational/entities/saddle.entity";
 import { CreateSaddleDto } from "../../../src/saddles/dto/create-saddle.dto";
 import { UpdateSaddleDto } from "../../../src/saddles/dto/update-saddle.dto";
-import { SaddleDto } from "../../../src/saddles/dto/saddle.dto";
 
 describe("SaddleService", () => {
   let service: SaddleService;

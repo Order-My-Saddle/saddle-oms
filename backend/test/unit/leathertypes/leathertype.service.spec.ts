@@ -6,7 +6,6 @@ import { LeathertypeService } from "../../../src/leathertypes/leathertype.servic
 import { LeathertypeEntity } from "../../../src/leathertypes/infrastructure/persistence/relational/entities/leathertype.entity";
 import { CreateLeathertypeDto } from "../../../src/leathertypes/dto/create-leathertype.dto";
 import { UpdateLeathertypeDto } from "../../../src/leathertypes/dto/update-leathertype.dto";
-import { LeathertypeDto } from "../../../src/leathertypes/dto/leathertype.dto";
 
 describe("LeathertypeService", () => {
   let service: LeathertypeService;

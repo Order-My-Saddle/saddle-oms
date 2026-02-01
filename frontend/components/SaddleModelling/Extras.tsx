@@ -47,6 +47,7 @@ export default function Extras() {
       setExtras(data['hydra:member'] || []);
       setTotalItems(data['hydra:totalItems'] || 0);
       
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setError(err.message || 'Failed to fetch extras');
       setExtras([]);

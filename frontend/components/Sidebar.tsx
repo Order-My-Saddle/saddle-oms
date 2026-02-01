@@ -1,17 +1,18 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { DivideIcon as LucideIcon, LayoutDashboard, Package, Users, ShoppingCart, Boxes, BarChart3, Search, ChevronRight, ChevronLeft, Wrench, PackageCheck, Factory, Archive, Warehouse } from 'lucide-react';
+import { LayoutDashboard, Users, ShoppingCart, BarChart3, Search, ChevronRight, ChevronLeft, Wrench, PackageCheck, Factory, Archive, Warehouse } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
 import { SaddlesSidebarSection } from './SaddlesSidebarSection';
 import { AccountManagementSidebarSection } from './AccountManagementSidebarSection';
 import { useUserRole } from '@/hooks/useUserRole';
-import { hasScreenPermission, NAVIGATION_ITEMS } from '@/utils/rolePermissions';
+import { hasScreenPermission } from '@/utils/rolePermissions';
 
 interface NavItem {
   id: string;
   label: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon: any;
   href: string;
   permission: keyof typeof import('@/utils/rolePermissions').SCREEN_PERMISSIONS;
