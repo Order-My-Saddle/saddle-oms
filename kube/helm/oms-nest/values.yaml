@@ -119,6 +119,25 @@ ingress:
 secrets:
   name: oms-nest-secrets
 
+# Bitnami Sealed Secrets integration.
+# When enabled, secrets are encrypted and safe to commit to Git.
+# Requires sealed-secrets controller installed in the cluster.
+# See templates/sealed-secrets.yaml for setup instructions.
+sealedSecrets:
+  enabled: false
+  # Populate encryptedData by running: kubeseal --fetch-cert | kubeseal --format yaml
+  # Example (these are NOT real values):
+  # encryptedData:
+  #   DATABASE_HOST: AgBxxxxx...
+  #   DATABASE_PASSWORD: AgByyyyy...
+  encryptedData: {}
+
+# RBAC for secret access control.
+# Creates dedicated ServiceAccounts for backend/frontend pods
+# and restricts secret access to only the application secret.
+rbac:
+  enabled: true
+
 networkPolicies:
   enabled: true
 

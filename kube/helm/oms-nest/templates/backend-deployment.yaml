@@ -23,6 +23,14 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if .Values.rbac.enabled }}
+      serviceAccountName: {{ include "oms-nest.fullname" . }}-backend-sa
+      automountServiceAccountToken: false
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       {{- if .Values.backend.migration.enabled }}
       initContainers:
         - name: run-migrations

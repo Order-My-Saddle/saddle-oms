@@ -25,6 +25,13 @@ on:
         default: false
         type: boolean
 
+# Restrict permissions to the minimum required
+permissions:
+  contents: read
+  packages: write
+  id-token: write     # Required for OIDC token exchange with DigitalOcean
+  security-events: write
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME_BACKEND: ${{ github.repository }}-backend
@@ -221,8 +228,38 @@ jobs:
       run: |
         kubectl create namespace ${{ env.K8S_NAMESPACE }} --dry-run=client -o yaml | kubectl apply -f -
 
+    - name: Validate required secrets are configured
+      run: |
+        # Fail fast if any required secret is missing rather than deploying
+        # with empty values. GitHub masks secret values, so we check length.
+        MISSING=""
+        check_secret() {
+          local name="$1"
+          local value="$2"
+          if [ -z "$value" ]; then
+            MISSING="${MISSING} ${name}"
+          fi
+        }
+        check_secret "DB_USERNAME" "${{ secrets.DB_USERNAME }}"
+        check_secret "DB_PASSWORD" "${{ secrets.DB_PASSWORD }}"
+        check_secret "DB_NAME" "${{ secrets.DB_NAME }}"
+        check_secret "DB_HOST" "${{ secrets.DB_HOST }}"
+        check_secret "JWT_SECRET_KEY" "${{ secrets.JWT_SECRET_KEY }}"
+        check_secret "REDIS_HOST" "${{ secrets.REDIS_HOST }}"
+        check_secret "REDIS_PASSWORD" "${{ secrets.REDIS_PASSWORD }}"
+        check_secret "ENCRYPTION_SECRET" "${{ secrets.ENCRYPTION_SECRET }}"
+
+        if [ -n "$MISSING" ]; then
+          echo "::error::Missing required GitHub secrets:${MISSING}"
+          echo "Configure these in Settings > Secrets and variables > Actions"
+          exit 1
+        fi
+        echo "All required secrets are configured"
+
     - name: Create secrets from environment variables
       run: |
+        set +x  # Disable command echoing to prevent secret leakage in logs
+
         # Create database secrets
         kubectl create secret generic oms-postgres-secrets \
           --namespace=${{ env.K8S_NAMESPACE }} \
@@ -234,10 +271,10 @@ jobs:
         # Create application secrets
         kubectl create secret generic oms-app-secrets \
           --namespace=${{ env.K8S_NAMESPACE }} \
-          --from-literal=DATABASE_URL="postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}:5432/${{ secrets.DB_NAME }}" \
+          --from-literal=DATABASE_URL="postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}:5432/${{ secrets.DB_NAME }}?sslmode=require" \
           --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET_KEY }}" \
           --from-literal=JWT_EXPIRES_IN="24h" \
-          --from-literal=REDIS_URL="redis://${{ secrets.REDIS_HOST }}:6379" \
+          --from-literal=REDIS_URL="redis://:${{ secrets.REDIS_PASSWORD }}@${{ secrets.REDIS_HOST }}:6379" \
           --from-literal=ENCRYPTION_SECRET="${{ secrets.ENCRYPTION_SECRET }}" \
           --from-literal=API_PORT="3001" \
           --from-literal=NODE_ENV="staging" \
@@ -256,6 +293,18 @@ jobs:
           --docker-username=${{ github.actor }} \
           --docker-password=${{ secrets.GITHUB_TOKEN }} \
           --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Verify secrets were created
+      run: |
+        echo "Verifying Kubernetes secrets exist..."
+        for secret in oms-postgres-secrets oms-app-secrets oms-redis-secrets registry-credentials; do
+          if kubectl get secret "$secret" -n ${{ env.K8S_NAMESPACE }} > /dev/null 2>&1; then
+            echo "  $secret [OK]"
+          else
+            echo "::error::Secret $secret was not created"
+            exit 1
+          fi
+        done
 
     - name: Update image tags in K8s manifests
       run: |

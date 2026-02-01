@@ -80,6 +80,11 @@ tmp/
 *.seed
 *.pid.lock
 
+# Kubernetes secrets env files
+secrets.env
+kube/secrets.env
+kube/*.sealed.yaml
+
 # Security - NEVER COMMIT THESE
 *.pem
 *.key

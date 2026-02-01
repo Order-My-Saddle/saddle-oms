@@ -23,6 +23,14 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- if .Values.rbac.enabled }}
+      serviceAccountName: {{ include "oms-nest.fullname" . }}-frontend-sa
+      automountServiceAccountToken: false
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: frontend
           image: {{ include "oms-nest.frontend.image" . }}

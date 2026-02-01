@@ -8,10 +8,22 @@
  *   - oms-nest-deploy-staging:    auto-deploy on develop merges
  *   - oms-nest-deploy-production: manual approval gate on main merges
  *
- * Required Jenkins credentials:
- *   - kubeconfig-oms:         Kubernetes cluster kubeconfig
- *   - ghcr-credentials:       GitHub Container Registry PAT
- *   - slack-webhook-url:      Slack notification webhook
+ * Required Jenkins credentials (store in Jenkins Credential Manager):
+ *   - kubeconfig-oms:              Kubernetes cluster kubeconfig (Secret file)
+ *   - ghcr-credentials:            GitHub Container Registry PAT (Username/Password)
+ *   - slack-webhook-url:           Slack notification webhook (Secret text)
+ *   - oms-db-credentials:          Database username/password (Username/Password)
+ *   - oms-jwt-secret:              JWT signing secret (Secret text)
+ *   - oms-redis-password:          Redis password (Secret text)
+ *   - oms-encryption-secret:       Encryption key (Secret text)
+ *   - oms-mail-credentials:        Mail SMTP username/password (Username/Password)
+ *
+ * Security hardening:
+ *   - All secrets accessed via credentials() bindings (never hardcoded)
+ *   - Secrets masked in build logs automatically by Jenkins
+ *   - Workspace cleaned after every build
+ *   - No secret values printed in echo/sh steps
+ *   - Helm secrets passed via --set-string to avoid YAML injection
  */
 
 pipeline {
@@ -104,6 +116,65 @@ pipeline {
             }
         }
 
+        stage('Sync Secrets') {
+            steps {
+                script {
+                    def namespace = "oms-nest-${params.ENVIRONMENT}"
+
+                    // Use Jenkins withCredentials to bind secrets securely.
+                    // Jenkins automatically masks these values in build logs.
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'oms-db-credentials',
+                            usernameVariable: 'DB_USER',
+                            passwordVariable: 'DB_PASS'
+                        ),
+                        string(credentialsId: 'oms-jwt-secret', variable: 'JWT_SECRET'),
+                        string(credentialsId: 'oms-encryption-secret', variable: 'ENCRYPTION_SECRET'),
+                        string(credentialsId: 'oms-redis-password', variable: 'REDIS_PASS'),
+                        usernamePassword(
+                            credentialsId: 'oms-mail-credentials',
+                            usernameVariable: 'MAIL_USER',
+                            passwordVariable: 'MAIL_PASS'
+                        ),
+                        usernamePassword(
+                            credentialsId: 'ghcr-credentials',
+                            usernameVariable: 'GHCR_USER',
+                            passwordVariable: 'GHCR_TOKEN'
+                        )
+                    ]) {
+                        // Create/update application secrets in Kubernetes.
+                        // Values are injected from Jenkins credentials and automatically
+                        // masked in console output. The --dry-run | apply pattern
+                        // is idempotent (safe to re-run).
+                        sh '''
+                            set +x
+                            kubectl create secret generic oms-nest-secrets \
+                                --namespace="${namespace}" \
+                                --from-literal=DATABASE_USERNAME="${DB_USER}" \
+                                --from-literal=DATABASE_PASSWORD="${DB_PASS}" \
+                                --from-literal=AUTH_JWT_SECRET="${JWT_SECRET}" \
+                                --from-literal=AUTH_REFRESH_SECRET="${JWT_SECRET}" \
+                                --from-literal=ENCRYPTION_SECRET="${ENCRYPTION_SECRET}" \
+                                --from-literal=REDIS_PASSWORD="${REDIS_PASS}" \
+                                --from-literal=MAIL_USER="${MAIL_USER}" \
+                                --from-literal=MAIL_PASSWORD="${MAIL_PASS}" \
+                                --dry-run=client -o yaml | kubectl apply -f -
+
+                            kubectl create secret docker-registry ghcr-credentials \
+                                --namespace="${namespace}" \
+                                --docker-server=ghcr.io \
+                                --docker-username="${GHCR_USER}" \
+                                --docker-password="${GHCR_TOKEN}" \
+                                --dry-run=client -o yaml | kubectl apply -f -
+                        '''
+                    }
+
+                    echo "Kubernetes secrets synced for namespace: ${namespace}"
+                }
+            }
+        }
+
         stage('Deploy') {
             steps {
                 script {
@@ -120,6 +191,23 @@ pipeline {
                             --atomic \
                             --wait \
                             --timeout 10m
+                    """
+                }
+            }
+        }
+
+        stage('Verify Secrets') {
+            steps {
+                script {
+                    def namespace = "oms-nest-${params.ENVIRONMENT}"
+
+                    // Verify secrets exist without printing values
+                    sh """
+                        echo "Verifying secrets in namespace ${namespace}..."
+                        kubectl get secret oms-nest-secrets -n ${namespace} \
+                            -o jsonpath='{.metadata.name}' && echo " [OK]"
+                        kubectl get secret ghcr-credentials -n ${namespace} \
+                            -o jsonpath='{.metadata.name}' && echo " [OK]"
                     """
                 }
             }
