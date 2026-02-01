@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchOrderStatusStats } from '@/services/api';
+import { logger } from '@/utils/logger';
 
 interface Status {
   key: string;
@@ -67,7 +68,7 @@ export default function DashboardOrderStatusFlow({ onStatusClick, onTotalOrders,
     setLoading(true);
     fetchOrderStatusStats()
       .then(data => {
-        console.log('DashboardOrderStatusFlow: Received status stats:', data);
+        logger.log('DashboardOrderStatusFlow: Received status stats:', data);
 
         // The backend now returns: { totalOrders, urgentOrders, overdueOrders, averageValue, statusCounts }
         const total = data.totalOrders || 0;
@@ -101,8 +102,8 @@ export default function DashboardOrderStatusFlow({ onStatusClick, onTotalOrders,
           };
         });
 
-        console.log('DashboardOrderStatusFlow: Status counts from backend:', statusCounts);
-        console.log('DashboardOrderStatusFlow: Final status object:', statusObj);
+        logger.log('DashboardOrderStatusFlow: Status counts from backend:', statusCounts);
+        logger.log('DashboardOrderStatusFlow: Final status object:', statusObj);
 
         setStatuses(statusObj);
         setTotalOrders(total);
@@ -142,7 +143,7 @@ export default function DashboardOrderStatusFlow({ onStatusClick, onTotalOrders,
                 <div
                   key={statusKey}
                   onClick={() => {
-                    console.log('DashboardOrderStatusFlow: Clicking status:', status.key, 'with label:', status.label, 'mapped to filter:', filterValue);
+                    logger.log('DashboardOrderStatusFlow: Clicking status:', status.key, 'with label:', status.label, 'mapped to filter:', filterValue);
                     // Toggle: if already selected, clear it; otherwise select it
                     onStatusClick?.(isActive ? '' : filterValue);
                   }}

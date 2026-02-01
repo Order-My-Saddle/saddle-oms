@@ -1,5 +1,6 @@
 // Simple Order Detail API Service - Fallback for when comprehensive data isn't available
 import { fetchEntities } from './api';
+import { logger } from '@/utils/logger';
 
 export interface SimpleOrderData {
   order: any;
@@ -11,7 +12,7 @@ export interface SimpleOrderData {
  * Fetch basic order data for editing when comprehensive endpoint fails
  */
 export async function fetchSimpleOrderData(orderId: number): Promise<SimpleOrderData> {
-  console.log('Fetching simple order data for:', orderId);
+  logger.log('Fetching simple order data for:', orderId);
   
   try {
     // Try to get the order by ID from enriched orders first
@@ -80,7 +81,7 @@ export async function fetchSimpleOrderData(orderId: number): Promise<SimpleOrder
     throw new Error('Order not found');
     
   } catch (error) {
-    console.error('Error fetching simple order data:', error);
+    logger.error('Error fetching simple order data:', error);
     throw error;
   }
 }
@@ -95,7 +96,7 @@ export async function searchCustomers(searchTerm: string): Promise<any[]> {
     });
     return response['hydra:member'] || [];
   } catch (error) {
-    console.error('Error searching customers:', error);
+    logger.error('Error searching customers:', error);
     return [];
   }
 }
@@ -109,13 +110,13 @@ export async function searchFitters(searchTerm: string): Promise<any[]> {
     });
     return response['hydra:member'] || [];
   } catch (error) {
-    console.error('Error searching fitters:', error);
+    logger.error('Error searching fitters:', error);
     return [];
   }
 }
 
 export async function saveSimpleOrder(orderId: number, orderData: any): Promise<any> {
-  console.log('Saving simple order:', orderId, orderData);
+  logger.log('Saving simple order:', orderId, orderData);
   
   try {
     // Use the enriched orders endpoint for updates
@@ -137,7 +138,7 @@ export async function saveSimpleOrder(orderId: number, orderData: any): Promise<
     
     return await response.json();
   } catch (error) {
-    console.error('Error saving simple order:', error);
+    logger.error('Error saving simple order:', error);
     throw error;
   }
 }

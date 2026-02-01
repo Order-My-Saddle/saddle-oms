@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle } from 'lucide-react';
+import { logger } from '@/utils/logger';
 import { getCustomerName, getFitterName, getSupplierName, getUrgent } from '@/utils/orderHydration';
 
 interface OrderEditModalProps {
@@ -79,7 +80,7 @@ export function OrderEditModal({ order, isOpen, onClose, onSave }: OrderEditModa
       await onSave(updatedOrder);
       onClose();
     } catch (error) {
-      console.error('Error saving order:', error);
+      logger.error('Error saving order:', error);
       setError(error instanceof Error ? error.message : 'Failed to save order. Please try again.');
     } finally {
       setSaving(false);

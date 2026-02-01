@@ -8,6 +8,7 @@ import { useTableFilters, usePagination } from '@/hooks';
 import { getBrandTableColumns } from '@/utils/brandTableColumns';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { fetchBrands, updateBrand, deleteBrand, createBrand, type Brand } from '@/services/brands';
+import { logger } from '@/utils/logger';
 import { BrandDetailModal } from '@/components/shared/BrandDetailModal';
 import { BrandEditModal } from '@/components/shared/BrandEditModal';
 import { BrandAddModal } from '@/components/shared/BrandAddModal';
@@ -34,7 +35,7 @@ export default function Brands() {
     setError('');
     
     try {
-      console.log('Fetching brands with filters:', filters);
+      logger.log('Fetching brands with filters:', filters);
       const data = await fetchBrands({
         page: pagination.currentPage,
         searchTerm,
@@ -86,7 +87,7 @@ export default function Brands() {
         // Refresh the brand list
         fetchBrandsData();
       } catch (error) {
-        console.error('Error deleting brand:', error);
+        logger.error('Error deleting brand:', error);
         setError(error instanceof Error ? error.message : 'Failed to delete brand');
       }
     }
@@ -103,7 +104,7 @@ export default function Brands() {
       setShowEditModal(false);
       setSelectedBrand(null);
     } catch (error) {
-      console.error('Error updating brand:', error);
+      logger.error('Error updating brand:', error);
       throw error; // Re-throw to show error in modal
     }
   };
@@ -121,7 +122,7 @@ export default function Brands() {
       fetchBrandsData();
       setShowAddModal(false);
     } catch (error) {
-      console.error('Error creating brand:', error);
+      logger.error('Error creating brand:', error);
       throw error; // Re-throw to show error in modal
     }
   };

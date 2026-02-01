@@ -1,4 +1,5 @@
 import { fetchEntities } from './api';
+import { logger } from '@/utils/logger';
 
 export interface Preset {
   id: string;
@@ -40,7 +41,7 @@ export async function fetchPresets({
   orderBy?: string;
   order?: 'asc' | 'desc';
 } = {}): Promise<PresetsResponse> {
-  console.log('fetchPresets: Called with params:', { page, searchTerm, filters, orderBy, order });
+  logger.log('fetchPresets: Called with params:', { page, searchTerm, filters, orderBy, order });
   
   // Build filter parameters for API Platform
   const extraParams: Record<string, string | number | boolean> = {};
@@ -48,7 +49,7 @@ export async function fetchPresets({
   // Handle individual field filters
   Object.entries(filters).forEach(([key, value]) => {
     if (value && value.trim()) {
-      console.log(`fetchPresets: Processing filter ${key}:`, value);
+      logger.log(`fetchPresets: Processing filter ${key}:`, value);
       // For text fields, use partial matching with API Platform filters
       if (key === 'name') {
         extraParams['name[contains]'] = value;
@@ -68,7 +69,7 @@ export async function fetchPresets({
     }
   });
 
-  console.log('fetchPresets: Calling fetchEntities with entity "presets" and params:', extraParams);
+  logger.log('fetchPresets: Calling fetchEntities with entity "presets" and params:', extraParams);
 
   return await fetchEntities({
     entity: 'presets',
@@ -149,7 +150,7 @@ export async function createPreset(presetData: Partial<Preset>): Promise<Preset>
     entities: [entity]
   };
 
-  console.log('Attempting preset creation with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
+  logger.log('Attempting preset creation with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
 
   const response = await fetch(`${API_URL}/save`, {
     method: 'POST',
@@ -167,12 +168,12 @@ export async function createPreset(presetData: Partial<Preset>): Promise<Preset>
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Preset creation failed:', errorText);
+    logger.error('Preset creation failed:', errorText);
     throw new Error(`Failed to create preset: ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Preset creation result:', result);
+  logger.log('Preset creation result:', result);
 
   // Return the first entity from the response
   return result.Entities?.[0] || result.entities?.[0] || result;
@@ -212,7 +213,7 @@ export async function updatePreset(id: string, presetData: Partial<Preset>): Pro
     entities: [entity]
   };
 
-  console.log('Attempting preset update with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
+  logger.log('Attempting preset update with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
 
   const response = await fetch(`${API_URL}/save`, {
     method: 'POST',
@@ -230,12 +231,12 @@ export async function updatePreset(id: string, presetData: Partial<Preset>): Pro
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Preset update failed:', errorText);
+    logger.error('Preset update failed:', errorText);
     throw new Error(`Failed to update preset: ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Preset update result:', result);
+  logger.log('Preset update result:', result);
 
   // Return the first entity from the response
   return result.Entities?.[0] || result.entities?.[0] || result;
@@ -264,7 +265,7 @@ export async function deletePreset(id: string): Promise<void> {
  */
 export async function fetchPresetCount(): Promise<number> {
   try {
-    console.log('📊 fetchPresetCount: Getting total preset count');
+    logger.log('📊 fetchPresetCount: Getting total preset count');
 
     // Get total count using minimal data transfer (limit=1) with full pagination metadata
     const result = await fetchEntities({
@@ -278,14 +279,14 @@ export async function fetchPresetCount(): Promise<number> {
 
     // Return the total count if available
     if (result['hydra:totalItems'] !== undefined && result['hydra:totalItems'] !== null) {
-      console.log('📊 Got total preset count from API:', result['hydra:totalItems']);
+      logger.log('📊 Got total preset count from API:', result['hydra:totalItems']);
       return result['hydra:totalItems'];
     }
 
-    console.warn('📊 Could not get preset count from API, using fallback');
+    logger.warn('📊 Could not get preset count from API, using fallback');
     return 0;
   } catch (error) {
-    console.error('📊 Error fetching preset count:', error);
+    logger.error('📊 Error fetching preset count:', error);
     return 0;
   }
 }

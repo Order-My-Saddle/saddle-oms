@@ -21,6 +21,7 @@ import {
   type OrderTableRow
 } from '../utils/orderProcessing';
 import { getEnrichedOrders, searchByOrderId } from '@/services/enrichedOrders';
+import { logger } from '@/utils/logger';
 
 // Base order interface that matches the API response
 export interface Order {
@@ -92,14 +93,14 @@ export default function Orders() {
       } else if (/^\d+$/.test(term.trim())) {
         // If the search term is a number, search by order ID
         const exactOrderId = term.trim();
-        console.log('Searching for exact order ID:', exactOrderId);
+        logger.log('Searching for exact order ID:', exactOrderId);
         setIsSearching(true);
         setSearchMessage(`Searching for order ID: ${exactOrderId}...`);
         setHeaderFilters(prev => ({ ...prev, orderId: exactOrderId, searchTerm: '' }));
       } else {
         // If the search term is text, search across multiple fields (customer, factory, fitter, brand, etc.)
         const searchValue = term.trim();
-        console.log('Searching for:', searchValue);
+        logger.log('Searching for:', searchValue);
         setIsSearching(true);
         setSearchMessage(`Searching for: "${searchValue}"...`);
         setHeaderFilters(prev => ({ ...prev, orderId: '', searchTerm: searchValue }));
@@ -258,7 +259,7 @@ export default function Orders() {
 
   // Handle edit order
   const handleEditOrder = (order: Order) => {
-    console.log('Edit order:', order);
+    logger.log('Edit order:', order);
     // Just set the basic order info - comprehensive editor will fetch full data
     setSelectedOrder(order);
     setIsEditOpen(true);
@@ -266,13 +267,13 @@ export default function Orders() {
 
   // Handle approve order
   const handleApproveOrder = (order: Order) => {
-    console.log('Approve order', order);
+    logger.log('Approve order', order);
     // Implement approve logic
   };
 
   // Handle delete order
   const handleDeleteOrder = (order: Order) => {
-    console.log('Delete order', order);
+    logger.log('Delete order', order);
     // Implement delete logic
   };
 
@@ -287,7 +288,7 @@ export default function Orders() {
             <button 
               key="reset-filters"
               onClick={() => {
-                console.log('Resetting all Orders filters');
+                logger.log('Resetting all Orders filters');
                 // Reset all filters
                 setHeaderFilters({});
                 setPage(1);

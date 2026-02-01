@@ -1,4 +1,5 @@
 import { User } from '@/types/Role';
+import { logger } from '@/utils/logger';
 
 /**
  * Service for managing user data storage in local storage
@@ -19,7 +20,7 @@ export const getCurrentUser = (): User | null => {
     const userData = localStorage.getItem(USER_STORAGE_KEY);
     return userData ? JSON.parse(userData) : null;
   } catch (error) {
-    console.error('Error getting current user from storage:', error);
+    logger.error('Error getting current user from storage:', error);
     return null;
   }
 };
@@ -39,7 +40,7 @@ export const setCurrentUser = (user: User | null): void => {
       localStorage.removeItem(USER_STORAGE_KEY);
     }
   } catch (error) {
-    console.error('Error setting current user in storage:', error);
+    logger.error('Error setting current user in storage:', error);
   }
 };
 
@@ -54,7 +55,7 @@ export const getCurrentToken = (): string | null => {
   try {
     return localStorage.getItem(TOKEN_STORAGE_KEY);
   } catch (error) {
-    console.error('Error getting token from storage:', error);
+    logger.error('Error getting token from storage:', error);
     return null;
   }
 };
@@ -74,7 +75,7 @@ export const setCurrentToken = (token: string | null): void => {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
     }
   } catch (error) {
-    console.error('Error setting token in storage:', error);
+    logger.error('Error setting token in storage:', error);
   }
 };
 
@@ -90,7 +91,7 @@ export const clearUserStorage = (): void => {
     localStorage.removeItem(USER_STORAGE_KEY);
     localStorage.removeItem(TOKEN_STORAGE_KEY);
   } catch (error) {
-    console.error('Error clearing user storage:', error);
+    logger.error('Error clearing user storage:', error);
   }
 };
 

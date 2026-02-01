@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { fetchCustomers, updateCustomer, deleteCustomer, createCustomer, type Customer } from '@/services/customers';
 import { CustomerDetailModal } from '@/components/shared/CustomerDetailModal';
 import { CustomerEditModal } from '@/components/shared/CustomerEditModal';
+import { logger } from '@/utils/logger';
 
 // Customer editing is now supported through the BreezeJS SaveBundle API
 
@@ -42,7 +43,7 @@ export default function Customers() {
     setError('');
 
     try {
-      console.log('Fetching customers with filters:', filters);
+      logger.log('Fetching customers with filters:', filters);
       const data = await fetchCustomers({
         page: currentPage,
         searchTerm,
@@ -145,9 +146,9 @@ export default function Customers() {
 
       try {
         await deleteCustomer(customer.id);
-        console.log(`Customer "${customer.name}" deleted successfully`);
+        logger.log(`Customer "${customer.name}" deleted successfully`);
       } catch (error) {
-        console.error('Error deleting customer:', error);
+        logger.error('Error deleting customer:', error);
 
         // Revert optimistic removal on error by refetching
         fetchCustomersData();
@@ -179,9 +180,9 @@ export default function Customers() {
 
       setShowEditModal(false);
       setSelectedCustomer(null);
-      console.log(`Customer "${updatedCustomer.name || selectedCustomer.name}" updated successfully`);
+      logger.log(`Customer "${updatedCustomer.name || selectedCustomer.name}" updated successfully`);
     } catch (error) {
-      console.error('Error updating customer:', error);
+      logger.error('Error updating customer:', error);
 
       // Revert optimistic update on error by refetching
       fetchCustomersData();
@@ -202,9 +203,9 @@ export default function Customers() {
 
       setShowCreateModal(false);
       setSelectedCustomer(null);
-      console.log(`Customer "${newCustomer.name}" created successfully`);
+      logger.log(`Customer "${newCustomer.name}" created successfully`);
     } catch (error) {
-      console.error('Error creating customer:', error);
+      logger.error('Error creating customer:', error);
 
       // Revert any optimistic changes by refetching
       fetchCustomersData();

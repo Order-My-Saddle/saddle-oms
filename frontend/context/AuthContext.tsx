@@ -5,6 +5,7 @@ import { User, UserRole } from '../types/Role';
 import { fetchEntities } from '../services/api';
 import { login as loginApi, clearAuthTokens } from '../api/login';
 import jwt from 'jsonwebtoken';
+import { logger } from '@/utils/logger';
 import {
   tokenAtom,
   userAtom,
@@ -48,7 +49,7 @@ function getTokenFromCookies(): string | null {
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  console.log('🏗️ AuthProvider: Component mounting/initializing');
+  logger.log('🏗️ AuthProvider: Component mounting/initializing');
 
   const [token, setToken] = useAtom(tokenAtom);
   const [user, setUser] = useAtom(userAtom);
@@ -60,7 +61,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [, setLoadingAction] = useAtom(setLoadingAtom);
   const [, restoreUserFromBasicInfo] = useAtom(restoreUserFromBasicInfoAtom);
 
-  console.log('🔍 AuthProvider: Current state on mount:', {
+  logger.log('🔍 AuthProvider: Current state on mount:', {
     hasUser: !!user,
     hasToken: !!token,
     isLoading,
@@ -73,7 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Add cleanup logging
   useEffect(() => {
     return () => {
-      console.log('🏗️ AuthProvider: Component unmounting');
+      logger.log('🏗️ AuthProvider: Component unmounting');
     };
   }, []);
 
@@ -81,7 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Prevent unnecessary reinitializations if we already have valid auth state
     if (user && token && !isLoading) {
-      console.log('🔄 AuthContext: Skipping checkAuth - already authenticated:', {
+      logger.log('🔄 AuthContext: Skipping checkAuth - already authenticated:', {
         hasUser: !!user,
         hasToken: !!token,
         isLoading
@@ -90,27 +91,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const checkAuth = async () => {
-      console.log('🔄 AuthContext: Starting checkAuth...');
+      logger.log('🔄 AuthContext: Starting checkAuth...');
       setLoadingAction(true);
       try {
         // Use token from Jotai store, fallback to cookies for migration
         let authToken = token;
-        console.log('🔄 AuthContext: Token from Jotai store:', authToken ? 'present' : 'missing');
+        logger.log('🔄 AuthContext: Token from Jotai store:', authToken ? 'present' : 'missing');
         if (!authToken) {
           authToken = getTokenFromCookies();
-          console.log('🔄 AuthContext: Token from cookies:', authToken ? 'present' : 'missing');
+          logger.log('🔄 AuthContext: Token from cookies:', authToken ? 'present' : 'missing');
           if (authToken) {
             setToken(authToken); // Store in Jotai for future use
-            console.log('🔄 AuthContext: Token stored in Jotai');
+            logger.log('🔄 AuthContext: Token stored in Jotai');
           }
         }
 
         // Try to restore user from basic info if user is null but we have token
         if (authToken && !user) {
-          console.log('🔄 AuthContext: Attempting to restore user from basic info');
+          logger.log('🔄 AuthContext: Attempting to restore user from basic info');
           const restoredUser = restoreUserFromBasicInfo();
           if (restoredUser) {
-            console.log('✅ AuthContext: User restored from basic info:', restoredUser);
+            logger.log('✅ AuthContext: User restored from basic info:', restoredUser);
             // Return early as user is now restored
             setLoadingAction(false);
             return;
@@ -118,23 +119,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         
         if (authToken) {
-          console.log('🔄 AuthContext: Processing token...');
+          logger.log('🔄 AuthContext: Processing token...');
           // Verify the token is not expired
           const decoded = jwt.decode(authToken) as { exp?: number; id?: string | number; userId?: string | number; roles?: string[]; sub?: string | number; username?: string; email?: string; firstName?: string; lastName?: string; name?: string };
-          console.log('🔄 AuthContext: Decoded token:', decoded);
+          logger.log('🔄 AuthContext: Decoded token:', decoded);
 
           if (decoded?.exp && decoded.exp * 1000 > Date.now()) {
-            console.log('🔄 AuthContext: Token is valid, not expired');
+            logger.log('🔄 AuthContext: Token is valid, not expired');
             // Token is valid, try to fetch user data
             try {
               await fetchUserData(authToken);
-              console.log('✅ AuthContext: User data fetched successfully from API');
+              logger.log('✅ AuthContext: User data fetched successfully from API');
             } catch (fetchError) {
-              console.log('⚠️  AuthContext: API fetch failed, using token data as fallback', fetchError);
+              logger.log('⚠️  AuthContext: API fetch failed, using token data as fallback', fetchError);
               // Fallback: create user from token data
               const userId = decoded?.id || decoded?.userId || decoded?.sub;
-              console.log('🔄 AuthContext: Extracted userId:', userId);
-              console.log('🔄 AuthContext: Extracted roles:', decoded?.roles);
+              logger.log('🔄 AuthContext: Extracted userId:', userId);
+              logger.log('🔄 AuthContext: Extracted roles:', decoded?.roles);
               
               if (userId && decoded?.roles) {
                 const primaryRole = mapRolesToPrimary(decoded.roles);
@@ -152,26 +153,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   firstName: tokenFirstName,
                   lastName: tokenLastName,
                 };
-                console.log('🔄 AuthContext: Setting user data from token:', userData);
-                console.log('🔄 AuthContext: Primary role mapped to:', primaryRole);
+                logger.log('🔄 AuthContext: Setting user data from token:', userData);
+                logger.log('🔄 AuthContext: Primary role mapped to:', primaryRole);
                 
                 // Use the loginAction atom to properly set both token and user
                 loginAction({ token: authToken, user: userData });
               } else {
-                console.error('❌ AuthContext: Missing userId or roles in token');
+                logger.error('❌ AuthContext: Missing userId or roles in token');
               }
             }
           } else {
-            console.log('❌ AuthContext: Token expired, clearing auth');
+            logger.log('❌ AuthContext: Token expired, clearing auth');
             // Token expired, clear it
             clearAuthTokens();
             logoutAction();
           }
         } else {
-          console.log('🔄 AuthContext: No token found');
+          logger.log('🔄 AuthContext: No token found');
         }
       } catch (error) {
-        console.error('Auth check error:', error);
+        logger.error('Auth check error:', error);
         clearAuthTokens();
         logoutAction();
       } finally {
@@ -225,22 +226,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         member = result?.['hydra:member']?.[0];
       }
       if (member) {
-        console.log('🔍 AuthContext: member.typeName:', member.typeName);
-        console.log('🔍 AuthContext: member.role:', member.role);
-        console.log('🔍 AuthContext: member["@type"]:', member["@type"]);
+        logger.log('🔍 AuthContext: member.typeName:', member.typeName);
+        logger.log('🔍 AuthContext: member.role:', member.role);
+        logger.log('🔍 AuthContext: member["@type"]:', member["@type"]);
         
         const rawRole = member.typeName || member.role || member["@type"] || 'user';
-        console.log('🔍 AuthContext: rawRole to map:', rawRole);
+        logger.log('🔍 AuthContext: rawRole to map:', rawRole);
         
         const mappedRole = mapTypeNameToRole(rawRole);
-        console.log('🔍 AuthContext: mappedRole result:', mappedRole);
+        logger.log('🔍 AuthContext: mappedRole result:', mappedRole);
         
         // Map backend name to firstName/lastName for frontend
         const nameParts = (member.name || '').split(' ').filter(part => part.length > 0);
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
 
-        console.log('🔍 AuthContext: name mapping:', {
+        logger.log('🔍 AuthContext: name mapping:', {
           originalName: member.name,
           nameParts,
           firstName,
@@ -256,45 +257,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           lastName: lastName,
         };
         
-        console.log('🔄 AuthContext: Setting user data from API:', userData);
-        console.log('🔄 AuthContext: Member data from API:', member);
-        console.log('🔄 AuthContext: Current user atom value before set:', user);
+        logger.log('🔄 AuthContext: Setting user data from API:', userData);
+        logger.log('🔄 AuthContext: Member data from API:', member);
+        logger.log('🔄 AuthContext: Current user atom value before set:', user);
         
         // Use the loginAction atom to properly set both token and user
         loginAction({ token: token, user: userData });
-        console.log('✅ AuthContext: User data set via loginAction');
+        logger.log('✅ AuthContext: User data set via loginAction');
 
         // User data has been set via loginAction, should be available immediately
-        console.log('✅ AuthContext: User authentication completed successfully');
+        logger.log('✅ AuthContext: User authentication completed successfully');
         // Note: User data is now managed in memory/state only for security
         return userData; // Return the user data for immediate access
       } else {
         throw new Error('User not found');
       }
     } catch (error) {
-      console.error('Failed to fetch user data:', error);
+      logger.error('Failed to fetch user data:', error);
       throw error;
     }
   }, []);
 
   // Login function
   const login = async (username: string, password: string) => {
-    console.log('🔄 AuthContext: Starting login for username:', username);
+    logger.log('🔄 AuthContext: Starting login for username:', username);
     
     try {
       // Call the login API
-      console.log('🔄 AuthContext: Calling login API...');
+      logger.log('🔄 AuthContext: Calling login API...');
       const result = await loginApi(username, password);
-      console.log('🔄 AuthContext: Login API result:', result);
+      logger.log('🔄 AuthContext: Login API result:', result);
       
       if (result.success && result.token) {
-        console.log('🔄 AuthContext: Login API successful, fetching user data...');
+        logger.log('🔄 AuthContext: Login API successful, fetching user data...');
         
         // Store token in Jotai and fetch complete user data
         try {
           setToken(result.token); // Store token in Jotai immediately
           const userData = await fetchUserData(result.token);
-          console.log('✅ AuthContext: Token stored and user data fetched successfully:', userData);
+          logger.log('✅ AuthContext: Token stored and user data fetched successfully:', userData);
 
           // Wait a moment to ensure atom state is updated
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -305,14 +306,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             user: userData  // Include user data in return
           };
         } catch (fetchError) {
-          console.error('❌ AuthContext: Failed to fetch user data after login:', fetchError);
+          logger.error('❌ AuthContext: Failed to fetch user data after login:', fetchError);
 
           // Fallback: create user from token data if fetch fails
-          console.log('🔄 AuthContext: Using fallback user data from token...');
+          logger.log('🔄 AuthContext: Using fallback user data from token...');
 
           // Decode token to get roles
           const decoded = jwt.decode(result.token) as { id?: string | number; roles?: string[]; username?: string; name?: string };
-          console.log('🔄 AuthContext: Decoded token for fallback:', decoded);
+          logger.log('🔄 AuthContext: Decoded token for fallback:', decoded);
 
           // Map name to firstName/lastName if available
           const fallbackNameParts = (result.user?.name || decoded?.name || '').split(' ').filter(part => part.length > 0);
@@ -321,7 +322,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           // Use roles from decoded token if available
           const userRole = decoded?.roles ? mapRolesToPrimary(decoded.roles) : mapTypeNameToRole(result.user?.role || 'user');
-          console.log('🔄 AuthContext: Fallback role from token:', userRole);
+          logger.log('🔄 AuthContext: Fallback role from token:', userRole);
 
           const userData: User = {
             id: result.userId || decoded?.id || 0,
@@ -332,7 +333,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             lastName: fallbackLastName,
           };
 
-          console.log('🔄 AuthContext: Setting fallback user data:', userData);
+          logger.log('🔄 AuthContext: Setting fallback user data:', userData);
           setUser(userData);
 
           return {
@@ -342,14 +343,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           };
         }
       } else {
-        console.log('❌ AuthContext: Login API failed:', result.message);
+        logger.log('❌ AuthContext: Login API failed:', result.message);
         return { 
           success: false, 
           message: result.message || 'Login failed. Please check your credentials.' 
         };
       }
     } catch (error) {
-      console.error('❌ AuthContext: Login error:', error);
+      logger.error('❌ AuthContext: Login error:', error);
       return { 
         success: false, 
         message: error instanceof Error ? error.message : 'An unexpected error occurred during login.' 
@@ -370,7 +371,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         await fetchUserData(authToken);
       } catch (error) {
-        console.error('Failed to refresh user data:', error);
+        logger.error('Failed to refresh user data:', error);
         logout();
       }
     }
@@ -395,7 +396,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 };
 
 function mapTypeNameToRole(typeName: string): UserRole {
-  console.log('🔍 mapTypeNameToRole: input typeName:', typeName);
+  logger.log('🔍 mapTypeNameToRole: input typeName:', typeName);
 
   // Normalize to lowercase for comparison
   const normalized = typeName.toLowerCase();
@@ -422,7 +423,7 @@ function mapTypeNameToRole(typeName: string): UserRole {
     case 'role_supervisor': return UserRole.SUPERVISOR;
     case 'role_user': return UserRole.USER;
     default:
-      console.log('🔍 mapTypeNameToRole: no match found, defaulting to USER');
+      logger.log('🔍 mapTypeNameToRole: no match found, defaulting to USER');
       return UserRole.USER;
   }
 }
@@ -454,7 +455,7 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   
   // Debug what the context is actually providing
-  console.log('🔍 useAuth: context value:', {
+  logger.log('🔍 useAuth: context value:', {
     user: ctx.user,
     isLoaded: ctx.isLoaded,
     isAuthenticated: ctx.isAuthenticated,

@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { EditOrder } from './EditOrder';
 import { generateOrderPDF, generateLabelPDF } from '@/lib/generate-pdf';
 import { fetchOrderDetail, type OrderDetailData } from '@/services/enrichedOrders';
+import { logger } from '@/utils/logger';
 
 interface OrderDetailsProps {
   order: {
@@ -122,7 +123,7 @@ export function OrderDetails({ order, onClose }: OrderDetailsProps) {
         }
       } catch (err) {
         if (!cancelled) {
-          console.error('Failed to load order detail:', err);
+          logger.error('Failed to load order detail:', err);
           setError(err instanceof Error ? err.message : 'Failed to load order details');
         }
       } finally {
@@ -237,7 +238,7 @@ export function OrderDetails({ order, onClose }: OrderDetailsProps) {
 
       alert(`Order status changed to "${orderStatus}"`);
     } catch (err) {
-      console.error('Failed to change order status:', err);
+      logger.error('Failed to change order status:', err);
       alert('Failed to change order status. The backend endpoint may not be implemented yet.');
     } finally {
       setStatusChanging(false);

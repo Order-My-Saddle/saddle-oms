@@ -1,5 +1,6 @@
 import { useAtom } from 'jotai';
 import { tokenAtom } from '../store/auth';
+import { logger } from '@/utils/logger';
 
 export function useToken() {
   const [token] = useAtom(tokenAtom);
@@ -15,7 +16,7 @@ export function getStoredToken(): string | null {
         return JSON.parse(stored);
       }
     } catch (e) {
-      console.warn('Failed to parse stored token:', e);
+      logger.warn('Failed to parse stored token:', e);
     }
   }
   return null;

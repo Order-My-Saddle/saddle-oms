@@ -11,6 +11,7 @@ import { createSupplier, updateSupplier, deleteSupplier, type Supplier } from '@
 import { SupplierDetailModal } from '@/components/shared/SupplierDetailModal';
 import { SupplierEditModal } from '@/components/shared/SupplierEditModal';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 export default function Suppliers() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -88,7 +89,7 @@ export default function Suppliers() {
         }, 100);
 
       } catch (error) {
-        console.error('Error deleting supplier:', error);
+        logger.error('Error deleting supplier:', error);
 
         // Show error toast
         toast.error(`Failed to delete supplier: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -133,7 +134,7 @@ export default function Suppliers() {
       }, 100);
 
     } catch (error) {
-      console.error('Error updating supplier:', error);
+      logger.error('Error updating supplier:', error);
 
       // Show error toast
       toast.error(`Failed to update supplier: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -163,7 +164,7 @@ export default function Suppliers() {
       }, 100);
 
     } catch (error) {
-      console.error('Error creating supplier:', error);
+      logger.error('Error creating supplier:', error);
 
       // Show error toast
       toast.error(`Failed to create supplier: ${error instanceof Error ? error.message : 'Unknown error'}`);

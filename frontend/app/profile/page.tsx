@@ -13,6 +13,7 @@ import { useState, useEffect } from "react";
 import { updateUser, type UpdateUserData } from "@/services/users";
 import { UserRole } from "@/types/Role";
 import { toast } from "sonner";
+import { logger } from '@/utils/logger';
 
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
@@ -115,7 +116,7 @@ export default function ProfilePage() {
       setIsEditing(false);
       toast.success("Profile updated successfully");
     } catch (error) {
-      console.error("Failed to update profile:", error);
+      logger.error("Failed to update profile:", error);
       toast.error("Failed to update profile. Please try again.");
     } finally {
       setIsLoading(false);

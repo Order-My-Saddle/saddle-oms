@@ -1,3 +1,5 @@
+import { logger } from '@/utils/logger';
+
 export interface Brand {
   id: string;
   name: string;
@@ -73,7 +75,7 @@ export async function fetchBrands({
   orderBy?: string;
   order?: 'asc' | 'desc';
 } = {}): Promise<BrandsResponse> {
-  console.log('fetchBrands: Called with params:', { page, searchTerm, filters, orderBy, order });
+  logger.log('fetchBrands: Called with params:', { page, searchTerm, filters, orderBy, order });
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const token = getToken();
@@ -88,7 +90,7 @@ export async function fetchBrands({
     params.set('search', searchTerm);
   }
 
-  console.log('fetchBrands: Calling brands endpoint with params:', params.toString());
+  logger.log('fetchBrands: Calling brands endpoint with params:', params.toString());
 
   const response = await fetch(`${API_URL}/api/v1/brands?${params.toString()}`, {
     method: 'GET',
@@ -102,12 +104,12 @@ export async function fetchBrands({
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('fetchBrands: Failed to fetch brands:', errorText);
+    logger.error('fetchBrands: Failed to fetch brands:', errorText);
     throw new Error(`Failed to fetch brands: ${response.status} ${response.statusText}`);
   }
 
   const brandData: NestJSBrandsResponse = await response.json();
-  console.log('fetchBrands: Received brand data:', brandData);
+  logger.log('fetchBrands: Received brand data:', brandData);
 
   // Transform to Hydra format expected by frontend
   const brands: Brand[] = brandData.data.map(brand => ({
@@ -128,7 +130,7 @@ export async function createBrand(brandData: Partial<Brand>): Promise<Brand> {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const token = getToken();
 
-  console.log('Creating brand with data:', brandData);
+  logger.log('Creating brand with data:', brandData);
 
   const response = await fetch(`${API_URL}/api/v1/brands`, {
     method: 'POST',
@@ -143,12 +145,12 @@ export async function createBrand(brandData: Partial<Brand>): Promise<Brand> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Brand creation failed:', errorText);
+    logger.error('Brand creation failed:', errorText);
     throw new Error(`Failed to create brand: ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Brand creation result:', result);
+  logger.log('Brand creation result:', result);
   return {
     id: String(result.id),
     name: result.name,
@@ -161,7 +163,7 @@ export async function updateBrand(id: string, brandData: Partial<Brand>): Promis
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const token = getToken();
 
-  console.log('Updating brand with ID:', id, 'Data:', brandData);
+  logger.log('Updating brand with ID:', id, 'Data:', brandData);
 
   const response = await fetch(`${API_URL}/api/v1/brands/${id}`, {
     method: 'PUT',
@@ -176,12 +178,12 @@ export async function updateBrand(id: string, brandData: Partial<Brand>): Promis
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Brand update failed:', errorText);
+    logger.error('Brand update failed:', errorText);
     throw new Error(`Failed to update brand: ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Brand update result:', result);
+  logger.log('Brand update result:', result);
   return {
     id: String(result.id),
     name: result.name,
@@ -194,7 +196,7 @@ export async function deleteBrand(id: string): Promise<void> {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const token = getToken();
 
-  console.log('Deleting brand with ID:', id);
+  logger.log('Deleting brand with ID:', id);
 
   const response = await fetch(`${API_URL}/api/v1/brands/${id}`, {
     method: 'DELETE',
@@ -207,11 +209,11 @@ export async function deleteBrand(id: string): Promise<void> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Brand deletion failed:', errorText);
+    logger.error('Brand deletion failed:', errorText);
     throw new Error(`Failed to delete brand: ${response.statusText}`);
   }
 
-  console.log('Brand deletion successful');
+  logger.log('Brand deletion successful');
 }
 
 /**
@@ -219,19 +221,19 @@ export async function deleteBrand(id: string): Promise<void> {
  */
 export async function fetchBrandCount(): Promise<number> {
   try {
-    console.log('📊 fetchBrandCount: Getting total brand count');
+    logger.log('📊 fetchBrandCount: Getting total brand count');
 
     const result = await fetchBrands({ page: 1 });
 
     if (result['hydra:totalItems'] !== undefined && result['hydra:totalItems'] !== null) {
-      console.log('📊 Got total brand count from API:', result['hydra:totalItems']);
+      logger.log('📊 Got total brand count from API:', result['hydra:totalItems']);
       return result['hydra:totalItems'];
     }
 
-    console.warn('📊 Could not get brand count from API, using fallback');
+    logger.warn('📊 Could not get brand count from API, using fallback');
     return 0;
   } catch (error) {
-    console.error('📊 Error fetching brand count:', error);
+    logger.error('📊 Error fetching brand count:', error);
     return 0;
   }
 }

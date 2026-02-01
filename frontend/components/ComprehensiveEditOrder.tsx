@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, ChevronRight, Search, User, Package, Settings } from 'lucide-react';
+import { logger } from '@/utils/logger';
 import { fetchOrderDetail, type OrderDetailData } from '@/services/enrichedOrders';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -161,7 +162,7 @@ export function ComprehensiveEditOrder({ order, isLoading = false, error, onClos
           if (!r.ok) throw new Error(`Failed to fetch options: ${r.status}`);
           return r.json() as Promise<EditFormOptions>;
         }).catch(err => {
-          console.warn('Failed to fetch edit options:', err);
+          logger.warn('Failed to fetch edit options:', err);
           return null;
         }),
       ]);
@@ -241,7 +242,7 @@ export function ComprehensiveEditOrder({ order, isLoading = false, error, onClos
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load order data';
-      console.error('Error loading order data:', err);
+      logger.error('Error loading order data:', err);
       setDataError(errorMessage);
     } finally {
       setLoadingData(false);
@@ -300,10 +301,10 @@ export function ComprehensiveEditOrder({ order, isLoading = false, error, onClos
       setSaving(true);
       try {
         // TODO: Implement save via backend endpoint
-        console.log('Saving order...');
+        logger.log('Saving order...');
         alert('Order save not yet implemented.');
       } catch (error) {
-        console.error('Error saving order:', error);
+        logger.error('Error saving order:', error);
       } finally {
         setSaving(false);
       }

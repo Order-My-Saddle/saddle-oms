@@ -1,4 +1,5 @@
 import { fetchEntities } from './api';
+import { logger } from '@/utils/logger';
 
 export interface Leathertype {
   id: string;
@@ -35,7 +36,7 @@ export async function fetchLeathertypes({
   orderBy?: string;
   order?: 'asc' | 'desc';
 } = {}): Promise<LeathertypesResponse> {
-  console.log('fetchLeathertypes: Called with params:', { page, searchTerm, filters, orderBy, order });
+  logger.log('fetchLeathertypes: Called with params:', { page, searchTerm, filters, orderBy, order });
   
   // Build filter parameters for API Platform
   const extraParams: Record<string, string | number | boolean> = {};
@@ -43,7 +44,7 @@ export async function fetchLeathertypes({
   // Handle individual field filters
   Object.entries(filters).forEach(([key, value]) => {
     if (value && value.trim()) {
-      console.log(`fetchLeathertypes: Processing filter ${key}:`, value);
+      logger.log(`fetchLeathertypes: Processing filter ${key}:`, value);
       // For text fields, use partial matching with API Platform filters
       if (key === 'name') {
         extraParams['name[contains]'] = value;
@@ -61,7 +62,7 @@ export async function fetchLeathertypes({
     }
   });
 
-  console.log('fetchLeathertypes: Calling fetchEntities with entity "leathertypes" and params:', extraParams);
+  logger.log('fetchLeathertypes: Calling fetchEntities with entity "leathertypes" and params:', extraParams);
 
   return await fetchEntities({
     entity: 'leathertypes',
@@ -141,7 +142,7 @@ export async function createLeathertype(leathertypeData: Partial<Leathertype>): 
     entities: [entity]
   };
 
-  console.log('Attempting leathertype creation with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
+  logger.log('Attempting leathertype creation with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
 
   const response = await fetch(`${API_URL}/save`, {
     method: 'POST',
@@ -159,12 +160,12 @@ export async function createLeathertype(leathertypeData: Partial<Leathertype>): 
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Leathertype creation failed:', errorText);
+    logger.error('Leathertype creation failed:', errorText);
     throw new Error(`Failed to create leathertype: ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Leathertype creation result:', result);
+  logger.log('Leathertype creation result:', result);
 
   // Return the first entity from the response
   return result.Entities?.[0] || result.entities?.[0] || result;
@@ -203,7 +204,7 @@ export async function updateLeathertype(id: string, leathertypeData: Partial<Lea
     entities: [entity]
   };
 
-  console.log('Attempting leathertype update with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
+  logger.log('Attempting leathertype update with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
 
   const response = await fetch(`${API_URL}/save`, {
     method: 'POST',
@@ -221,12 +222,12 @@ export async function updateLeathertype(id: string, leathertypeData: Partial<Lea
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Leathertype update failed:', errorText);
+    logger.error('Leathertype update failed:', errorText);
     throw new Error(`Failed to update leathertype: ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Leathertype update result:', result);
+  logger.log('Leathertype update result:', result);
 
   // Return the first entity from the response
   return result.Entities?.[0] || result.entities?.[0] || result;
@@ -255,7 +256,7 @@ export async function deleteLeathertype(id: string): Promise<void> {
  */
 export async function fetchLeathertypeCount(): Promise<number> {
   try {
-    console.log('📊 fetchLeathertypeCount: Getting total leathertype count');
+    logger.log('📊 fetchLeathertypeCount: Getting total leathertype count');
 
     // Get total count using minimal data transfer (limit=1) with full pagination metadata
     const result = await fetchEntities({
@@ -269,14 +270,14 @@ export async function fetchLeathertypeCount(): Promise<number> {
 
     // Return the total count if available
     if (result['hydra:totalItems'] !== undefined && result['hydra:totalItems'] !== null) {
-      console.log('📊 Got total leathertype count from API:', result['hydra:totalItems']);
+      logger.log('📊 Got total leathertype count from API:', result['hydra:totalItems']);
       return result['hydra:totalItems'];
     }
 
-    console.warn('📊 Could not get leathertype count from API, using fallback');
+    logger.warn('📊 Could not get leathertype count from API, using fallback');
     return 0;
   } catch (error) {
-    console.error('📊 Error fetching leathertype count:', error);
+    logger.error('📊 Error fetching leathertype count:', error);
     return 0;
   }
 }

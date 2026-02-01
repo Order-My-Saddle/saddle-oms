@@ -8,6 +8,7 @@ import { useTableFilters, usePagination } from '@/hooks';
 import { PageHeader } from '@/components/shared';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { logger } from '@/utils/logger';
 
 const getDisplayValue = (value: any): string => {
   if (value === null || value === undefined) return '-';
@@ -113,7 +114,7 @@ export default function RepairsPage() {
     } catch (err) {
       setError('Failed to load repairs. Please try again.');
       setRepairs([]);
-      console.error('Error loading repairs:', err);
+      logger.error('Error loading repairs:', err);
     } finally {
       setLoading(false);
     }
@@ -128,12 +129,12 @@ export default function RepairsPage() {
   };
 
   const handleViewRepair = (repair: OrderProductSaddle) => {
-    console.log('View repair', repair);
+    logger.log('View repair', repair);
     // Implement view logic if needed
   };
 
   const handleEditRepair = (repair: OrderProductSaddle) => {
-    console.log('Edit repair', repair);
+    logger.log('Edit repair', repair);
     // Implement edit logic if needed
   };
 

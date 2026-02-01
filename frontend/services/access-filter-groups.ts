@@ -1,5 +1,6 @@
 import { fetchEntities } from './api';
 import type { AccessFilterGroup, AccessFilterGroupsResponse } from '@/types/AccessFilterGroup';
+import { logger } from '@/utils/logger';
 
 function getToken() {
   if (typeof window !== 'undefined') {
@@ -8,22 +9,22 @@ function getToken() {
       const stored = localStorage.getItem('auth_token');
       if (stored && stored !== 'null') {
         const parsedToken = JSON.parse(stored);
-        console.log('🔑 Found token in auth_token localStorage');
+        logger.log('🔑 Found token in auth_token localStorage');
         return parsedToken;
       }
     } catch (e) {
-      console.log('🔑 Failed to parse auth_token from localStorage, trying token key...');
+      logger.log('🔑 Failed to parse auth_token from localStorage, trying token key...');
     }
 
     // Check localStorage for 'token' key
     try {
       const token = localStorage.getItem('token');
       if (token && token !== 'null') {
-        console.log('🔑 Found token in token localStorage');
+        logger.log('🔑 Found token in token localStorage');
         return token;
       }
     } catch (e) {
-      console.log('🔑 No token found in localStorage, trying cookies...');
+      logger.log('🔑 No token found in localStorage, trying cookies...');
     }
 
     // Fallback to cookies
@@ -31,11 +32,11 @@ function getToken() {
     for (let cookie of cookies) {
       const [name, value] = cookie.trim().split('=');
       if (name === 'token') {
-        console.log('🔑 Found token in cookies');
+        logger.log('🔑 Found token in cookies');
         return value;
       }
     }
-    console.log('🔑 No token found anywhere');
+    logger.log('🔑 No token found anywhere');
   }
   return null;
 }
@@ -53,7 +54,7 @@ export async function fetchAccessFilterGroups({
   orderBy?: string;
   order?: 'asc' | 'desc';
 } = {}): Promise<AccessFilterGroupsResponse> {
-  console.log('fetchAccessFilterGroups: Called with params:', { page, searchTerm, filters, orderBy, order });
+  logger.log('fetchAccessFilterGroups: Called with params:', { page, searchTerm, filters, orderBy, order });
 
   // Build filter parameters for API Platform
   const extraParams: Record<string, string | number | boolean> = {};
@@ -61,7 +62,7 @@ export async function fetchAccessFilterGroups({
   // Handle individual field filters
   Object.entries(filters).forEach(([key, value]) => {
     if (value && value.trim()) {
-      console.log(`fetchAccessFilterGroups: Processing filter ${key}:`, value);
+      logger.log(`fetchAccessFilterGroups: Processing filter ${key}:`, value);
       // For text fields, use partial matching
       if (key === 'name' || key === 'description') {
         extraParams[key] = value;
@@ -77,7 +78,7 @@ export async function fetchAccessFilterGroups({
     }
   });
 
-  console.log('fetchAccessFilterGroups: Calling fetchEntities with entity "access_filter_groups" and params:', extraParams);
+  logger.log('fetchAccessFilterGroups: Calling fetchEntities with entity "access_filter_groups" and params:', extraParams);
 
   return await fetchEntities({
     entity: 'access_filter_groups',
@@ -121,7 +122,7 @@ export async function createAccessFilterGroup(accessFilterGroupData: Partial<Acc
     entities: [entity]
   };
 
-  console.log('Attempting access filter group creation with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
+  logger.log('Attempting access filter group creation with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
 
   const response = await fetch(`${API_URL}/save`, {
     method: 'POST',
@@ -139,17 +140,17 @@ export async function createAccessFilterGroup(accessFilterGroupData: Partial<Acc
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Access filter group creation failed:', response.status, errorText);
+    logger.error('Access filter group creation failed:', response.status, errorText);
     throw new Error(`Failed to create access filter group: ${response.status} ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Access filter group creation result:', result);
+  logger.log('Access filter group creation result:', result);
 
   // Check for errors in SaveBundle response
   if (result.Errors && result.Errors.length > 0) {
-    console.error('SaveBundle errors:', result.Errors);
-    console.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
+    logger.error('SaveBundle errors:', result.Errors);
+    logger.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
     const errorMessages = result.Errors.map((err: any) => {
       return err.ErrorMessage || err.message || err.Message || err.error || err.description || JSON.stringify(err);
     }).join(', ');
@@ -163,7 +164,7 @@ export async function createAccessFilterGroup(accessFilterGroupData: Partial<Acc
     return result.entities[0];
   } else {
     // If no entity returned in SaveBundle but no errors, creation was likely successful
-    console.log('No entities in SaveBundle response but no errors, returning optimistic data');
+    logger.log('No entities in SaveBundle response but no errors, returning optimistic data');
     return {
       id: 'pending', // Will be set by backend
       ...accessFilterGroupData
@@ -205,7 +206,7 @@ export async function updateAccessFilterGroup(id: string, accessFilterGroupData:
     entities: [entity]
   };
 
-  console.log('Attempting access filter group update with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
+  logger.log('Attempting access filter group update with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
 
   const response = await fetch(`${API_URL}/save`, {
     method: 'POST',
@@ -223,17 +224,17 @@ export async function updateAccessFilterGroup(id: string, accessFilterGroupData:
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Update access filter group error response:', errorText);
+    logger.error('Update access filter group error response:', errorText);
     throw new Error(`Failed to update access filter group: ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Access filter group update result:', result);
+  logger.log('Access filter group update result:', result);
 
   // Check for errors in SaveBundle response
   if (result.Errors && result.Errors.length > 0) {
-    console.error('SaveBundle errors:', result.Errors);
-    console.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
+    logger.error('SaveBundle errors:', result.Errors);
+    logger.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
     const errorMessages = result.Errors.map((err: any) => {
       return err.ErrorMessage || err.message || err.Message || err.error || err.description || JSON.stringify(err);
     }).join(', ');
@@ -249,7 +250,7 @@ export async function updateAccessFilterGroup(id: string, accessFilterGroupData:
     return result.entities[0];
   } else {
     // If no entity returned in SaveBundle but no errors, update was likely successful
-    console.log('No entities in SaveBundle response but no errors, returning optimistic data');
+    logger.log('No entities in SaveBundle response but no errors, returning optimistic data');
     return {
       id: id,
       ...accessFilterGroupData

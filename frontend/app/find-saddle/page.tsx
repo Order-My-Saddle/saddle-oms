@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { fetchOrderDetail, type OrderDetailData } from '@/services/enrichedOrders';
 import { generateOrderPDF } from '@/lib/generate-pdf';
+import { logger } from '@/utils/logger';
 
 // Option group mapping matching production layout
 const optionGroups: Record<string, string> = {
@@ -84,7 +85,7 @@ export default function FindSaddlePage() {
     } catch (err) {
       setError('Error searching for order. Please try again.');
       setOrderData(null);
-      console.error('Search error:', err);
+      logger.error('Search error:', err);
     } finally {
       setLoading(false);
     }

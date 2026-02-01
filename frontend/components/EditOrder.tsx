@@ -21,6 +21,7 @@ import {
   Fitter,
   OrderStatus
 } from '@/types/ComprehensiveOrder';
+import { logger } from '@/utils/logger';
 
 interface EditOrderProps {
   order?: {
@@ -107,7 +108,7 @@ export function EditOrder({ order, isLoading = false, error, onClose, onBack }: 
     setDataError(null);
     
     try {
-      console.log('Loading comprehensive order data for:', order.id);
+      logger.log('Loading comprehensive order data for:', order.id);
       
       // Try to fetch comprehensive data, but fallback gracefully
       let data;
@@ -161,7 +162,7 @@ export function EditOrder({ order, isLoading = false, error, onClose, onBack }: 
           productSaddles: []
         };
       } catch (fetchError) {
-        console.warn('Failed to fetch comprehensive data, using order summary:', fetchError);
+        logger.warn('Failed to fetch comprehensive data, using order summary:', fetchError);
         // Create minimal data structure from the order object
         data = {
           order: {
@@ -232,7 +233,7 @@ export function EditOrder({ order, isLoading = false, error, onClose, onBack }: 
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load order data';
-      console.error('Error loading comprehensive order data:', err);
+      logger.error('Error loading comprehensive order data:', err);
       
       // If it's an authentication error, provide clear instructions
       if (errorMessage.includes('Authentication required') || errorMessage.includes('401')) {
@@ -244,7 +245,7 @@ export function EditOrder({ order, isLoading = false, error, onClose, onBack }: 
         }
       } else {
         // For other errors, still allow editing with minimal data
-        console.warn('Non-auth error, continuing with minimal data');
+        logger.warn('Non-auth error, continuing with minimal data');
         setDataError(null); // Don't show error, just continue
         
         // Set minimal form data to allow editing
@@ -284,7 +285,7 @@ export function EditOrder({ order, isLoading = false, error, onClose, onBack }: 
         const results = await searchCustomers(searchTerm);
         setCustomerSearchResults(results);
       } catch (error) {
-        console.error('Error searching customers:', error);
+        logger.error('Error searching customers:', error);
         setCustomerSearchResults([]);
       } finally {
         setCustomerSearchLoading(false);
@@ -306,7 +307,7 @@ export function EditOrder({ order, isLoading = false, error, onClose, onBack }: 
         const results = await searchFitters(searchTerm);
         setFitterSearchResults(results);
       } catch (error) {
-        console.error('Error searching fitters:', error);
+        logger.error('Error searching fitters:', error);
         setFitterSearchResults([]);
       } finally {
         setFitterSearchLoading(false);
@@ -345,10 +346,10 @@ export function EditOrder({ order, isLoading = false, error, onClose, onBack }: 
         };
         
         await saveOrderEditData(order?.id || '', orderToSave);
-        console.log('Order saved successfully');
+        logger.log('Order saved successfully');
         onClose();
       } catch (error) {
-        console.error('Error saving order:', error);
+        logger.error('Error saving order:', error);
         // Handle error (show toast, etc.)
       } finally {
         setSaving(false);

@@ -1,5 +1,6 @@
 // Service for fetching enriched orders data from the enriched_order API resource
 import { fetchEntities } from './api';
+import { logger } from '@/utils/logger';
 
 // Helper function to get current user from auth context
 function getCurrentUser() {
@@ -11,7 +12,7 @@ function getCurrentUser() {
         return JSON.parse(storedUser);
       }
     } catch (error) {
-      console.warn('Failed to get user from localStorage:', error);
+      logger.warn('Failed to get user from localStorage:', error);
     }
   }
   return null;
@@ -43,7 +44,7 @@ interface SearchFilters {
 
 // Function to search for a specific order by ID through multiple pages
 export async function searchForOrderByPages(orderId: string | number): Promise<any> {
-  console.log('Starting paginated search for order ID:', orderId);
+  logger.log('Starting paginated search for order ID:', orderId);
   
   // We'll try the first 10 pages to find the order
   const targetOrderId = Number(orderId);
@@ -51,7 +52,7 @@ export async function searchForOrderByPages(orderId: string | number): Promise<a
   const itemsPerPage = 30; // Default API pagination
   
   for (let page = 1; page <= pageLimit; page++) {
-    console.log(`Searching page ${page} for order ID ${orderId}`);
+    logger.log(`Searching page ${page} for order ID ${orderId}`);
     
     try {
       // Get the specific page of results
@@ -64,11 +65,11 @@ export async function searchForOrderByPages(orderId: string | number): Promise<a
       });
       
       if (!response['hydra:member'] || response['hydra:member'].length === 0) {
-        console.log(`No results on page ${page}, stopping search`);
+        logger.log(`No results on page ${page}, stopping search`);
         break;
       }
       
-      console.log(`Page ${page} has ${response['hydra:member'].length} orders`);
+      logger.log(`Page ${page} has ${response['hydra:member'].length} orders`);
       
       // Check for the order on this page
       const foundOrder = response['hydra:member'].find((order: any) => {
@@ -79,12 +80,12 @@ export async function searchForOrderByPages(orderId: string | number): Promise<a
       // Sample a few orders to see what's on this page
       if (page === 1 || page % 3 === 0) { // Log first page and every third page
         const orderIds = response['hydra:member'].map((order: any) => Number(order.orderId)).sort((a: number, b: number) => a - b);
-        console.log(`Sample order IDs on page ${page}: ${orderIds.slice(0, 5)}...`);
-        console.log(`Order ID range on page ${page}: ${Math.min(...orderIds)} - ${Math.max(...orderIds)}`);
+        logger.log(`Sample order IDs on page ${page}: ${orderIds.slice(0, 5)}...`);
+        logger.log(`Order ID range on page ${page}: ${Math.min(...orderIds)} - ${Math.max(...orderIds)}`);
       }
       
       if (foundOrder) {
-        console.log(`Found order ${orderId} on page ${page}:`, foundOrder);
+        logger.log(`Found order ${orderId} on page ${page}:`, foundOrder);
         
         // Return a properly formatted response with just the found order
         return {
@@ -103,16 +104,16 @@ export async function searchForOrderByPages(orderId: string | number): Promise<a
       const lowestOrderIdOnPage = Math.min(...response['hydra:member'].map((order: any) => Number(order.orderId)));
       
       if (lowestOrderIdOnPage < targetOrderId) {
-        console.log(`Lowest order ID on page ${page} (${lowestOrderIdOnPage}) is already below target ${targetOrderId}, stopping search`);
+        logger.log(`Lowest order ID on page ${page} (${lowestOrderIdOnPage}) is already below target ${targetOrderId}, stopping search`);
         break;
       }
     } catch (error) {
-      console.error(`Error searching page ${page}:`, error);
+      logger.error(`Error searching page ${page}:`, error);
       throw error;
     }
   }
   
-  console.log(`Order ${orderId} not found after searching ${pageLimit} pages`);
+  logger.log(`Order ${orderId} not found after searching ${pageLimit} pages`);
   
   // Return empty result if order not found
   return {
@@ -123,28 +124,28 @@ export async function searchForOrderByPages(orderId: string | number): Promise<a
 
 // Accept filters and pass to fetchEntities for the enriched_order entity
 export async function getEnrichedOrders(params: GetEnrichedOrdersParams = {}) {
-  console.log('enrichedOrders.ts: getEnrichedOrders called with params:', params);
+  logger.log('enrichedOrders.ts: getEnrichedOrders called with params:', params);
   
   // Format filters for API Platform
   const formattedFilters = { ...params.filters };
-  console.log('enrichedOrders.ts: Initial formattedFilters:', formattedFilters);
+  logger.log('enrichedOrders.ts: Initial formattedFilters:', formattedFilters);
   
   // Auto-apply fitter filtering for FITTER role users
   const currentUser = getCurrentUser();
   if (currentUser && currentUser.role === 'ROLE_FITTER' && currentUser.username && !formattedFilters.fitterUsername) {
-    console.log('enrichedOrders.ts: Auto-applying fitter filter for user:', currentUser.username);
+    logger.log('enrichedOrders.ts: Auto-applying fitter filter for user:', currentUser.username);
     formattedFilters.fitterUsername = currentUser.username;
   }
   
   // Special case for orderId search - use paginated search if we have an exact orderId
   if (formattedFilters.orderId && /^\d+$/.test(formattedFilters.orderId)) {
     try {
-      console.log('Detected specific order ID search:', formattedFilters.orderId);
+      logger.log('Detected specific order ID search:', formattedFilters.orderId);
       
       // Use paginated search to find the specific order
       return await searchForOrderByPages(formattedFilters.orderId);
     } catch (error) {
-      console.warn('Failed to find order through paginated search, falling back to regular search:', error);
+      logger.warn('Failed to find order through paginated search, falling back to regular search:', error);
       // Fall back to regular search if the paginated search fails
     }
   }
@@ -161,7 +162,7 @@ export async function getEnrichedOrders(params: GetEnrichedOrdersParams = {}) {
   Object.keys(formattedFilters).forEach(key => {
     const value = formattedFilters[key];
     if (value !== undefined && value !== null && value !== '') {
-      console.log(`Filtering by ${key}:`, value);
+      logger.log(`Filtering by ${key}:`, value);
       // Use direct field names without array notation for proper API Platform filtering
       cleanedFilters[key] = value;
     }
@@ -180,7 +181,7 @@ export async function getEnrichedOrders(params: GetEnrichedOrdersParams = {}) {
 
   // Use searchTerm from either the filters or the top-level param
   const effectiveSearchTerm = searchTermFromFilters || params.searchTerm;
-  console.log('enrichedOrders.ts: Final API request parameters:', formattedFilters, 'searchTerm:', effectiveSearchTerm);
+  logger.log('enrichedOrders.ts: Final API request parameters:', formattedFilters, 'searchTerm:', effectiveSearchTerm);
 
   const response = await fetchEntities({
     entity: 'enriched_orders',
@@ -190,14 +191,14 @@ export async function getEnrichedOrders(params: GetEnrichedOrdersParams = {}) {
     searchTerm: effectiveSearchTerm,
   });
   
-  console.log('enrichedOrders.ts: API response received:', {
+  logger.log('enrichedOrders.ts: API response received:', {
     totalItems: response['hydra:totalItems'],
     memberCount: response['hydra:member']?.length,
     firstOrderStatuses: response['hydra:member']?.slice(0, 3).map((order: any) => order.orderStatus)
   });
   
   // Server-side filtering should now work properly without array notation
-  console.log('enrichedOrders.ts: Server-side filtering should handle the request properly');
+  logger.log('enrichedOrders.ts: Server-side filtering should handle the request properly');
   
   return response;
 }
@@ -365,7 +366,7 @@ export interface OrderDetailData {
  * Fetch comprehensive order detail data for the order detail view
  */
 export async function fetchOrderDetail(orderId: number): Promise<OrderDetailData> {
-  console.log('Fetching order detail for:', orderId);
+  logger.log('Fetching order detail for:', orderId);
 
   const response = await fetch(`${API_URL}/api/v1/enriched_orders/detail/${orderId}`, {
     headers: authHeaders(),
@@ -384,7 +385,7 @@ export async function fetchOrderDetail(orderId: number): Promise<OrderDetailData
 
 // Search by specific order ID (numeric)
 export async function searchByOrderId(orderId: string | number): Promise<any> {
-  console.log('Searching by Order ID:', orderId);
+  logger.log('Searching by Order ID:', orderId);
   return getEnrichedOrders({
     filters: { orderId: String(orderId) },
     orderBy: 'orderId',
@@ -394,7 +395,7 @@ export async function searchByOrderId(orderId: string | number): Promise<any> {
 
 // Search by order status
 export async function searchByOrderStatus(status: string): Promise<any> {
-  console.log('Searching by Order Status:', status);
+  logger.log('Searching by Order Status:', status);
   
   // Try the exact status first
   let result = await getEnrichedOrders({
@@ -405,7 +406,7 @@ export async function searchByOrderStatus(status: string): Promise<any> {
   
   // If no results and it looks like a constant format, try variations
   if (result['hydra:totalItems'] === 0 || result['hydra:member']?.length === 0) {
-    console.log('No results for exact status, trying variations for:', status);
+    logger.log('No results for exact status, trying variations for:', status);
     
     // Try lowercase
     const lowerStatus = status.toLowerCase();
@@ -417,7 +418,7 @@ export async function searchByOrderStatus(status: string): Promise<any> {
       });
       
       if (result['hydra:totalItems'] > 0) {
-        console.log('Found results with lowercase status:', lowerStatus);
+        logger.log('Found results with lowercase status:', lowerStatus);
         return result;
       }
     }
@@ -432,7 +433,7 @@ export async function searchByOrderStatus(status: string): Promise<any> {
       });
       
       if (result['hydra:totalItems'] > 0) {
-        console.log('Found results with snake_case status:', snakeStatus);
+        logger.log('Found results with snake_case status:', snakeStatus);
         return result;
       }
     }
@@ -447,7 +448,7 @@ export async function searchByOrderStatus(status: string): Promise<any> {
       });
       
       if (result['hydra:totalItems'] > 0) {
-        console.log('Found results with space-separated status:', spaceStatus);
+        logger.log('Found results with space-separated status:', spaceStatus);
         return result;
       }
     }
@@ -458,7 +459,7 @@ export async function searchByOrderStatus(status: string): Promise<any> {
 
 // Search by customer name
 export async function searchByCustomerName(customerName: string): Promise<any> {
-  console.log('Searching by Customer Name:', customerName);
+  logger.log('Searching by Customer Name:', customerName);
   return getEnrichedOrders({
     filters: { customerName },
     orderBy: 'orderId',
@@ -468,7 +469,7 @@ export async function searchByCustomerName(customerName: string): Promise<any> {
 
 // Search by fitter name
 export async function searchByFitterName(fitterName: string): Promise<any> {
-  console.log('Searching by Fitter Name:', fitterName);
+  logger.log('Searching by Fitter Name:', fitterName);
   return getEnrichedOrders({
     filters: { fitterName },
     orderBy: 'orderId',
@@ -478,7 +479,7 @@ export async function searchByFitterName(fitterName: string): Promise<any> {
 
 // Search by supplier name
 export async function searchBySupplier(supplierName: string): Promise<any> {
-  console.log('Searching by Supplier Name:', supplierName);
+  logger.log('Searching by Supplier Name:', supplierName);
   return getEnrichedOrders({
     filters: { supplierName },
     orderBy: 'orderId',
@@ -488,7 +489,7 @@ export async function searchBySupplier(supplierName: string): Promise<any> {
 
 // Search by date range
 export async function searchByDateRange(fromDate: Date, toDate: Date): Promise<any> {
-  console.log('Searching by Date Range:', fromDate, 'to', toDate);
+  logger.log('Searching by Date Range:', fromDate, 'to', toDate);
   
   const fromDateStr = fromDate.toISOString().split('T')[0];
   const toDateStr = toDate.toISOString().split('T')[0];
@@ -505,7 +506,7 @@ export async function searchByDateRange(fromDate: Date, toDate: Date): Promise<a
 
 // Search by urgent status
 export async function searchByUrgentStatus(urgent: boolean): Promise<any> {
-  console.log('Searching by Urgent Status:', urgent);
+  logger.log('Searching by Urgent Status:', urgent);
   return getEnrichedOrders({
     filters: { urgent: urgent },
     orderBy: 'orderId',
@@ -515,25 +516,25 @@ export async function searchByUrgentStatus(urgent: boolean): Promise<any> {
 
 // Universal search that tries multiple fields
 export async function universalSearch(searchTerm: string): Promise<any> {
-  console.log('Performing universal search for:', searchTerm);
+  logger.log('Performing universal search for:', searchTerm);
   
   // If search term is numeric, search by order ID
   if (/^\d+$/.test(searchTerm)) {
-    console.log('Numeric search term detected, searching by order ID');
+    logger.log('Numeric search term detected, searching by order ID');
     const orderIdResult = await searchByOrderId(searchTerm);
     if (orderIdResult['hydra:member'] && orderIdResult['hydra:member'].length > 0) {
-      console.log('Found results by order ID');
+      logger.log('Found results by order ID');
       return orderIdResult;
     }
-    console.log('No results by order ID, continuing with general search');
+    logger.log('No results by order ID, continuing with general search');
   }
   
   // For text searches, try multiple strategies
-  console.log('Text search term detected, trying multiple search strategies');
+  logger.log('Text search term detected, trying multiple search strategies');
   
   // Strategy 1: Use backend search parameter if available
   try {
-    console.log('Strategy 1: Using backend search parameter');
+    logger.log('Strategy 1: Using backend search parameter');
     const searchResult = await getEnrichedOrders({
       searchTerm,
       orderBy: 'orderId',
@@ -543,12 +544,12 @@ export async function universalSearch(searchTerm: string): Promise<any> {
     });
     
     if (searchResult['hydra:member'] && searchResult['hydra:member'].length > 0) {
-      console.log('Backend search returned results:', searchResult['hydra:member'].length);
+      logger.log('Backend search returned results:', searchResult['hydra:member'].length);
       return searchResult;
     }
-    console.log('Backend search returned no results, trying individual field searches');
+    logger.log('Backend search returned no results, trying individual field searches');
   } catch (error) {
-    console.log('Backend search failed, trying individual field searches:', error);
+    logger.log('Backend search failed, trying individual field searches:', error);
   }
   
   // Strategy 2: Try individual field searches and combine results
@@ -560,7 +561,7 @@ export async function universalSearch(searchTerm: string): Promise<any> {
   
   try {
     const results = await Promise.all(searchPromises);
-    console.log('Individual field search results:', results.map(r => r['hydra:totalItems']));
+    logger.log('Individual field search results:', results.map(r => r['hydra:totalItems']));
     
     // Combine all results, removing duplicates by orderId
     const allOrders = new Map();
@@ -582,11 +583,11 @@ export async function universalSearch(searchTerm: string): Promise<any> {
       'hydra:totalItems': totalItems
     };
     
-    console.log('Combined search results:', combinedResults['hydra:totalItems']);
+    logger.log('Combined search results:', combinedResults['hydra:totalItems']);
     return combinedResults;
     
   } catch (error) {
-    console.error('All search strategies failed:', error);
+    logger.error('All search strategies failed:', error);
     return {
       'hydra:member': [],
       'hydra:totalItems': 0
@@ -596,7 +597,7 @@ export async function universalSearch(searchTerm: string): Promise<any> {
 
 // Advanced search with multiple filters
 export async function advancedSearch(filters: SearchFilters): Promise<any> {
-  console.log('Performing advanced search with filters:', filters);
+  logger.log('Performing advanced search with filters:', filters);
   
   const searchFilters: Record<string, string> = {};
   
@@ -630,7 +631,7 @@ export async function advancedSearch(filters: SearchFilters): Promise<any> {
 
 // Dashboard-specific search for status filtering
 export async function getOrdersByStatus(status: string): Promise<any> {
-  console.log('Getting orders by status for dashboard:', status);
+  logger.log('Getting orders by status for dashboard:', status);
   return searchByOrderStatus(status);
 }
 
@@ -653,17 +654,17 @@ export async function getAllStatusValues(): Promise<string[]> {
     }
     
     const uniqueStatuses = Array.from(statusValues).sort();
-    console.log('getAllStatusValues: Found unique status values:', uniqueStatuses);
+    logger.log('getAllStatusValues: Found unique status values:', uniqueStatuses);
     return uniqueStatuses;
   } catch (error) {
-    console.error('getAllStatusValues: Error fetching status values:', error);
+    logger.error('getAllStatusValues: Error fetching status values:', error);
     return [];
   }
 }
 
 // Search with pagination support for large datasets
 export async function paginatedSearch(searchParams: SearchFilters & { page?: number; limit?: number }): Promise<any> {
-  console.log('Performing paginated search:', searchParams);
+  logger.log('Performing paginated search:', searchParams);
   
   const { page = 1, ...filters } = searchParams;
   

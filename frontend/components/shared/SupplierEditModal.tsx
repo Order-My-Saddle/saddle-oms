@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 interface SupplierEditModalProps {
   supplier: Supplier | null;
@@ -88,7 +89,7 @@ export function SupplierEditModal({ supplier, isOpen, onClose, onSave }: Supplie
 
       onClose();
     } catch (error) {
-      console.error('Error saving supplier:', error);
+      logger.error('Error saving supplier:', error);
       // Don't set error here anymore since parent handles toast notifications
       // Keep the modal open for user to retry
     } finally {

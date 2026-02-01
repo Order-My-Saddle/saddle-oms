@@ -3,6 +3,7 @@ import React, { Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { LoginForm } from '../../components/LoginForm';
+import { logger } from '@/utils/logger';
 
 export default function LoginPage() {
   const { user, isLoaded, isAuthenticated } = useAuth();
@@ -11,8 +12,8 @@ export default function LoginPage() {
   useEffect(() => {
     // If user is already authenticated, redirect to dashboard
     if (isLoaded && isAuthenticated && user) {
-      console.log('🔄 LoginPage: User already authenticated, redirecting to dashboard');
-      console.log('🔄 LoginPage: User details:', { id: user.id, username: user.username, role: user.role });
+      logger.log('🔄 LoginPage: User already authenticated, redirecting to dashboard');
+      logger.log('🔄 LoginPage: User details:', { id: user.id, username: user.username, role: user.role });
 
       // Use window.location.replace for more reliable navigation in staging/production
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -21,7 +22,7 @@ export default function LoginPage() {
         router.replace('/dashboard');
       } else {
         // For production/staging, use window.location.replace to ensure navigation works
-        console.log('🔄 LoginPage: Using window.location.replace for reliable navigation');
+        logger.log('🔄 LoginPage: Using window.location.replace for reliable navigation');
         window.location.replace('/dashboard');
       }
     }

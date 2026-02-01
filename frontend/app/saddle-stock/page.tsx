@@ -8,6 +8,7 @@ import { useTableFilters, usePagination } from '@/hooks';
 import { PageHeader } from '@/components/shared';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { logger } from '@/utils/logger';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 
@@ -127,7 +128,7 @@ export default function AllSaddleStockPage() {
     } catch (err) {
       setError('Failed to load saddle stock. Please try again.');
       setSaddleStock([]);
-      console.error('Error loading all saddle stock:', err);
+      logger.error('Error loading all saddle stock:', err);
     } finally {
       setLoading(false);
     }
@@ -142,7 +143,7 @@ export default function AllSaddleStockPage() {
   };
 
   const handleViewSaddle = (saddle: SaddleStock) => {
-    console.log('View saddle', saddle);
+    logger.log('View saddle', saddle);
   };
 
   return (

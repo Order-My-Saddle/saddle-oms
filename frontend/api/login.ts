@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { logger } from '@/utils/logger';
 
 export interface LoginResponse {
   success: boolean;
@@ -65,7 +66,7 @@ export async function login(username: string, password: string): Promise<LoginRe
         throw new Error('Invalid token format');
       }
     } catch (e) {
-      console.error('Failed to decode token:', e);
+      logger.error('Failed to decode token:', e);
       return { 
         success: false, 
         message: 'Invalid token format',
@@ -108,7 +109,7 @@ export async function login(username: string, password: string): Promise<LoginRe
       user: userInfo,
     };
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error:', error);
     return { 
       success: false, 
       message: error instanceof Error ? error.message : 'An unknown error occurred',
@@ -145,10 +146,10 @@ export async function logout(): Promise<void> {
     clearAuthTokens();
 
     if (!response.ok) {
-      console.warn('Logout endpoint failed, but tokens cleared locally');
+      logger.warn('Logout endpoint failed, but tokens cleared locally');
     }
   } catch (error) {
-    console.error('Logout error:', error);
+    logger.error('Logout error:', error);
     // Still clear local tokens even if network fails
     clearAuthTokens();
   }

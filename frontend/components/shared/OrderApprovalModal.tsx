@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertTriangle, CheckCircle } from 'lucide-react';
 import { getCustomerName, getFitterName } from '@/utils/orderHydration';
+import { logger } from '@/utils/logger';
 
 interface OrderApprovalModalProps {
   order: Order | null;
@@ -31,7 +32,7 @@ export function OrderApprovalModal({ order, isOpen, onClose, onApprove }: OrderA
       setApprovalNotes('');
       onClose();
     } catch (error) {
-      console.error('Error approving order:', error);
+      logger.error('Error approving order:', error);
       setError(error instanceof Error ? error.message : 'Failed to approve order. Please try again.');
     } finally {
       setApproving(false);

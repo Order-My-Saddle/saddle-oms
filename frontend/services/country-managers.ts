@@ -1,5 +1,6 @@
 import { fetchEntities } from './api';
 import type { CountryManager, CountryManagersResponse } from '@/types/CountryManager';
+import { logger } from '@/utils/logger';
 
 function getToken() {
   if (typeof window !== 'undefined') {
@@ -8,22 +9,22 @@ function getToken() {
       const stored = localStorage.getItem('auth_token');
       if (stored && stored !== 'null') {
         const parsedToken = JSON.parse(stored);
-        console.log('🔑 Found token in auth_token localStorage');
+        logger.log('🔑 Found token in auth_token localStorage');
         return parsedToken;
       }
     } catch (e) {
-      console.log('🔑 Failed to parse auth_token from localStorage, trying token key...');
+      logger.log('🔑 Failed to parse auth_token from localStorage, trying token key...');
     }
 
     // Check localStorage for 'token' key
     try {
       const token = localStorage.getItem('token');
       if (token && token !== 'null') {
-        console.log('🔑 Found token in token localStorage');
+        logger.log('🔑 Found token in token localStorage');
         return token;
       }
     } catch (e) {
-      console.log('🔑 No token found in localStorage, trying cookies...');
+      logger.log('🔑 No token found in localStorage, trying cookies...');
     }
 
     // Fallback to cookies
@@ -31,11 +32,11 @@ function getToken() {
     for (let cookie of cookies) {
       const [name, value] = cookie.trim().split('=');
       if (name === 'token') {
-        console.log('🔑 Found token in cookies');
+        logger.log('🔑 Found token in cookies');
         return value;
       }
     }
-    console.log('🔑 No token found anywhere');
+    logger.log('🔑 No token found anywhere');
   }
   return null;
 }
@@ -53,7 +54,7 @@ export async function fetchCountryManagers({
   orderBy?: string;
   order?: 'asc' | 'desc';
 } = {}): Promise<CountryManagersResponse> {
-  console.log('fetchCountryManagers: Called with params:', { page, searchTerm, filters, orderBy, order });
+  logger.log('fetchCountryManagers: Called with params:', { page, searchTerm, filters, orderBy, order });
 
   // Build filter parameters for API Platform
   const extraParams: Record<string, string | number | boolean> = {};
@@ -61,7 +62,7 @@ export async function fetchCountryManagers({
   // Handle individual field filters
   Object.entries(filters).forEach(([key, value]) => {
     if (value && value.trim()) {
-      console.log(`fetchCountryManagers: Processing filter ${key}:`, value);
+      logger.log(`fetchCountryManagers: Processing filter ${key}:`, value);
       // For text fields, use partial matching
       if (key === 'country' || key === 'managerName' || key === 'email' || key === 'region') {
         extraParams[key] = value;
@@ -77,7 +78,7 @@ export async function fetchCountryManagers({
     }
   });
 
-  console.log('fetchCountryManagers: Calling fetchEntities with entity "country_managers" and params:', extraParams);
+  logger.log('fetchCountryManagers: Calling fetchEntities with entity "country_managers" and params:', extraParams);
 
   return await fetchEntities({
     entity: 'country_managers',
@@ -124,7 +125,7 @@ export async function createCountryManager(countryManagerData: Partial<CountryMa
     entities: [entity]
   };
 
-  console.log('Attempting country manager creation with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
+  logger.log('Attempting country manager creation with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
 
   const response = await fetch(`${API_URL}/save`, {
     method: 'POST',
@@ -142,17 +143,17 @@ export async function createCountryManager(countryManagerData: Partial<CountryMa
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Country manager creation failed:', response.status, errorText);
+    logger.error('Country manager creation failed:', response.status, errorText);
     throw new Error(`Failed to create country manager: ${response.status} ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Country manager creation result:', result);
+  logger.log('Country manager creation result:', result);
 
   // Check for errors in SaveBundle response
   if (result.Errors && result.Errors.length > 0) {
-    console.error('SaveBundle errors:', result.Errors);
-    console.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
+    logger.error('SaveBundle errors:', result.Errors);
+    logger.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
     const errorMessages = result.Errors.map((err: any) => {
       return err.ErrorMessage || err.message || err.Message || err.error || err.description || JSON.stringify(err);
     }).join(', ');
@@ -166,7 +167,7 @@ export async function createCountryManager(countryManagerData: Partial<CountryMa
     return result.entities[0];
   } else {
     // If no entity returned in SaveBundle but no errors, creation was likely successful
-    console.log('No entities in SaveBundle response but no errors, returning optimistic data');
+    logger.log('No entities in SaveBundle response but no errors, returning optimistic data');
     return {
       id: 'pending', // Will be set by backend
       ...countryManagerData
@@ -211,7 +212,7 @@ export async function updateCountryManager(id: string, countryManagerData: Parti
     entities: [entity]
   };
 
-  console.log('Attempting country manager update with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
+  logger.log('Attempting country manager update with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
 
   const response = await fetch(`${API_URL}/save`, {
     method: 'POST',
@@ -229,17 +230,17 @@ export async function updateCountryManager(id: string, countryManagerData: Parti
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Update country manager error response:', errorText);
+    logger.error('Update country manager error response:', errorText);
     throw new Error(`Failed to update country manager: ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Country manager update result:', result);
+  logger.log('Country manager update result:', result);
 
   // Check for errors in SaveBundle response
   if (result.Errors && result.Errors.length > 0) {
-    console.error('SaveBundle errors:', result.Errors);
-    console.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
+    logger.error('SaveBundle errors:', result.Errors);
+    logger.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
     const errorMessages = result.Errors.map((err: any) => {
       return err.ErrorMessage || err.message || err.Message || err.error || err.description || JSON.stringify(err);
     }).join(', ');
@@ -255,7 +256,7 @@ export async function updateCountryManager(id: string, countryManagerData: Parti
     return result.entities[0];
   } else {
     // If no entity returned in SaveBundle but no errors, update was likely successful
-    console.log('No entities in SaveBundle response but no errors, returning optimistic data');
+    logger.log('No entities in SaveBundle response but no errors, returning optimistic data');
     return {
       id: id,
       ...countryManagerData

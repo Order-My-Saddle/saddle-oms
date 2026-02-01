@@ -9,6 +9,7 @@ import { getAccessFilterGroupTableColumns } from '@/utils/accessFilterGroupsTabl
 import { PageHeader } from '@/components/shared/PageHeader';
 import { createAccessFilterGroup, updateAccessFilterGroup, deleteAccessFilterGroup, type AccessFilterGroup } from '@/services/access-filter-groups';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 export default function AccessFilterGroups() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,19 +51,19 @@ export default function AccessFilterGroups() {
   // Handle view access filter group details
   const handleViewAccessFilterGroup = (accessFilterGroup: AccessFilterGroup) => {
     // Placeholder - view functionality to be implemented
-    console.log('View access filter group:', accessFilterGroup);
+    logger.log('View access filter group:', accessFilterGroup);
   };
 
   // Handle edit access filter group
   const handleEditAccessFilterGroup = (accessFilterGroup: AccessFilterGroup) => {
     // Placeholder - edit functionality to be implemented
-    console.log('Edit access filter group:', accessFilterGroup);
+    logger.log('Edit access filter group:', accessFilterGroup);
   };
 
   // Handle add new access filter group
   const handleAddAccessFilterGroup = () => {
     // Placeholder - add functionality to be implemented
-    console.log('Add new access filter group');
+    logger.log('Add new access filter group');
   };
 
   // Handle delete access filter group
@@ -83,7 +84,7 @@ export default function AccessFilterGroups() {
         }, 100);
 
       } catch (error) {
-        console.error('Error deleting access filter group:', error);
+        logger.error('Error deleting access filter group:', error);
 
         // Show error toast
         toast.error(`Failed to delete access filter group: ${error instanceof Error ? error.message : 'Unknown error'}`);

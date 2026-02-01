@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 interface ExtraAddModalProps {
   isOpen: boolean;
@@ -61,7 +62,7 @@ export function ExtraAddModal({ isOpen, onClose, onSave }: ExtraAddModalProps) {
       await onSave(newExtra);
       onClose();
     } catch (error) {
-      console.error('Error saving extra:', error);
+      logger.error('Error saving extra:', error);
       setError(error instanceof Error ? error.message : 'Failed to save extra. Please try again.');
     } finally {
       setSaving(false);

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertTriangle } from 'lucide-react';
+import { logger } from '@/utils/logger';
 import { fetchModels, Model } from '@/services/models';
 
 interface PresetAddModalProps {
@@ -56,7 +57,7 @@ export function PresetAddModal({ isOpen, onClose, onSave }: PresetAddModalProps)
       });
       setModels(data['hydra:member'] || []);
     } catch (error) {
-      console.error('Error loading models:', error);
+      logger.error('Error loading models:', error);
     } finally {
       setLoadingModels(false);
     }
@@ -84,7 +85,7 @@ export function PresetAddModal({ isOpen, onClose, onSave }: PresetAddModalProps)
       await onSave(newPreset);
       onClose();
     } catch (error) {
-      console.error('Error saving preset:', error);
+      logger.error('Error saving preset:', error);
       setError(error instanceof Error ? error.message : 'Failed to save preset. Please try again.');
     } finally {
       setSaving(false);

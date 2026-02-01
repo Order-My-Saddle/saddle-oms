@@ -47,6 +47,7 @@ import { OrderProductSaddleModule } from "./order-product-saddles/order-product-
 import { CountryManagerModule } from "./country-managers/country-manager.module";
 import { WarehouseModule } from "./warehouses/warehouse.module";
 import { SaddleStockModule } from "./saddle-stock/saddle-stock.module";
+import { SaddleExtraModule } from "./saddle-extras/saddle-extra.module";
 import { APP_INTERCEPTOR } from "@nestjs/core";
 import { AuditLogInterceptor } from "./audit-logging/interceptors/audit-log.interceptor";
 
@@ -110,6 +111,7 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
     PresetModule, // Legacy entity ✅ - enabled
     // ProductModule, // Needs implementation
     SaddleStockModule, // Saddle stock (fitter inventory) ✅ - enabled
+    SaddleExtraModule, // Saddle-extra associations ✅ - enabled
   ],
   providers: [
     {

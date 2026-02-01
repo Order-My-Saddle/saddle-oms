@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { updateFitter, deleteFitter, type Fitter } from '@/services/fitters';
 import { FitterDetailModal } from '@/components/shared/FitterDetailModal';
 import { FitterEditModal } from '@/components/shared/FitterEditModal';
+import { logger } from '@/utils/logger';
 
 export default function Fitters() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -69,7 +70,7 @@ export default function Fitters() {
         // Refresh the fitter list
         refetch();
       } catch (error) {
-        console.error('Error deleting fitter:', error);
+        logger.error('Error deleting fitter:', error);
         setActionError(error instanceof Error ? error.message : 'Failed to delete fitter');
       }
     }
@@ -86,7 +87,7 @@ export default function Fitters() {
       setShowEditModal(false);
       setSelectedFitter(null);
     } catch (error) {
-      console.error('Error updating fitter:', error);
+      logger.error('Error updating fitter:', error);
       throw error; // Re-throw to show error in modal
     }
   };

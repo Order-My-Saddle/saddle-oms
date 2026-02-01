@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 interface BrandEditModalProps {
   brand: Brand | null;
@@ -53,7 +54,7 @@ export function BrandEditModal({ brand, isOpen, onClose, onSave }: BrandEditModa
       await onSave(editedBrand);
       onClose();
     } catch (error) {
-      console.error('Error saving brand:', error);
+      logger.error('Error saving brand:', error);
       setError(error instanceof Error ? error.message : 'Failed to save brand. Please try again.');
     } finally {
       setSaving(false);

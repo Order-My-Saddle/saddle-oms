@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { fetchFactories, Factory, createFactoryLookup } from '@/services/factories';
 import { getSaddleTypeLabel, FACTORY_REGIONS, FACTORY_REGION_KEYS, FactoryRegionKey } from '@/utils/saddleConstants';
 import { Loader2 } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 interface ModelDetailModalProps {
   model: Model | null;
@@ -35,7 +36,7 @@ export function ModelDetailModal({ model, isOpen, onClose, onEdit }: ModelDetail
       setFactories(factoryList);
       setFactoryLookup(createFactoryLookup(factoryList));
     } catch (error) {
-      console.error('Error loading factories:', error);
+      logger.error('Error loading factories:', error);
     } finally {
       setLoadingFactories(false);
     }

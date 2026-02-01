@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 interface CustomerEditModalProps {
   customer: Customer | null;
@@ -55,7 +56,7 @@ export function CustomerEditModal({ customer, isOpen, onClose, onSave }: Custome
       await onSave(editedCustomer);
       onClose();
     } catch (error) {
-      console.error('Error saving customer:', error);
+      logger.error('Error saving customer:', error);
       setError(error instanceof Error ? error.message : 'Failed to save customer. Please try again.');
     } finally {
       setSaving(false);

@@ -1,4 +1,5 @@
 import { fetchEntities } from './api';
+import { logger } from '@/utils/logger';
 
 export interface Option {
   id: string;
@@ -36,7 +37,7 @@ export async function fetchOptions({
   orderBy?: string;
   order?: 'asc' | 'desc';
 } = {}): Promise<OptionsResponse> {
-  console.log('fetchOptions: Called with params:', { page, searchTerm, filters, orderBy, order });
+  logger.log('fetchOptions: Called with params:', { page, searchTerm, filters, orderBy, order });
   
   // Build filter parameters for API Platform
   const extraParams: Record<string, string | number | boolean> = {};
@@ -44,7 +45,7 @@ export async function fetchOptions({
   // Handle individual field filters
   Object.entries(filters).forEach(([key, value]) => {
     if (value && value.trim()) {
-      console.log(`fetchOptions: Processing filter ${key}:`, value);
+      logger.log(`fetchOptions: Processing filter ${key}:`, value);
       // For text fields, use partial matching with API Platform filters
       if (key === 'name') {
         extraParams['name[contains]'] = value;
@@ -64,7 +65,7 @@ export async function fetchOptions({
     }
   });
 
-  console.log('fetchOptions: Calling fetchEntities with entity "options" and params:', extraParams);
+  logger.log('fetchOptions: Calling fetchEntities with entity "options" and params:', extraParams);
 
   return await fetchEntities({
     entity: 'options',
@@ -145,7 +146,7 @@ export async function createOption(optionData: Partial<Option>): Promise<Option>
     entities: [entity]
   };
 
-  console.log('Attempting option creation with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
+  logger.log('Attempting option creation with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
 
   const response = await fetch(`${API_URL}/save`, {
     method: 'POST',
@@ -163,12 +164,12 @@ export async function createOption(optionData: Partial<Option>): Promise<Option>
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Option creation failed:', errorText);
+    logger.error('Option creation failed:', errorText);
     throw new Error(`Failed to create option: ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Option creation result:', result);
+  logger.log('Option creation result:', result);
 
   // Return the first entity from the response
   return result.Entities?.[0] || result.entities?.[0] || result;
@@ -208,7 +209,7 @@ export async function updateOption(id: string, optionData: Partial<Option>): Pro
     entities: [entity]
   };
 
-  console.log('Attempting option update with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
+  logger.log('Attempting option update with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
 
   const response = await fetch(`${API_URL}/save`, {
     method: 'POST',
@@ -226,12 +227,12 @@ export async function updateOption(id: string, optionData: Partial<Option>): Pro
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Option update failed:', errorText);
+    logger.error('Option update failed:', errorText);
     throw new Error(`Failed to update option: ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Option update result:', result);
+  logger.log('Option update result:', result);
 
   // Return the first entity from the response
   return result.Entities?.[0] || result.entities?.[0] || result;
@@ -260,7 +261,7 @@ export async function deleteOption(id: string): Promise<void> {
  */
 export async function fetchOptionCount(): Promise<number> {
   try {
-    console.log('📊 fetchOptionCount: Getting total option count');
+    logger.log('📊 fetchOptionCount: Getting total option count');
 
     // Get total count using minimal data transfer (limit=1) with full pagination metadata
     const result = await fetchEntities({
@@ -274,14 +275,14 @@ export async function fetchOptionCount(): Promise<number> {
 
     // Return the total count if available
     if (result['hydra:totalItems'] !== undefined && result['hydra:totalItems'] !== null) {
-      console.log('📊 Got total option count from API:', result['hydra:totalItems']);
+      logger.log('📊 Got total option count from API:', result['hydra:totalItems']);
       return result['hydra:totalItems'];
     }
 
-    console.warn('📊 Could not get option count from API, using fallback');
+    logger.warn('📊 Could not get option count from API, using fallback');
     return 0;
   } catch (error) {
-    console.error('📊 Error fetching option count:', error);
+    logger.error('📊 Error fetching option count:', error);
     return 0;
   }
 }

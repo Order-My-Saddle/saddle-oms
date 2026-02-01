@@ -1,6 +1,7 @@
 import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { User, UserRole } from '../types/Role';
+import { logger } from '@/utils/logger';
 
 // Token atom - stored in localStorage for persistence
 export const tokenAtom = atomWithStorage<string | null>('auth_token', null);
@@ -29,7 +30,7 @@ export const isAuthenticatedAtom = atom((get) => {
 export const loginActionAtom = atom(
   null,
   (get, set, { token, user }: { token: string; user: User }) => {
-    console.log('🔧 loginActionAtom: Setting token and user:', { token: token ? 'present' : 'missing', user });
+    logger.log('🔧 loginActionAtom: Setting token and user:', { token: token ? 'present' : 'missing', user });
     set(tokenAtom, token);
     set(userAtom, user);
     // Store minimal user info for service access
@@ -42,7 +43,7 @@ export const loginActionAtom = atom(
       email: user.email
     });
     set(isAuthLoadingAtom, false);
-    console.log('✅ loginActionAtom: All atoms set');
+    logger.log('✅ loginActionAtom: All atoms set');
   }
 );
 
@@ -72,7 +73,7 @@ export const restoreUserFromBasicInfoAtom = atom(
     const token = get(tokenAtom);
 
     if (!user && userBasicInfo && token) {
-      console.log('🔄 Auth Store: Restoring user from basic info:', userBasicInfo);
+      logger.log('🔄 Auth Store: Restoring user from basic info:', userBasicInfo);
       // Create a basic user object from stored info
       const restoredUser: User = {
         id: userBasicInfo.id,

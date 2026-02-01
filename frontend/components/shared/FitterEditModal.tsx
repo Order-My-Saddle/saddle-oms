@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 interface FitterEditModalProps {
   fitter: Fitter | null;
@@ -56,8 +57,8 @@ export function FitterEditModal({ fitter, isOpen, onClose, onSave }: FitterEditM
 
     try {
       // Log the complete editedFitter data before validation
-      console.log('FitterEditModal: Complete editedFitter data before validation:', JSON.stringify(editedFitter, null, 2));
-      console.log('FitterEditModal: Address field analysis:', {
+      logger.log('FitterEditModal: Complete editedFitter data before validation:', JSON.stringify(editedFitter, null, 2));
+      logger.log('FitterEditModal: Address field analysis:', {
         addressValue: editedFitter.address,
         addressType: typeof editedFitter.address,
         addressLength: editedFitter.address?.length,
@@ -76,7 +77,7 @@ export function FitterEditModal({ fitter, isOpen, onClose, onSave }: FitterEditM
       }
 
       if (!editedFitter.address?.trim()) {
-        console.error('FitterEditModal: Address validation failed - address field is empty or whitespace');
+        logger.error('FitterEditModal: Address validation failed - address field is empty or whitespace');
         throw new Error('Address is required');
       }
 
@@ -106,13 +107,13 @@ export function FitterEditModal({ fitter, isOpen, onClose, onSave }: FitterEditM
         saveData.password = newPassword;
       }
 
-      console.log('FitterEditModal: All validations passed, calling onSave');
+      logger.log('FitterEditModal: All validations passed, calling onSave');
 
       // Call the onSave callback
       await onSave(saveData);
       onClose();
     } catch (error) {
-      console.error('Error saving fitter:', error);
+      logger.error('Error saving fitter:', error);
       setError(error instanceof Error ? error.message : 'Failed to save fitter. Please try again.');
     } finally {
       setSaving(false);

@@ -1,11 +1,23 @@
 import React from 'react';
 import { TableHeaderFilter } from '../components/shared/TableHeaderFilter';
+import { Button } from '@/components/ui/button';
 
 export type ModelHeaderFilters = Record<string, string>;
 export type SetModelHeaderFilters = (key: string, value: string) => void;
 
-export function getModelTableColumns(headerFilters: ModelHeaderFilters, setHeaderFilters: SetModelHeaderFilters) {
-  return [
+export interface ModelActionCallbacks {
+  onInfo?: (model: any) => void;
+  onExtras?: (model: any) => void;
+  onOptions?: (model: any) => void;
+  onPrices?: (model: any) => void;
+}
+
+export function getModelTableColumns(
+  headerFilters: ModelHeaderFilters,
+  setHeaderFilters: SetModelHeaderFilters,
+  actionCallbacks?: ModelActionCallbacks,
+) {
+  const columns = [
     {
       key: 'id',
       title: (
@@ -81,4 +93,61 @@ export function getModelTableColumns(headerFilters: ModelHeaderFilters, setHeade
       maxWidth: '100px',
     },
   ];
+
+  if (actionCallbacks) {
+    columns.push({
+      key: '_actions',
+      title: (<span className="text-xs font-medium text-gray-500">ACTIONS</span>) as any,
+      render: (v: any, row: any) => {
+        if (!row) return null;
+        return (
+          <div className="flex gap-1 flex-wrap">
+            {actionCallbacks.onInfo && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={(e) => { e.stopPropagation(); actionCallbacks.onInfo!(row); }}
+              >
+                Info
+              </Button>
+            )}
+            {actionCallbacks.onExtras && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={(e) => { e.stopPropagation(); actionCallbacks.onExtras!(row); }}
+              >
+                Extra&apos;s
+              </Button>
+            )}
+            {actionCallbacks.onOptions && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={(e) => { e.stopPropagation(); actionCallbacks.onOptions!(row); }}
+              >
+                Options
+              </Button>
+            )}
+            {actionCallbacks.onPrices && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={(e) => { e.stopPropagation(); actionCallbacks.onPrices!(row); }}
+              >
+                Prices
+              </Button>
+            )}
+          </div>
+        );
+      },
+      maxWidth: '280px',
+    });
+  }
+
+  return columns;
 }

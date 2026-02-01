@@ -1,5 +1,6 @@
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/types/Role';
+import { logger } from '@/utils/logger';
 
 export interface UserRoleInfo {
   role: UserRole | null;
@@ -20,10 +21,10 @@ export function useUserRole(): UserRoleInfo {
   const role = user?.role || null;
   
   // Debug logging
-  console.log('🔍 useUserRole: user from AuthContext:', user);
-  console.log('🔍 useUserRole: isLoaded:', isLoaded);
-  console.log('🔍 useUserRole: isAuthenticated:', isAuthenticated);
-  console.log('🔍 useUserRole: extracted role:', role);
+  logger.log('🔍 useUserRole: user from AuthContext:', user);
+  logger.log('🔍 useUserRole: isLoaded:', isLoaded);
+  logger.log('🔍 useUserRole: isAuthenticated:', isAuthenticated);
+  logger.log('🔍 useUserRole: extracted role:', role);
 
   const isAdmin = role === UserRole.ADMIN || role === UserRole.SUPERVISOR;
   const isSupervisor = role === UserRole.SUPERVISOR;

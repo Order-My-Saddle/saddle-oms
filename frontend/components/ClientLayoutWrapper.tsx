@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { TopNav } from '@/components/TopNav';
 import { Toaster } from '@/components/ui/sonner';
 import { useAuth } from '@/context/AuthContext';
+import { logger } from '@/utils/logger';
 
 export default function ClientLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -13,18 +14,18 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    console.log('🏗️ ClientLayoutWrapper: Auth check:', { isLoaded, isAuthenticated, pathname });
+    logger.log('🏗️ ClientLayoutWrapper: Auth check:', { isLoaded, isAuthenticated, pathname });
 
     // Only redirect after auth state has loaded
     if (isLoaded && !isAuthenticated && pathname !== '/login') {
-      console.log('🔒 ClientLayoutWrapper: User not authenticated, redirecting to login');
+      logger.log('🔒 ClientLayoutWrapper: User not authenticated, redirecting to login');
       router.push('/login');
     }
   }, [isLoaded, isAuthenticated, pathname, router]);
 
   // Memoize layout content to prevent unnecessary re-renders during route changes
   const layoutContent = useMemo(() => {
-    console.log('🏗️ ClientLayoutWrapper: Re-rendering layout for pathname:', pathname);
+    logger.log('🏗️ ClientLayoutWrapper: Re-rendering layout for pathname:', pathname);
 
     if (pathname === '/login') {
       return <>{children}</>;

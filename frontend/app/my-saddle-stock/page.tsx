@@ -8,6 +8,7 @@ import { useTableFilters, usePagination } from '@/hooks';
 import { PageHeader } from '@/components/shared';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { logger } from '@/utils/logger';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Plus } from 'lucide-react';
@@ -144,7 +145,7 @@ export default function MySaddleStockPage() {
     } catch (err) {
       setError('Failed to load your saddle stock. Please try again.');
       setSaddleStock([]);
-      console.error('Error loading my saddle stock:', err);
+      logger.error('Error loading my saddle stock:', err);
     } finally {
       setLoading(false);
     }
@@ -159,17 +160,17 @@ export default function MySaddleStockPage() {
   };
 
   const handleViewSaddle = (saddle: SaddleStock) => {
-    console.log('View saddle', saddle);
+    logger.log('View saddle', saddle);
     // Implement view logic if needed
   };
 
   const handleEditSaddle = (saddle: SaddleStock) => {
-    console.log('Edit saddle', saddle);
+    logger.log('Edit saddle', saddle);
     // Implement edit logic if needed
   };
 
   const handleAddStock = () => {
-    console.log('Add new stock');
+    logger.log('Add new stock');
     // Implement add stock logic
   };
 

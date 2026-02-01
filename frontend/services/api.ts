@@ -1,4 +1,5 @@
 // Centralized API service for Orders, Reports, Dashboard
+import { logger } from '@/utils/logger';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -226,7 +227,7 @@ export async function fetchEntities({
         const [sortField, sortOrder] = Object.entries(orderObj)[0];
         url += `&order[${sortField}]=${sortOrder}`;
       } catch (e) {
-        console.warn('Invalid order parameter format, using default');
+        logger.warn('Invalid order parameter format, using default');
         url += `&order[${orderBy}]=${order}`;
       }
     } else {
@@ -273,8 +274,8 @@ export async function fetchEntities({
   // Add cache-busting timestamp to ensure fresh data
   url += `&_t=${Date.now()}`;
 
-  console.log('fetchEntities: Fetching URL:', url.toString());
-  console.log('fetchEntities: Request headers:', {
+  logger.log('fetchEntities: Fetching URL:', url.toString());
+  logger.log('fetchEntities: Request headers:', {
     ...authHeaders(),
     'Cache-Control': 'no-cache, no-store, must-revalidate',
     'Pragma': 'no-cache',
@@ -291,16 +292,16 @@ export async function fetchEntities({
     credentials: 'include',
   });
 
-  console.log(`fetchEntities: Response status for ${entity}:`, res.status, res.statusText);
-  console.log('fetchEntities: Response headers:', Object.fromEntries(res.headers.entries()));
+  logger.log(`fetchEntities: Response status for ${entity}:`, res.status, res.statusText);
+  logger.log('fetchEntities: Response headers:', Object.fromEntries(res.headers.entries()));
 
   if (!res.ok) {
     let errorResponseText = '';
     try {
       errorResponseText = await res.text();
-      console.error(`fetchEntities: Error response body for ${entity}:`, errorResponseText);
+      logger.error(`fetchEntities: Error response body for ${entity}:`, errorResponseText);
     } catch (e) {
-      console.error(`fetchEntities: Could not read error response body for ${entity}:`, e);
+      logger.error(`fetchEntities: Could not read error response body for ${entity}:`, e);
     }
 
     if (res.status === 401) {
@@ -308,7 +309,7 @@ export async function fetchEntities({
     } else if (res.status === 403) {
       throw new Error(`Access denied for ${entity}. Insufficient permissions.`);
     } else if (res.status === 500) {
-      console.error(`fetchEntities: 500 Error Details for ${entity}:`, {
+      logger.error(`fetchEntities: 500 Error Details for ${entity}:`, {
         url,
         status: res.status,
         statusText: res.statusText,

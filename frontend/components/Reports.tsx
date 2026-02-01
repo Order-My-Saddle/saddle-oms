@@ -28,6 +28,7 @@ const formatDate = (date: Date): string => {
 import { getFitterName, getCustomerName, getSupplierName, getSeatSize, getStatus, getUrgent, getDate } from '../utils/orderHydration';
 import { getOrderTableColumns } from '../utils/orderTableColumns';
 import { seatSizes, statuses, orderStatuses } from '../utils/orderConstants';
+import { logger } from '@/utils/logger';
 import { getEnrichedOrders, searchByOrderId } from '../services/enrichedOrders';
 import { useFitters } from '../hooks/useEntities';
 import { extractDynamicFactories, extractDynamicSeatSizes } from '../utils/orderProcessing';
@@ -184,7 +185,7 @@ export default function Reports() {
 
     try {
       const orderId = order.orderId || order.id;
-      console.log('Fetching complete order data for:', orderId);
+      logger.log('Fetching complete order data for:', orderId);
 
       let result;
 
@@ -193,11 +194,11 @@ export default function Reports() {
         try {
           result = await searchByOrderId(orderId);
           if (result['hydra:member'] && result['hydra:member'].length > 0) {
-            console.log('Successfully fetched order by ID:', orderId);
+            logger.log('Successfully fetched order by ID:', orderId);
             return result['hydra:member'][0];
           }
         } catch (error) {
-          console.warn('Failed to fetch by Order ID:', error);
+          logger.warn('Failed to fetch by Order ID:', error);
         }
       }
 
@@ -205,11 +206,11 @@ export default function Reports() {
       throw new Error(`Order not found with ID: ${orderId}`);
 
     } catch (error) {
-      console.error('Error fetching complete order data:', error);
+      logger.error('Error fetching complete order data:', error);
       setOrderDataError(error instanceof Error ? error.message : 'Failed to load order data');
 
       // Return the original order data as fallback
-      console.log('Falling back to table row data');
+      logger.log('Falling back to table row data');
       return order;
     } finally {
       setIsLoadingOrderData(false);
@@ -279,13 +280,13 @@ export default function Reports() {
 
   // Tijdelijke log om te debuggen
   useEffect(() => {
-    console.log('API orders:', orders);
-    console.log('Processed orders:', processedOrders);
-    console.log('Filtered orders:', filteredOrders);
-    console.log('Header filters:', headerFilters);
-    console.log('Date filter:', date);
-    console.log('Ordered date filter:', orderedDate);
-    console.log('Payment date filter:', paymentDate);
+    logger.log('API orders:', orders);
+    logger.log('Processed orders:', processedOrders);
+    logger.log('Filtered orders:', filteredOrders);
+    logger.log('Header filters:', headerFilters);
+    logger.log('Date filter:', date);
+    logger.log('Ordered date filter:', orderedDate);
+    logger.log('Payment date filter:', paymentDate);
   }, [orders, processedOrders, filteredOrders, headerFilters, date, orderedDate, paymentDate]);
 
   return (
@@ -634,7 +635,7 @@ export default function Reports() {
                   variant="outline" 
                   className="border-red-600 text-red-600 hover:bg-red-50"
                   onClick={() => {
-                    console.log('Resetting all Reports filters');
+                    logger.log('Resetting all Reports filters');
                     // Reset header filters
                     setHeaderFilters({});
                     // Reset dropdown states
@@ -674,21 +675,21 @@ export default function Reports() {
             onSearch={setSearchTerm}
             headerFilters={headerFilters}
             onFilterChange={(key: string, value: string) => setHeaderFilters(prev => ({ ...prev, [key]: value }))}
-            onViewOrder={(order) => console.log('View order:', order)}
+            onViewOrder={(order) => logger.log('View order:', order)}
             onEditOrder={async (order) => {
-              console.log('Edit order:', order);
+              logger.log('Edit order:', order);
               try {
                 // Fetch complete order data from API
                 const completeOrderData = await fetchCompleteOrderData(order);
-                console.log('Complete order data fetched for Reports:', completeOrderData);
+                logger.log('Complete order data fetched for Reports:', completeOrderData);
                 // For now, just log the data. In a real implementation, 
                 // you'd open an EditOrder modal here similar to Dashboard/Orders
               } catch (error) {
-                console.error('Failed to fetch order data for editing:', error);
+                logger.error('Failed to fetch order data for editing:', error);
               }
             }}
-            onApproveOrder={(order) => console.log('Approve order:', order)}
-            onDeleteOrder={(order) => console.log('Delete order:', order)}
+            onApproveOrder={(order) => logger.log('Approve order:', order)}
+            onDeleteOrder={(order) => logger.log('Delete order:', order)}
             seatSizes={seatSizes}
             statuses={statuses}
             fitters={fittersList}

@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { login } from '../api/login';
 import { useAuth } from '../context/AuthContext';
 import { loginSchema, validateData, sanitizeString } from '../schemas/validation';
+import { logger } from '@/utils/logger';
 
 export function LoginForm() {
   const [username, setUsername] = useState('');
@@ -20,7 +21,7 @@ export function LoginForm() {
     setLoading(true);
     
     try {
-      console.log('🔄 LoginForm: Starting login process - v2...');
+      logger.log('🔄 LoginForm: Starting login process - v2...');
       
       // Sanitize and validate input
       const sanitizedUsername = sanitizeString(username);
@@ -38,20 +39,20 @@ export function LoginForm() {
       
       // Call the login function with validated and sanitized credentials
       const result = await loginWithContext(validation.data.username, validation.data.password);
-      console.log('🔄 LoginForm: Login result:', result);
+      logger.log('🔄 LoginForm: Login result:', result);
       
       if (result.success) {
         // Login was successful, wait for auth state to be set before redirect
         const redirect = searchParams.get('redirect') || '/dashboard';
-        console.log('✅ LoginForm: Login successful, preparing redirect to:', redirect);
-        console.log('🔄 LoginForm: Current URL before redirect:', window.location.href);
-        console.log('🔄 LoginForm: Current user from AuthContext:', result.user || 'no user data returned');
+        logger.log('✅ LoginForm: Login successful, preparing redirect to:', redirect);
+        logger.log('🔄 LoginForm: Current URL before redirect:', window.location.href);
+        logger.log('🔄 LoginForm: Current user from AuthContext:', result.user || 'no user data returned');
 
         // Wait longer for auth state to propagate and then redirect
-        console.log('🔄 LoginForm: Waiting for auth state to settle...');
+        logger.log('🔄 LoginForm: Waiting for auth state to settle...');
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        console.log('🔄 LoginForm: Auth state should be stable, attempting redirect to:', redirect);
+        logger.log('🔄 LoginForm: Auth state should be stable, attempting redirect to:', redirect);
 
         // Always use window.location for reliable navigation in staging/production
         // This ensures a complete page reload and bypasses any Next.js navigation timing issues
@@ -59,30 +60,30 @@ export function LoginForm() {
 
         if (isLocalhost) {
           // Use Next.js router for local development
-          console.log('🔄 LoginForm: Local environment - using router.replace');
+          logger.log('🔄 LoginForm: Local environment - using router.replace');
           router.replace(redirect);
         } else {
           // Use full page navigation for staging/production to avoid navigation conflicts
-          console.log('🔄 LoginForm: Production environment - using window.location.replace for reliable navigation');
+          logger.log('🔄 LoginForm: Production environment - using window.location.replace for reliable navigation');
           window.location.replace(redirect);
         }
 
         // Add a small delay to verify redirect
         setTimeout(() => {
-          console.log('🔄 LoginForm: URL after redirect attempt:', window.location.href);
-          console.log('🔄 LoginForm: Current path:', window.location.pathname);
+          logger.log('🔄 LoginForm: URL after redirect attempt:', window.location.href);
+          logger.log('🔄 LoginForm: Current path:', window.location.pathname);
         }, 500);
       } else {
-        console.log('❌ LoginForm: Login failed:', result.message);
+        logger.log('❌ LoginForm: Login failed:', result.message);
         // Show error message from the server if available
         setError(result.message || 'Login failed. Please check your credentials.');
       }
     } catch (error) {
-      console.error('❌ LoginForm: Login error:', error);
+      logger.error('❌ LoginForm: Login error:', error);
       setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
-      console.log('🔄 LoginForm: Login process completed, loading set to false');
+      logger.log('🔄 LoginForm: Login process completed, loading set to false');
     }
   };
 

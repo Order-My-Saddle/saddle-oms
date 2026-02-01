@@ -13,6 +13,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { hasScreenPermission } from '@/utils/rolePermissions';
 import { UserDetailModal } from '@/components/shared/UserDetailModal';
 import { UserEditModal } from '@/components/shared/UserEditModal';
+import { logger } from '@/utils/logger';
 
 export default function Users() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -148,16 +149,16 @@ export default function Users() {
       setSelectedUser(null);
 
       // Show success message
-      console.log(`User "${selectedUser.username}" deleted successfully`);
+      logger.log(`User "${selectedUser.username}" deleted successfully`);
 
     } catch (error) {
-      console.error('Failed to delete user:', error);
+      logger.error('Failed to delete user:', error);
 
       // Revert optimistic removal on error by refetching
       refetch(true);
 
       // Show error notification
-      console.error(`Failed to delete user: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logger.error(`Failed to delete user: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
   
@@ -192,13 +193,13 @@ export default function Users() {
       setSelectedUser(null);
 
       // Show success toast
-      console.log(`User "${updatedUser.username || selectedUser.username}" updated successfully`);
+      logger.log(`User "${updatedUser.username || selectedUser.username}" updated successfully`);
 
     } catch (error) {
-      console.error('Error updating user:', error);
+      logger.error('Error updating user:', error);
 
       // Show error toast
-      console.error(`Failed to update user: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logger.error(`Failed to update user: ${error instanceof Error ? error.message : 'Unknown error'}`);
 
       // Revert optimistic update on error by refetching
       refetch(true);
@@ -229,16 +230,16 @@ export default function Users() {
       setSelectedUser(null);
 
       // Show success toast
-      console.log(`User "${newUser.username}" created successfully`);
+      logger.log(`User "${newUser.username}" created successfully`);
 
     } catch (error) {
-      console.error('Error creating user:', error);
+      logger.error('Error creating user:', error);
 
       // Revert any optimistic changes by refetching
       refetch(true);
 
       // Show error toast
-      console.error(`Failed to create user: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      logger.error(`Failed to create user: ${error instanceof Error ? error.message : 'Unknown error'}`);
 
       throw error; // Re-throw to show error in modal
     }

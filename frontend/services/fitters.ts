@@ -1,4 +1,5 @@
 import { fetchEntities } from './api';
+import { logger } from '@/utils/logger';
 
 export interface Fitter {
   id: number;
@@ -45,7 +46,7 @@ export async function fetchFitters({
   orderBy?: string;
   order?: 'asc' | 'desc';
 } = {}): Promise<FittersResponse> {
-  console.log('fetchFitters: Called with params:', { page, searchTerm, filters, orderBy, order });
+  logger.log('fetchFitters: Called with params:', { page, searchTerm, filters, orderBy, order });
   
   // Build filter parameters for API Platform
   const extraParams: Record<string, string | number | boolean> = {};
@@ -53,7 +54,7 @@ export async function fetchFitters({
   // Handle individual field filters
   Object.entries(filters).forEach(([key, value]) => {
     if (value && value.trim()) {
-      console.log(`fetchFitters: Processing filter ${key}:`, value);
+      logger.log(`fetchFitters: Processing filter ${key}:`, value);
       // For text fields, use partial matching with API Platform filters
       if (key === 'name') {
         extraParams['name[contains]'] = value;
@@ -75,7 +76,7 @@ export async function fetchFitters({
     }
   });
 
-  console.log('fetchFitters: Calling fetchEntities with entity "fitters" and params:', extraParams);
+  logger.log('fetchFitters: Calling fetchEntities with entity "fitters" and params:', extraParams);
 
   return await fetchEntities({
     entity: 'fitters',
@@ -126,7 +127,7 @@ function getAuthHeaders() {
 export async function createFitter(fitterData: Partial<Fitter>): Promise<Fitter> {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-  console.log('Creating fitter with data:', fitterData);
+  logger.log('Creating fitter with data:', fitterData);
 
   const response = await fetch(`${API_URL}/api/v1/fitters`, {
     method: 'POST',
@@ -137,19 +138,19 @@ export async function createFitter(fitterData: Partial<Fitter>): Promise<Fitter>
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Fitter creation failed:', response.status, errorText);
+    logger.error('Fitter creation failed:', response.status, errorText);
     throw new Error(`Failed to create fitter: ${response.status} ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Fitter creation successful:', result);
+  logger.log('Fitter creation successful:', result);
   return result;
 }
 
 export async function updateFitter(id: number, fitterData: Partial<Fitter>): Promise<Fitter> {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-  console.log('Updating fitter with ID:', id, 'Data:', fitterData);
+  logger.log('Updating fitter with ID:', id, 'Data:', fitterData);
 
   const response = await fetch(`${API_URL}/api/v1/fitters/${id}`, {
     method: 'PUT',
@@ -160,19 +161,19 @@ export async function updateFitter(id: number, fitterData: Partial<Fitter>): Pro
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Fitter update failed:', response.status, errorText);
+    logger.error('Fitter update failed:', response.status, errorText);
     throw new Error(`Failed to update fitter: ${response.status} ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Fitter update successful:', result);
+  logger.log('Fitter update successful:', result);
   return result;
 }
 
 export async function deleteFitter(id: number): Promise<void> {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-  console.log('Deleting fitter with ID:', id);
+  logger.log('Deleting fitter with ID:', id);
 
   const response = await fetch(`${API_URL}/api/v1/fitters/${id}`, {
     method: 'DELETE',
@@ -182,11 +183,11 @@ export async function deleteFitter(id: number): Promise<void> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Fitter deletion failed:', response.status, errorText);
+    logger.error('Fitter deletion failed:', response.status, errorText);
     throw new Error(`Failed to delete fitter: ${response.status} ${response.statusText}`);
   }
 
-  console.log('Fitter deletion successful');
+  logger.log('Fitter deletion successful');
 }
 
 /**
@@ -194,7 +195,7 @@ export async function deleteFitter(id: number): Promise<void> {
  */
 export async function fetchFitterCount(): Promise<number> {
   try {
-    console.log('📊 fetchFitterCount: Getting total fitter count');
+    logger.log('📊 fetchFitterCount: Getting total fitter count');
 
     // Get total count using minimal data transfer (limit=1) with full pagination metadata
     const result = await fetchEntities({
@@ -208,14 +209,14 @@ export async function fetchFitterCount(): Promise<number> {
 
     // Return the total count if available
     if (result['hydra:totalItems'] !== undefined && result['hydra:totalItems'] !== null) {
-      console.log('📊 Got total fitter count from API:', result['hydra:totalItems']);
+      logger.log('📊 Got total fitter count from API:', result['hydra:totalItems']);
       return result['hydra:totalItems'];
     }
 
-    console.warn('📊 Could not get fitter count from API, using fallback');
+    logger.warn('📊 Could not get fitter count from API, using fallback');
     return 0;
   } catch (error) {
-    console.error('📊 Error fetching fitter count:', error);
+    logger.error('📊 Error fetching fitter count:', error);
     return 0;
   }
 }

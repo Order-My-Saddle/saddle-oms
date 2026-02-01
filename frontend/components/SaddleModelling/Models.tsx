@@ -11,6 +11,10 @@ import { fetchModels, updateModel, deleteModel, createModel, type Model } from '
 import { ModelDetailModal } from '@/components/shared/ModelDetailModal';
 import { ModelEditModal } from '@/components/shared/ModelEditModal';
 import { ModelAddModal } from '@/components/shared/ModelAddModal';
+import { ModelPricesModal } from '@/components/shared/ModelPricesModal';
+import { ModelExtrasModal } from '@/components/shared/ModelExtrasModal';
+import { ModelOptionsModal } from '@/components/shared/ModelOptionsModal';
+import { logger } from '@/utils/logger';
 
 export default function Models() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -23,18 +27,21 @@ export default function Models() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showPricesModal, setShowPricesModal] = useState(false);
+  const [showExtrasModal, setShowExtrasModal] = useState(false);
+  const [showOptionsModal, setShowOptionsModal] = useState(false);
 
   // Use our hooks for filters and pagination
   const { filters, updateFilter } = useTableFilters<Record<string, string>>({});
   const { pagination, setTotalItems, setPage } = usePagination(30, 1); // Match backend default page size
-  
+
   // Fetch models with filters
   const fetchModelsData = useCallback(async () => {
     setLoading(true);
     setError('');
-    
+
     try {
-      console.log('Fetching models with filters:', filters);
+      logger.log('Fetching models with filters:', filters);
       const data = await fetchModels({
         page: pagination.currentPage,
         searchTerm,
@@ -42,10 +49,10 @@ export default function Models() {
         orderBy: 'sequence',
         order: 'asc'
       });
-      
+
       setModels(data['hydra:member'] || []);
       setTotalItems(data['hydra:totalItems'] || 0);
-      
+
     } catch (err: any) {
       setError(err.message || 'Failed to fetch models');
       setModels([]);
@@ -59,13 +66,13 @@ export default function Models() {
   useEffect(() => {
     fetchModelsData();
   }, [fetchModelsData]);
-  
+
   // Handle filter changes
   const handleFilterChange = (key: string, value: string) => {
     updateFilter(key, value);
     setPage(1); // Reset to page 1 when filters change
   };
-  
+
   // Handle view model details
   const handleViewModel = (model: Model) => {
     setSelectedModel(model);
@@ -86,7 +93,7 @@ export default function Models() {
         // Refresh the model list
         fetchModelsData();
       } catch (error) {
-        console.error('Error deleting model:', error);
+        logger.error('Error deleting model:', error);
         setError(error instanceof Error ? error.message : 'Failed to delete model');
       }
     }
@@ -103,7 +110,7 @@ export default function Models() {
       setShowEditModal(false);
       setSelectedModel(null);
     } catch (error) {
-      console.error('Error updating model:', error);
+      logger.error('Error updating model:', error);
       throw error; // Re-throw to show error in modal
     }
   };
@@ -121,7 +128,7 @@ export default function Models() {
       fetchModelsData();
       setShowAddModal(false);
     } catch (error) {
-      console.error('Error creating model:', error);
+      logger.error('Error creating model:', error);
       throw error; // Re-throw to show error in modal
     }
   };
@@ -131,6 +138,9 @@ export default function Models() {
     setShowDetailModal(false);
     setShowEditModal(false);
     setShowAddModal(false);
+    setShowPricesModal(false);
+    setShowExtrasModal(false);
+    setShowOptionsModal(false);
     setSelectedModel(null);
   };
 
@@ -138,6 +148,27 @@ export default function Models() {
   const handleEditFromDetail = () => {
     setShowDetailModal(false);
     setShowEditModal(true);
+  };
+
+  // Action button handlers
+  const handleInfoClick = (model: Model) => {
+    setSelectedModel(model);
+    setShowDetailModal(true);
+  };
+
+  const handleExtrasClick = (model: Model) => {
+    setSelectedModel(model);
+    setShowExtrasModal(true);
+  };
+
+  const handleOptionsClick = (model: Model) => {
+    setSelectedModel(model);
+    setShowOptionsModal(true);
+  };
+
+  const handlePricesClick = (model: Model) => {
+    setSelectedModel(model);
+    setShowPricesModal(true);
   };
 
   return (
@@ -156,7 +187,12 @@ export default function Models() {
 
       <EntityTable
         entities={models}
-        columns={getModelTableColumns(filters, handleFilterChange)}
+        columns={getModelTableColumns(filters, handleFilterChange, {
+          onInfo: handleInfoClick,
+          onExtras: handleExtrasClick,
+          onOptions: handleOptionsClick,
+          onPrices: handlePricesClick,
+        })}
         searchTerm={searchTerm}
         onSearch={setSearchTerm}
         headerFilters={filters}
@@ -197,6 +233,27 @@ export default function Models() {
         isOpen={showAddModal}
         onClose={handleCloseModals}
         onSave={handleSaveNewModel}
+      />
+
+      {/* Model Prices Modal */}
+      <ModelPricesModal
+        model={selectedModel}
+        isOpen={showPricesModal}
+        onClose={handleCloseModals}
+      />
+
+      {/* Model Extras Modal */}
+      <ModelExtrasModal
+        model={selectedModel}
+        isOpen={showExtrasModal}
+        onClose={handleCloseModals}
+      />
+
+      {/* Model Options Modal */}
+      <ModelOptionsModal
+        model={selectedModel}
+        isOpen={showOptionsModal}
+        onClose={handleCloseModals}
       />
     </div>
   );

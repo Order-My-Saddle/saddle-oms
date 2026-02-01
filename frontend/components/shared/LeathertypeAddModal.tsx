@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertTriangle } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 interface LeathertypeAddModalProps {
   isOpen: boolean;
@@ -56,7 +57,7 @@ export function LeathertypeAddModal({ isOpen, onClose, onSave }: LeathertypeAddM
       await onSave(newLeathertype);
       onClose();
     } catch (error) {
-      console.error('Error saving leather type:', error);
+      logger.error('Error saving leather type:', error);
       setError(error instanceof Error ? error.message : 'Failed to save leather type. Please try again.');
     } finally {
       setSaving(false);

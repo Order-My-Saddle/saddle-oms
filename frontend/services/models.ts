@@ -1,3 +1,5 @@
+import { logger } from '@/utils/logger';
+
 export interface Model {
   id: string;
   name: string;
@@ -105,7 +107,7 @@ export async function fetchModels({
   orderBy?: string;
   order?: 'asc' | 'desc';
 } = {}): Promise<ModelsResponse> {
-  console.log('fetchModels: Called with params:', { page, searchTerm, filters, orderBy, order });
+  logger.log('fetchModels: Called with params:', { page, searchTerm, filters, orderBy, order });
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const token = getToken();
@@ -140,7 +142,7 @@ export async function fetchModels({
     params.set('active', 'false');
   }
 
-  console.log('fetchModels: Calling saddles endpoint with params:', params.toString());
+  logger.log('fetchModels: Calling saddles endpoint with params:', params.toString());
 
   const response = await fetch(`${API_URL}/api/v1/saddles?${params.toString()}`, {
     method: 'GET',
@@ -154,12 +156,12 @@ export async function fetchModels({
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('fetchModels: Failed to fetch saddles:', errorText);
+    logger.error('fetchModels: Failed to fetch saddles:', errorText);
     throw new Error(`Failed to fetch models: ${response.status} ${response.statusText}`);
   }
 
   const saddleData: SaddleResponse = await response.json();
-  console.log('fetchModels: Received saddle data:', saddleData);
+  logger.log('fetchModels: Received saddle data:', saddleData);
 
   // Transform saddle data to model format expected by frontend
   const models: Model[] = saddleData.data.map(saddle => ({
@@ -215,7 +217,7 @@ export async function createModel(modelData: Partial<Model>): Promise<Model> {
     type: modelData.type ?? 0,
   };
 
-  console.log('Creating saddle (model):', JSON.stringify(saddleData, null, 2));
+  logger.log('Creating saddle (model):', JSON.stringify(saddleData, null, 2));
 
   const response = await fetch(`${API_URL}/api/v1/saddles`, {
     method: 'POST',
@@ -231,12 +233,12 @@ export async function createModel(modelData: Partial<Model>): Promise<Model> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Model creation failed:', errorText);
+    logger.error('Model creation failed:', errorText);
     throw new Error(`Failed to create model: ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Model creation result:', result);
+  logger.log('Model creation result:', result);
 
   // Transform saddle response to model format
   return {
@@ -306,7 +308,7 @@ export async function updateModel(id: string, modelData: Partial<Model>): Promis
     saddleData.type = modelData.type;
   }
 
-  console.log('Updating saddle (model):', id, JSON.stringify(saddleData, null, 2));
+  logger.log('Updating saddle (model):', id, JSON.stringify(saddleData, null, 2));
 
   const response = await fetch(`${API_URL}/api/v1/saddles/${id}`, {
     method: 'PATCH',
@@ -322,12 +324,12 @@ export async function updateModel(id: string, modelData: Partial<Model>): Promis
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Model update failed:', errorText);
+    logger.error('Model update failed:', errorText);
     throw new Error(`Failed to update model: ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Model update result:', result);
+  logger.log('Model update result:', result);
 
   // Transform saddle response to model format
   return {
@@ -355,7 +357,7 @@ export async function deleteModel(id: string): Promise<void> {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const token = getToken();
 
-  console.log('Deleting saddle (model):', id);
+  logger.log('Deleting saddle (model):', id);
 
   const response = await fetch(`${API_URL}/api/v1/saddles/${id}`, {
     method: 'DELETE',
@@ -368,7 +370,7 @@ export async function deleteModel(id: string): Promise<void> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Model deletion failed:', errorText);
+    logger.error('Model deletion failed:', errorText);
     throw new Error(`Failed to delete model: ${response.statusText}`);
   }
 }
@@ -380,7 +382,7 @@ export async function fetchNextSequence(): Promise<number> {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const token = getToken();
 
-  console.log('fetchNextSequence: Getting next sequence number');
+  logger.log('fetchNextSequence: Getting next sequence number');
 
   const response = await fetch(`${API_URL}/api/v1/saddles/next-sequence`, {
     method: 'GET',
@@ -394,13 +396,13 @@ export async function fetchNextSequence(): Promise<number> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('fetchNextSequence: Failed to fetch next sequence:', errorText);
+    logger.error('fetchNextSequence: Failed to fetch next sequence:', errorText);
     // Return 1 as default if endpoint fails
     return 1;
   }
 
   const result = await response.json();
-  console.log('fetchNextSequence: Result:', result);
+  logger.log('fetchNextSequence: Result:', result);
   return result.nextSequence || 1;
 }
 
@@ -409,21 +411,21 @@ export async function fetchNextSequence(): Promise<number> {
  */
 export async function fetchModelCount(): Promise<number> {
   try {
-    console.log('📊 fetchModelCount: Getting total model count');
+    logger.log('📊 fetchModelCount: Getting total model count');
 
     // Use fetchModels with minimal data to get total count
     const result = await fetchModels({ page: 1 });
 
     // Return the total count if available
     if (result['hydra:totalItems'] !== undefined && result['hydra:totalItems'] !== null) {
-      console.log('📊 Got total model count from API:', result['hydra:totalItems']);
+      logger.log('📊 Got total model count from API:', result['hydra:totalItems']);
       return result['hydra:totalItems'];
     }
 
-    console.warn('📊 Could not get model count from API, using fallback');
+    logger.warn('📊 Could not get model count from API, using fallback');
     return 0;
   } catch (error) {
-    console.error('📊 Error fetching model count:', error);
+    logger.error('📊 Error fetching model count:', error);
     return 0;
   }
 }

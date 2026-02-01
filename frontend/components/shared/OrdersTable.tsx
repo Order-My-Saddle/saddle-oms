@@ -8,6 +8,7 @@ import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Order } from '@/types/Order';
 import React from 'react';
 import { DateRangePicker } from '@/components/shared/DateRangePicker';
+import { logger } from '@/utils/logger';
 import { useUserRole } from '@/hooks/useUserRole';
 import { hasScreenPermission } from '@/utils/rolePermissions';
 
@@ -64,7 +65,7 @@ export function OrdersTable({
   const { role } = useUserRole();
 
   // Debug role information
-  console.log('OrdersTable: Current role:', role);
+  logger.log('OrdersTable: Current role:', role);
   
   // Optionally add OPTIONS column if any action handlers are provided
   const hasActions = onViewOrder || onEditOrder || onApproveOrder || onDeleteOrder;

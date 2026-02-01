@@ -11,6 +11,7 @@ import { createSupplier, updateSupplier, deleteSupplier, type Supplier } from '@
 import { SupplierDetailModal } from '@/components/shared/SupplierDetailModal';
 import { SupplierEditModal } from '@/components/shared/SupplierEditModal';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 export default function Factories() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -131,7 +132,7 @@ export default function Factories() {
         }, 100);
 
       } catch (error) {
-        console.error('Error deleting factory:', error);
+        logger.error('Error deleting factory:', error);
 
         // Show error toast
         toast.error(`Failed to delete factory: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -176,7 +177,7 @@ export default function Factories() {
       }, 100);
 
     } catch (error) {
-      console.error('Error updating factory:', error);
+      logger.error('Error updating factory:', error);
 
       // Show error toast
       toast.error(`Failed to update factory: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -206,7 +207,7 @@ export default function Factories() {
       }, 100);
 
     } catch (error) {
-      console.error('Error creating factory:', error);
+      logger.error('Error creating factory:', error);
 
       // Show error toast
       toast.error(`Failed to create factory: ${error instanceof Error ? error.message : 'Unknown error'}`);

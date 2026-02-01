@@ -1,3 +1,5 @@
+import { logger } from '@/utils/logger';
+
 export interface Factory {
   id: number;
   displayName: string;
@@ -61,7 +63,7 @@ function getToken() {
  * Fetch all factories for dropdown/lookup
  */
 export async function fetchFactories(): Promise<FactoriesResponse> {
-  console.log('fetchFactories: Fetching factories');
+  logger.log('fetchFactories: Fetching factories');
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const token = getToken();
@@ -83,12 +85,12 @@ export async function fetchFactories(): Promise<FactoriesResponse> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('fetchFactories: Failed to fetch factories:', errorText);
+    logger.error('fetchFactories: Failed to fetch factories:', errorText);
     throw new Error(`Failed to fetch factories: ${response.status} ${response.statusText}`);
   }
 
   const factoryData: NestJSFactoriesResponse = await response.json();
-  console.log('fetchFactories: Received factory data:', factoryData);
+  logger.log('fetchFactories: Received factory data:', factoryData);
 
   // Transform to Hydra format expected by frontend
   const factories: Factory[] = factoryData.data.map(factory => ({

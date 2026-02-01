@@ -8,6 +8,7 @@ import { useTableFilters, usePagination } from '@/hooks';
 import { getPresetTableColumns } from '@/utils/presetTableColumns';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { fetchPresets, updatePreset, deletePreset, createPreset, type Preset } from '@/services/presets';
+import { logger } from '@/utils/logger';
 import { PresetDetailModal } from '@/components/shared/PresetDetailModal';
 import { PresetEditModal } from '@/components/shared/PresetEditModal';
 import { PresetAddModal } from '@/components/shared/PresetAddModal';
@@ -34,7 +35,7 @@ export default function Presets() {
     setError('');
     
     try {
-      console.log('Fetching presets with filters:', filters);
+      logger.log('Fetching presets with filters:', filters);
       const data = await fetchPresets({
         page: pagination.currentPage,
         searchTerm,
@@ -103,7 +104,7 @@ export default function Presets() {
       // Refresh data to ensure consistency
       await fetchPresetsData();
     } catch (error) {
-      console.error('Error updating preset:', error);
+      logger.error('Error updating preset:', error);
       throw error; // Re-throw to let modal handle the error display
     }
   };
@@ -120,7 +121,7 @@ export default function Presets() {
         // Refresh data to ensure consistency
         await fetchPresetsData();
       } catch (error) {
-        console.error('Error deleting preset:', error);
+        logger.error('Error deleting preset:', error);
         setError('Failed to delete preset. Please try again.');
       }
     }
@@ -139,7 +140,7 @@ export default function Presets() {
       fetchPresetsData();
       setIsAddModalOpen(false);
     } catch (error) {
-      console.error('Error creating preset:', error);
+      logger.error('Error creating preset:', error);
       throw error; // Re-throw to show error in modal
     }
   };

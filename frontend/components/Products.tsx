@@ -9,6 +9,7 @@ import { getProductTableColumns } from '@/utils/productTableColumns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 export interface Product {
   id: string;
@@ -64,19 +65,19 @@ export default function Products() {
   
   // Handle view product details
   const handleViewProduct = (product: Product) => {
-    console.log('View product', product);
+    logger.log('View product', product);
     // Implement view logic
   };
   
   // Handle edit product
   const handleEditProduct = (product: Product) => {
-    console.log('Edit product', product);
+    logger.log('Edit product', product);
     // Implement edit logic
   };
   
   // Handle delete product
   const handleDeleteProduct = (product: Product) => {
-    console.log('Delete product', product);
+    logger.log('Delete product', product);
     // Implement delete logic
   };
 

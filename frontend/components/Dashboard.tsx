@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { logger } from '@/utils/logger';
 import { getFitterName, getCustomerName, getSupplierName, getStatus, getUrgent, getDate } from '../utils/orderHydration';
 import { getOrderTableColumns } from '../utils/orderTableColumns';
 import { seatSizes, statuses } from '../utils/orderConstants';
@@ -139,7 +140,7 @@ export default function Dashboard() {
     
     // Load actual status values from database for debugging
     getAllStatusValues().then(statuses => {
-      console.log('Dashboard: Actual status values in database:', statuses);
+      logger.log('Dashboard: Actual status values in database:', statuses);
     });
   }, []);
 
@@ -149,11 +150,11 @@ export default function Dashboard() {
     
     // If we have a search term, use universal search instead of regular filtering
     if (debouncedSearchTerm.trim()) {
-      console.log('Dashboard: Performing universal search for:', debouncedSearchTerm);
+      logger.log('Dashboard: Performing universal search for:', debouncedSearchTerm);
       
       universalSearch(debouncedSearchTerm.trim())
         .then(data => {
-          console.log('Dashboard: Search results received:', {
+          logger.log('Dashboard: Search results received:', {
             totalItems: data['hydra:totalItems'],
             memberCount: data['hydra:member']?.length,
             searchTerm: debouncedSearchTerm
@@ -170,7 +171,7 @@ export default function Dashboard() {
           setLoadingOrders(false);
         })
         .catch((error) => {
-          console.error('Dashboard: Search failed:', error);
+          logger.error('Dashboard: Search failed:', error);
           setOrdersError('Search failed. Please try again.');
           setLoadingOrders(false);
         });
@@ -186,8 +187,8 @@ export default function Dashboard() {
         filters['orderTime[before]'] = date.to.toISOString().split('T')[0];
       }
       
-      console.log('Dashboard: Fetching orders with filters:', filters);
-      console.log('Dashboard: Current page:', currentPage);
+      logger.log('Dashboard: Fetching orders with filters:', filters);
+      logger.log('Dashboard: Current page:', currentPage);
       
       getEnrichedOrders({
         page: currentPage,
@@ -195,7 +196,7 @@ export default function Dashboard() {
         filters,
       })
       .then(data => {
-        console.log('Dashboard: Received API response:', {
+        logger.log('Dashboard: Received API response:', {
           totalItems: data['hydra:totalItems'],
           memberCount: data['hydra:member']?.length,
           currentPage: currentPage
@@ -208,7 +209,7 @@ export default function Dashboard() {
         
         // Log first few orders to see their complete structure
         if (data['hydra:member'] && data['hydra:member'].length > 0) {
-          console.log('Dashboard: Sample order data from API:', 
+          logger.log('Dashboard: Sample order data from API:', 
             data['hydra:member'].slice(0, 3).map((order: any) => ({
               orderId: order.orderId,
               orderStatus: order.orderStatus,
@@ -227,7 +228,7 @@ export default function Dashboard() {
             order.orderId == 41059 || order.orderId === '41059'
           );
           if (order41059) {
-            console.log('Dashboard: Found order 41059 with data:', {
+            logger.log('Dashboard: Found order 41059 with data:', {
               orderId: order41059.orderId,
               customerName: order41059.customerName,
               fitterName: order41059.fitterName,
@@ -332,7 +333,7 @@ export default function Dashboard() {
 
   const handleSaveOrder = async (updatedOrder: any) => {
     try {
-      console.log('Saving order:', updatedOrder);
+      logger.log('Saving order:', updatedOrder);
       // TODO: Implement actual API call to update the order
       // For now, just update the local state
       setOrders(prevOrders => 
@@ -346,16 +347,16 @@ export default function Dashboard() {
       // Here you would typically make an API call like:
       // await updateOrder(updatedOrder.id, updatedOrder);
       
-      console.log('Order saved successfully');
+      logger.log('Order saved successfully');
     } catch (error) {
-      console.error('Error saving order:', error);
+      logger.error('Error saving order:', error);
       throw error; // Re-throw to let the modal handle the error
     }
   };
 
   const handleApproveOrder = async (order: any, approvalNotes?: string) => {
     try {
-      console.log('Approving order:', order.orderId || order.id, 'with notes:', approvalNotes);
+      logger.log('Approving order:', order.orderId || order.id, 'with notes:', approvalNotes);
       
       // Update the order status to APPROVED in the database
       const updateData = {
@@ -377,9 +378,9 @@ export default function Dashboard() {
         )
       );
       
-      console.log('Order approved successfully in database');
+      logger.log('Order approved successfully in database');
     } catch (error) {
-      console.error('Error approving order:', error);
+      logger.error('Error approving order:', error);
       // Show user-friendly error message
       alert(`Failed to approve order: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error;
@@ -392,11 +393,11 @@ export default function Dashboard() {
   };
 
   const handleStatusCardClick = (status: string) => {
-    console.log('Dashboard: Status card clicked:', status);
-    console.log('Dashboard: Current selectedStatus:', selectedStatus);
+    logger.log('Dashboard: Status card clicked:', status);
+    logger.log('Dashboard: Current selectedStatus:', selectedStatus);
     
     const newStatus = status === selectedStatus ? '' : status;
-    console.log('Dashboard: Setting new status filter to:', newStatus);
+    logger.log('Dashboard: Setting new status filter to:', newStatus);
     
     setSelectedStatus(newStatus);
     setHeaderFilters(prev => ({
@@ -507,7 +508,7 @@ export default function Dashboard() {
           {/* Order Status Overview */}
           <DashboardOrderStatusFlow
             onStatusClick={key => {
-              console.log('Dashboard: Status flow clicked with key:', key);
+              logger.log('Dashboard: Status flow clicked with key:', key);
               setHeaderFilters(f => ({...f, status: key}));
               setCurrentPage(1); // Reset to page 1 when status filter changes
             }}
@@ -521,7 +522,7 @@ export default function Dashboard() {
           }}>
             <button 
               onClick={() => {
-                console.log('Resetting all filters via All Orders button');
+                logger.log('Resetting all filters via All Orders button');
                 setHeaderFilters({});
                 setDate({ from: undefined, to: undefined });
                 setCurrentPage(1);
@@ -583,7 +584,7 @@ export default function Dashboard() {
             {(Object.keys(headerFilters).some(key => headerFilters[key]) || date.from || date.to || searchTerm.trim()) && (
               <button
                 onClick={() => {
-                  console.log('Resetting all filters and search via Reset button');
+                  logger.log('Resetting all filters and search via Reset button');
                   setHeaderFilters({});
                   setDate({ from: undefined, to: undefined });
                   setSearchTerm(''); // Clear search term
@@ -721,22 +722,22 @@ export default function Dashboard() {
                   }
                 }}
                 onViewOrder={(order) => {
-                  console.log('View order:', order);
+                  logger.log('View order:', order);
                   setSelectedOrder(order);
                   setIsOrderModalOpen(true);
                 }}
                 onEditOrder={(order) => {
-                  console.log('Edit order:', order);
+                  logger.log('Edit order:', order);
                   // Just set the basic order info - comprehensive editor will fetch full data
                   setSelectedOrder(order);
                   setIsEditingOrder(true);
                 }}
                 onApproveOrder={(order) => {
-                  console.log('Approve order:', order);
+                  logger.log('Approve order:', order);
                   setSelectedOrder(order);
                   setIsApprovalModalOpen(true);
                 }}
-                onDeleteOrder={(order) => console.log('Delete order:', order)}
+                onDeleteOrder={(order) => logger.log('Delete order:', order)}
                 seatSizes={seatSizes}
                 statuses={statuses}
                 fitters={[]}
@@ -748,7 +749,7 @@ export default function Dashboard() {
                   currentPage: currentPage,
                   totalPages: totalPages,
                   onPageChange: (page: number) => {
-                    console.log('Dashboard: Changing to page:', page);
+                    logger.log('Dashboard: Changing to page:', page);
                     setCurrentPage(page);
                   },
                   totalItems: totalItems,

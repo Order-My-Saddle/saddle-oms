@@ -3,13 +3,14 @@ import { ReactNode } from 'react';
 import { AuthProvider } from '@/context/AuthContext';
 import { JotaiProvider } from './providers/JotaiProvider';
 import ClientLayoutWrapper from './ClientLayoutWrapper';
+import { logger } from '@/utils/logger';
 
 interface RootClientWrapperProps {
   children: ReactNode;
 }
 
 export default function RootClientWrapper({ children }: RootClientWrapperProps) {
-  console.log('🏗️ RootClientWrapper: Component mounting/initializing');
+  logger.log('🏗️ RootClientWrapper: Component mounting/initializing');
 
   return (
     <JotaiProvider>

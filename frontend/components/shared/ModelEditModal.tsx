@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle, Loader2 } from 'lucide-react';
+import { logger } from '@/utils/logger';
 import { fetchBrands, Brand } from '@/services/brands';
 import { fetchFactories, Factory } from '@/services/factories';
 import { SADDLE_TYPE_OPTIONS, FACTORY_REGIONS, FACTORY_REGION_KEYS, FactoryRegionKey } from '@/utils/saddleConstants';
@@ -60,16 +61,16 @@ export function ModelEditModal({ model, isOpen, onClose, onSave }: ModelEditModa
   const loadBrands = async () => {
     setLoadingBrands(true);
     try {
-      console.log('ModelEditModal: Loading brands...');
+      logger.log('ModelEditModal: Loading brands...');
       const data = await fetchBrands({
         page: 1,
         orderBy: 'name',
         order: 'asc',
       });
-      console.log('ModelEditModal: Loaded brands:', data);
+      logger.log('ModelEditModal: Loaded brands:', data);
       setBrands(data['hydra:member'] || []);
     } catch (error) {
-      console.error('Error loading brands:', error);
+      logger.error('Error loading brands:', error);
       setError('Failed to load brands. Please try again.');
     } finally {
       setLoadingBrands(false);
@@ -79,12 +80,12 @@ export function ModelEditModal({ model, isOpen, onClose, onSave }: ModelEditModa
   const loadFactories = async () => {
     setLoadingFactories(true);
     try {
-      console.log('ModelEditModal: Loading factories...');
+      logger.log('ModelEditModal: Loading factories...');
       const data = await fetchFactories();
-      console.log('ModelEditModal: Loaded factories:', data);
+      logger.log('ModelEditModal: Loaded factories:', data);
       setFactories(data['hydra:member'] || []);
     } catch (error) {
-      console.error('Error loading factories:', error);
+      logger.error('Error loading factories:', error);
       setError('Failed to load factories. Please try again.');
     } finally {
       setLoadingFactories(false);
@@ -115,7 +116,7 @@ export function ModelEditModal({ model, isOpen, onClose, onSave }: ModelEditModa
       await onSave(editedModel);
       onClose();
     } catch (error) {
-      console.error('Error saving saddle:', error);
+      logger.error('Error saving saddle:', error);
       setError(error instanceof Error ? error.message : 'Failed to save saddle. Please try again.');
     } finally {
       setSaving(false);

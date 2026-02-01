@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle } from 'lucide-react';
 import { getRoleDisplayName } from '@/utils/rolePermissions';
+import { logger } from '@/utils/logger';
 
 interface UserEditModalProps {
   user: User | null;
@@ -86,7 +87,7 @@ export function UserEditModal({ user, isOpen, onClose, onSave }: UserEditModalPr
       // Close modal on success
       onClose();
     } catch (error) {
-      console.error('Error saving user:', error);
+      logger.error('Error saving user:', error);
       setError(error instanceof Error ? error.message : 'Failed to save user');
     } finally {
       setSaving(false);

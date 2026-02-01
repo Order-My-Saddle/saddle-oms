@@ -1,6 +1,7 @@
 // Shared order processing utilities
 import { fetchEntities } from '@/services/api';
 import { orderFilterSchema, validateData, sanitizeObject } from '@/schemas/validation';
+import { logger } from '@/utils/logger';
 
 // Type definitions for order processing
 export interface OrderTableRow {
@@ -71,7 +72,7 @@ export function buildOrderFilters(headerFilters: HeaderFilters): Record<string, 
   // Validate the filters
   const validation = validateData(orderFilterSchema, sanitizedFilters);
   if (!validation.success) {
-    console.warn('Invalid order filters:', validation.errors);
+    logger.warn('Invalid order filters:', validation.errors);
     return {}; // Return empty filters if validation fails
   }
   
@@ -331,7 +332,7 @@ export async function fetchCompleteOrderData(
 
   try {
     const orderId = Number(order.id) || 0;
-    console.log('Fetching complete order data for ID:', orderId);
+    logger.log('Fetching complete order data for ID:', orderId);
 
     if (!orderId) {
       throw new Error('Invalid order ID');
@@ -344,18 +345,18 @@ export async function fetchCompleteOrderData(
     });
 
     if (result['hydra:member'] && result['hydra:member'].length > 0) {
-      console.log('Successfully fetched order:', orderId);
+      logger.log('Successfully fetched order:', orderId);
       return result['hydra:member'][0];
     }
 
     throw new Error(`Order not found with ID: ${orderId}`);
 
   } catch (error) {
-    console.error('Error fetching complete order data:', error);
+    logger.error('Error fetching complete order data:', error);
     setOrderDataError(error instanceof Error ? error.message : 'Failed to load order data');
 
     // Return the original order data as fallback
-    console.log('Falling back to table row data');
+    logger.log('Falling back to table row data');
     return order;
   } finally {
     setIsLoadingOrderData(false);

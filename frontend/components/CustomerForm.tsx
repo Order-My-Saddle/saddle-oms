@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft } from 'lucide-react';
 import { createCustomer } from '@/services/api';
 import { fetchFitters, Fitter } from '@/services/fitters';
+import { logger } from '@/utils/logger';
 
 interface CustomerFormProps {
   customer?: {
@@ -67,7 +68,7 @@ export function CustomerForm({ customer, onClose, onSave }: CustomerFormProps) {
         const response = await fetchFitters({ page: 1 });
         setFitters(response['hydra:member'] || []);
       } catch (error) {
-        console.error('Error loading fitters:', error);
+        logger.error('Error loading fitters:', error);
         setError('Failed to load fitters');
       } finally {
         setLoadingFitters(false);
@@ -114,17 +115,17 @@ export function CustomerForm({ customer, onClose, onSave }: CustomerFormProps) {
       
       if (customer?.id) {
         // TODO: Implement update customer when needed
-        console.log('Update customer:', customerData);
+        logger.log('Update customer:', customerData);
       } else {
         // Create new customer
         const newCustomer = await createCustomer(customerData);
-        console.log('Customer created successfully:', newCustomer);
+        logger.log('Customer created successfully:', newCustomer);
         onSave?.(newCustomer);
       }
       
       onClose();
     } catch (error) {
-      console.error('Error saving customer:', error);
+      logger.error('Error saving customer:', error);
       setError(error instanceof Error ? error.message : 'Failed to save customer');
     } finally {
       setSaving(false);

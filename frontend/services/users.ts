@@ -1,5 +1,6 @@
 import { fetchEntities } from './api';
 import { User, UserRole } from '@/types/Role';
+import { logger } from '@/utils/logger';
 
 const backendRoleToFrontend: Record<string, UserRole> = {
   admin: UserRole.ADMIN,
@@ -61,22 +62,22 @@ function getToken() {
       const stored = localStorage.getItem('auth_token');
       if (stored && stored !== 'null') {
         const parsedToken = JSON.parse(stored);
-        console.log('🔑 Found token in auth_token localStorage');
+        logger.log('🔑 Found token in auth_token localStorage');
         return parsedToken;
       }
     } catch (e) {
-      console.log('🔑 Failed to parse auth_token from localStorage, trying token key...');
+      logger.log('🔑 Failed to parse auth_token from localStorage, trying token key...');
     }
 
     // Check localStorage for 'token' key
     try {
       const token = localStorage.getItem('token');
       if (token && token !== 'null') {
-        console.log('🔑 Found token in token localStorage');
+        logger.log('🔑 Found token in token localStorage');
         return token;
       }
     } catch (e) {
-      console.log('🔑 No token found in localStorage, trying cookies...');
+      logger.log('🔑 No token found in localStorage, trying cookies...');
     }
 
     // Fallback to cookies
@@ -84,11 +85,11 @@ function getToken() {
     for (let cookie of cookies) {
       const [name, value] = cookie.trim().split('=');
       if (name === 'token') {
-        console.log('🔑 Found token in cookies');
+        logger.log('🔑 Found token in cookies');
         return value;
       }
     }
-    console.log('🔑 No token found anywhere');
+    logger.log('🔑 No token found anywhere');
   }
   return null;
 }
@@ -129,7 +130,7 @@ export async function fetchUsers({
   searchTerm?: string;
   forceRefresh?: boolean;
 } = {}): Promise<UsersResponse> {
-  console.log('🔍 fetchUsers: Using efficient NestJS backend API...');
+  logger.log('🔍 fetchUsers: Using efficient NestJS backend API...');
 
   const token = getToken();
   const queryParams = new URLSearchParams();
@@ -172,7 +173,7 @@ export async function fetchUsers({
 
   const url = `${API_URL}/api/v1/users?${queryParams.toString()}`;
 
-  console.log('🔍 fetchUsers: Calling backend URL:', url);
+  logger.log('🔍 fetchUsers: Calling backend URL:', url);
 
   const response = await fetch(url, {
     headers: {
@@ -188,12 +189,12 @@ export async function fetchUsers({
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('🔍 fetchUsers: Backend error:', response.status, errorText);
+    logger.error('🔍 fetchUsers: Backend error:', response.status, errorText);
     throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('🔍 fetchUsers: Backend response:', {
+  logger.log('🔍 fetchUsers: Backend response:', {
     hasNext: result.hasNext,
     data: result.data?.length,
     total: result.data?.length
@@ -220,7 +221,7 @@ export async function fetchUsers({
   const totalItems = result.totalCount ?? result.data?.length ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / limit));
 
-  console.log(`🔍 fetchUsers: Processed ${mappedUsers.length} users from backend (total: ${totalItems})`);
+  logger.log(`🔍 fetchUsers: Processed ${mappedUsers.length} users from backend (total: ${totalItems})`);
 
   return {
     'hydra:member': mappedUsers,
@@ -331,7 +332,7 @@ export async function createUser(userData: CreateUserData): Promise<User> {
     entities: [entity]
   };
 
-  console.log('Attempting user creation with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
+  logger.log('Attempting user creation with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
 
   const response = await fetch(`${API_URL}/save`, {
     method: 'POST',
@@ -349,17 +350,17 @@ export async function createUser(userData: CreateUserData): Promise<User> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('User creation failed:', response.status, errorText);
+    logger.error('User creation failed:', response.status, errorText);
     throw new Error(`Failed to create user: ${response.status} ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('User creation result:', result);
+  logger.log('User creation result:', result);
 
   // Check for errors in SaveBundle response
   if (result.Errors && result.Errors.length > 0) {
-    console.error('SaveBundle errors:', result.Errors);
-    console.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
+    logger.error('SaveBundle errors:', result.Errors);
+    logger.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
     const errorMessages = result.Errors.map((err: any) => {
       return err.ErrorMessage || err.message || err.Message || err.error || err.description || JSON.stringify(err);
     }).join(', ');
@@ -368,14 +369,14 @@ export async function createUser(userData: CreateUserData): Promise<User> {
 
   // Helper function to map backend user to frontend User type
   const mapBackendUserToFrontend = (backendUser: any): User => {
-    console.log('🔍 Mapping backend user:', backendUser);
+    logger.log('🔍 Mapping backend user:', backendUser);
 
     // Split name into firstName and lastName
     const nameParts = (backendUser.name || '').split(' ').filter(part => part.length > 0);
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
-    console.log('🔍 Name mapping:', {
+    logger.log('🔍 Name mapping:', {
       originalName: backendUser.name,
       nameParts,
       firstName,
@@ -399,7 +400,7 @@ export async function createUser(userData: CreateUserData): Promise<User> {
     return mapBackendUserToFrontend(result.entities[0]);
   } else {
     // If no entity returned in SaveBundle but no errors, creation was likely successful
-    console.log('No entities in SaveBundle response but no errors, returning optimistic data');
+    logger.log('No entities in SaveBundle response but no errors, returning optimistic data');
     return {
       id: 'pending', // Will be set by backend
       username: userData.username,
@@ -484,7 +485,7 @@ export async function updateUser(id: string, userData: UpdateUserData): Promise<
     entities: [entity]
   };
 
-  console.log('Attempting user update with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
+  logger.log('Attempting user update with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
 
   const response = await fetch(`${API_URL}/save`, {
     method: 'POST',
@@ -502,17 +503,17 @@ export async function updateUser(id: string, userData: UpdateUserData): Promise<
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Update user error response:', errorText);
+    logger.error('Update user error response:', errorText);
     throw new Error(`Failed to update user: ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('User update result:', result);
+  logger.log('User update result:', result);
 
   // Check for errors in SaveBundle response
   if (result.Errors && result.Errors.length > 0) {
-    console.error('SaveBundle errors:', result.Errors);
-    console.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
+    logger.error('SaveBundle errors:', result.Errors);
+    logger.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
     const errorMessages = result.Errors.map((err: any) => {
       return err.ErrorMessage || err.message || err.Message || err.error || err.description || JSON.stringify(err);
     }).join(', ');
@@ -521,14 +522,14 @@ export async function updateUser(id: string, userData: UpdateUserData): Promise<
 
   // Helper function to map backend user to frontend User type
   const mapBackendUserToFrontend = (backendUser: any): User => {
-    console.log('🔍 Mapping backend user (update):', backendUser);
+    logger.log('🔍 Mapping backend user (update):', backendUser);
 
     // Split name into firstName and lastName
     const nameParts = (backendUser.name || '').split(' ').filter(part => part.length > 0);
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
-    console.log('🔍 Name mapping (update):', {
+    logger.log('🔍 Name mapping (update):', {
       originalName: backendUser.name,
       nameParts,
       firstName,
@@ -554,7 +555,7 @@ export async function updateUser(id: string, userData: UpdateUserData): Promise<
     return mapBackendUserToFrontend(result.entities[0]);
   } else {
     // If no entity returned in SaveBundle but no errors, update was likely successful
-    console.log('No entities in SaveBundle response but no errors, returning optimistic data');
+    logger.log('No entities in SaveBundle response but no errors, returning optimistic data');
     return {
       id: id,
       username: userData.username,
@@ -608,7 +609,7 @@ export function getUserRoles(): { value: UserRole; label: string }[] {
  */
 export async function fetchUserCount(): Promise<number> {
   try {
-    console.log('📊 fetchUserCount: Getting total user count from NestJS backend');
+    logger.log('📊 fetchUserCount: Getting total user count from NestJS backend');
 
     const token = getToken();
     const url = `${API_URL}/api/v1/users?page=1&limit=1`;
@@ -623,16 +624,16 @@ export async function fetchUserCount(): Promise<number> {
     });
 
     if (!response.ok) {
-      console.error('📊 Error fetching user count:', response.status, response.statusText);
+      logger.error('📊 Error fetching user count:', response.status, response.statusText);
       return 0;
     }
 
     const result = await response.json();
     const total = result.totalCount ?? result.data?.length ?? 0;
-    console.log('📊 Total user count:', total);
+    logger.log('📊 Total user count:', total);
     return total;
   } catch (error) {
-    console.error('📊 Error fetching user count:', error);
+    logger.error('📊 Error fetching user count:', error);
     return 0;
   }
 }

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle, Loader2 } from 'lucide-react';
+import { logger } from '@/utils/logger';
 import { fetchBrands, Brand } from '@/services/brands';
 import { fetchFactories, Factory } from '@/services/factories';
 import { SADDLE_TYPE_OPTIONS, FACTORY_REGIONS, FACTORY_REGION_KEYS, FactoryRegionKey } from '@/utils/saddleConstants';
@@ -68,16 +69,16 @@ export function ModelAddModal({ isOpen, onClose, onSave }: ModelAddModalProps) {
   const loadBrands = async () => {
     setLoadingBrands(true);
     try {
-      console.log('ModelAddModal: Loading brands...');
+      logger.log('ModelAddModal: Loading brands...');
       const data = await fetchBrands({
         page: 1,
         orderBy: 'name',
         order: 'asc',
       });
-      console.log('ModelAddModal: Loaded brands:', data);
+      logger.log('ModelAddModal: Loaded brands:', data);
       setBrands(data['hydra:member'] || []);
     } catch (error) {
-      console.error('Error loading brands:', error);
+      logger.error('Error loading brands:', error);
       setError('Failed to load brands. Please try again.');
     } finally {
       setLoadingBrands(false);
@@ -87,12 +88,12 @@ export function ModelAddModal({ isOpen, onClose, onSave }: ModelAddModalProps) {
   const loadFactories = async () => {
     setLoadingFactories(true);
     try {
-      console.log('ModelAddModal: Loading factories...');
+      logger.log('ModelAddModal: Loading factories...');
       const data = await fetchFactories();
-      console.log('ModelAddModal: Loaded factories:', data);
+      logger.log('ModelAddModal: Loaded factories:', data);
       setFactories(data['hydra:member'] || []);
     } catch (error) {
-      console.error('Error loading factories:', error);
+      logger.error('Error loading factories:', error);
       setError('Failed to load factories. Please try again.');
     } finally {
       setLoadingFactories(false);
@@ -102,15 +103,15 @@ export function ModelAddModal({ isOpen, onClose, onSave }: ModelAddModalProps) {
   const loadNextSequence = async () => {
     setLoadingSequence(true);
     try {
-      console.log('ModelAddModal: Loading next sequence...');
+      logger.log('ModelAddModal: Loading next sequence...');
       const nextSeq = await fetchNextSequence();
-      console.log('ModelAddModal: Next sequence:', nextSeq);
+      logger.log('ModelAddModal: Next sequence:', nextSeq);
       setNewModel(prev => ({
         ...prev,
         sequence: nextSeq,
       }));
     } catch (error) {
-      console.error('Error loading next sequence:', error);
+      logger.error('Error loading next sequence:', error);
       // Default to 1 if we can't get the next sequence
       setNewModel(prev => ({
         ...prev,
@@ -143,7 +144,7 @@ export function ModelAddModal({ isOpen, onClose, onSave }: ModelAddModalProps) {
       await onSave(newModel);
       onClose();
     } catch (error) {
-      console.error('Error saving model:', error);
+      logger.error('Error saving model:', error);
       setError(error instanceof Error ? error.message : 'Failed to save model. Please try again.');
     } finally {
       setSaving(false);

@@ -11,6 +11,7 @@ import { LeathertypeEditModal } from '@/components/shared/LeathertypeEditModal';
 import { LeathertypeAddModal } from '@/components/shared/LeathertypeAddModal';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 export default function Leathertypes() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,7 +35,7 @@ export default function Leathertypes() {
     setError('');
     
     try {
-      console.log('Fetching leathertypes with filters:', filters);
+      logger.log('Fetching leathertypes with filters:', filters);
       const data = await fetchLeathertypes({
         page: pagination.currentPage,
         searchTerm,
@@ -103,7 +104,7 @@ export default function Leathertypes() {
       // Refresh data to ensure consistency
       await fetchLeathertypesData();
     } catch (error) {
-      console.error('Error updating leathertype:', error);
+      logger.error('Error updating leathertype:', error);
       throw error; // Re-throw to let modal handle the error display
     }
   };
@@ -120,7 +121,7 @@ export default function Leathertypes() {
         // Refresh data to ensure consistency
         await fetchLeathertypesData();
       } catch (error) {
-        console.error('Error deleting leathertype:', error);
+        logger.error('Error deleting leathertype:', error);
         setError('Failed to delete leather type. Please try again.');
       }
     }
@@ -139,7 +140,7 @@ export default function Leathertypes() {
       fetchLeathertypesData();
       setIsAddModalOpen(false);
     } catch (error) {
-      console.error('Error creating leathertype:', error);
+      logger.error('Error creating leathertype:', error);
       throw error; // Re-throw to show error in modal
     }
   };

@@ -1,4 +1,5 @@
 import { fetchEntities } from './api';
+import { logger } from '@/utils/logger';
 
 export interface Extra {
   id: string;
@@ -42,7 +43,7 @@ export async function fetchExtras({
   orderBy?: string;
   order?: 'asc' | 'desc';
 } = {}): Promise<ExtrasResponse> {
-  console.log('fetchExtras: Called with params:', { page, searchTerm, filters, orderBy, order });
+  logger.log('fetchExtras: Called with params:', { page, searchTerm, filters, orderBy, order });
 
   // Build filter parameters for API Platform
   const extraParams: Record<string, string | number | boolean> = {};
@@ -50,7 +51,7 @@ export async function fetchExtras({
   // Handle individual field filters
   Object.entries(filters).forEach(([key, value]) => {
     if (value && value.trim()) {
-      console.log(`fetchExtras: Processing filter ${key}:`, value);
+      logger.log(`fetchExtras: Processing filter ${key}:`, value);
       if (key === 'name') {
         extraParams['name[contains]'] = value;
       } else if (key === 'description') {
@@ -65,7 +66,7 @@ export async function fetchExtras({
     }
   });
 
-  console.log('fetchExtras: Calling fetchEntities with entity "extras" and params:', extraParams);
+  logger.log('fetchExtras: Calling fetchEntities with entity "extras" and params:', extraParams);
 
   return await fetchEntities({
     entity: 'extras',
@@ -139,7 +140,7 @@ export async function createExtra(extraData: Partial<Extra>): Promise<Extra> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Extra creation failed:', errorText);
+    logger.error('Extra creation failed:', errorText);
     throw new Error(`Failed to create extra: ${response.statusText}`);
   }
 
@@ -175,7 +176,7 @@ export async function updateExtra(id: string, extraData: Partial<Extra>): Promis
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Extra update failed:', errorText);
+    logger.error('Extra update failed:', errorText);
     throw new Error(`Failed to update extra: ${response.statusText}`);
   }
 

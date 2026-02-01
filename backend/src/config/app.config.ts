@@ -2,6 +2,7 @@ import { registerAs } from "@nestjs/config";
 import { AppConfig } from "./app-config.type";
 import validateConfig from ".././utils/validate-config";
 import {
+  IsBoolean,
   IsEnum,
   IsInt,
   IsOptional,
@@ -10,6 +11,7 @@ import {
   Max,
   Min,
 } from "class-validator";
+import { Transform } from "class-transformer";
 
 enum Environment {
   Development = "development",
@@ -47,6 +49,11 @@ class EnvironmentVariablesValidator {
   @IsString()
   @IsOptional()
   APP_HEADER_LANGUAGE: string;
+
+  @IsBoolean()
+  @IsOptional()
+  @Transform(({ value }) => value === "true" || value === true)
+  DEBUG_LOG: boolean;
 }
 
 export default registerAs<AppConfig>("app", () => {
@@ -66,5 +73,6 @@ export default registerAs<AppConfig>("app", () => {
     apiPrefix: process.env.API_PREFIX || "api",
     fallbackLanguage: process.env.APP_FALLBACK_LANGUAGE || "en",
     headerLanguage: process.env.APP_HEADER_LANGUAGE || "x-custom-lang",
+    debugLog: process.env.DEBUG_LOG === "true",
   };
 });

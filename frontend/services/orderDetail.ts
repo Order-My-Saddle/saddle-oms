@@ -1,6 +1,7 @@
 // Comprehensive Order Detail API Service
 // Based on the old Breeze UI implementation for complete order editing
 import { fetchEntities } from './api';
+import { logger } from '@/utils/logger';
 
 // API endpoints from the old implementation
 const API_ENDPOINTS = {
@@ -44,7 +45,7 @@ export interface ComprehensiveOrderData {
  * This replicates the multiple API calls made by the old Breeze UI
  */
 export async function fetchComprehensiveOrderData(orderId: number): Promise<ComprehensiveOrderData> {
-  console.log('Fetching comprehensive order data for:', orderId);
+  logger.log('Fetching comprehensive order data for:', orderId);
   
   try {
     // Parallel API calls to fetch all related data
@@ -134,7 +135,7 @@ export async function fetchComprehensiveOrderData(orderId: number): Promise<Comp
     ]);
 
     const order = orderResponse['hydra:member']?.[0] || orderResponse;
-    console.log('Fetched order:', order);
+    logger.log('Fetched order:', order);
 
     // Get product saddle related data if the order has product saddles
     let productSaddleExtras: any[] = [];
@@ -187,7 +188,7 @@ export async function fetchComprehensiveOrderData(orderId: number): Promise<Comp
           productSaddleItems.push(...(productSaddleItemsRes['hydra:member'] || []));
           productSaddles.push(...(productSaddlesRes['hydra:member'] || []));
         } catch (error) {
-          console.warn('Failed to fetch product saddle data for:', productSaddleId, error);
+          logger.warn('Failed to fetch product saddle data for:', productSaddleId, error);
         }
       }
 
@@ -222,7 +223,7 @@ export async function fetchComprehensiveOrderData(orderId: number): Promise<Comp
           modelItems.push(...(modelItemsRes['hydra:member'] || []));
           modelLeatherPrices.push(...(modelLeatherPricesRes['hydra:member'] || []));
         } catch (error) {
-          console.warn('Failed to fetch model data for:', modelId, error);
+          logger.warn('Failed to fetch model data for:', modelId, error);
         }
       }
     }
@@ -245,7 +246,7 @@ export async function fetchComprehensiveOrderData(orderId: number): Promise<Comp
       productSaddles
     };
 
-    console.log('Comprehensive order data loaded:', {
+    logger.log('Comprehensive order data loaded:', {
       orderLines: comprehensiveData.orderLines.length,
       comments: comprehensiveData.comments.length,
       options: comprehensiveData.options.length,
@@ -265,7 +266,7 @@ export async function fetchComprehensiveOrderData(orderId: number): Promise<Comp
     return comprehensiveData;
 
   } catch (error) {
-    console.error('Error fetching comprehensive order data:', error);
+    logger.error('Error fetching comprehensive order data:', error);
     throw new Error(`Failed to fetch comprehensive order data: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -287,7 +288,7 @@ export async function searchCustomers(searchTerm: string, limit: number = 20): P
     
     return response['hydra:member'] || [];
   } catch (error) {
-    console.error('Error searching customers:', error);
+    logger.error('Error searching customers:', error);
     return [];
   }
 }
@@ -309,7 +310,7 @@ export async function searchFitters(searchTerm: string, limit: number = 20): Pro
     
     return response['hydra:member'] || [];
   } catch (error) {
-    console.error('Error searching fitters:', error);
+    logger.error('Error searching fitters:', error);
     return [];
   }
 }
@@ -319,7 +320,7 @@ export async function searchFitters(searchTerm: string, limit: number = 20): Pro
  */
 export async function saveComprehensiveOrder(orderData: any): Promise<any> {
   try {
-    console.log('Saving comprehensive order data:', orderData);
+    logger.log('Saving comprehensive order data:', orderData);
     
     // This would typically involve multiple API calls to save
     // different parts of the order (order, order lines, product saddles, etc.)
@@ -340,7 +341,7 @@ export async function saveComprehensiveOrder(orderData: any): Promise<any> {
 
     return await response.json();
   } catch (error) {
-    console.error('Error saving comprehensive order:', error);
+    logger.error('Error saving comprehensive order:', error);
     throw error;
   }
 }
@@ -360,7 +361,7 @@ export async function getProductSaddleConfigurations(modelId: number): Promise<a
 
     return response['hydra:member'] || [];
   } catch (error) {
-    console.error('Error fetching product saddle configurations:', error);
+    logger.error('Error fetching product saddle configurations:', error);
     return [];
   }
 }

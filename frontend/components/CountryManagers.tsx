@@ -9,6 +9,7 @@ import { getCountryManagerTableColumns } from '@/utils/countryManagersTableColum
 import { PageHeader } from '@/components/shared/PageHeader';
 import { createCountryManager, updateCountryManager, deleteCountryManager, type CountryManager } from '@/services/country-managers';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 export default function CountryManagers() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -50,19 +51,19 @@ export default function CountryManagers() {
   // Handle view country manager details
   const handleViewCountryManager = (countryManager: CountryManager) => {
     // Placeholder - view functionality to be implemented
-    console.log('View country manager:', countryManager);
+    logger.log('View country manager:', countryManager);
   };
 
   // Handle edit country manager
   const handleEditCountryManager = (countryManager: CountryManager) => {
     // Placeholder - edit functionality to be implemented
-    console.log('Edit country manager:', countryManager);
+    logger.log('Edit country manager:', countryManager);
   };
 
   // Handle add new country manager
   const handleAddCountryManager = () => {
     // Placeholder - add functionality to be implemented
-    console.log('Add new country manager');
+    logger.log('Add new country manager');
   };
 
   // Handle delete country manager
@@ -83,7 +84,7 @@ export default function CountryManagers() {
         }, 100);
 
       } catch (error) {
-        console.error('Error deleting country manager:', error);
+        logger.error('Error deleting country manager:', error);
 
         // Show error toast
         toast.error(`Failed to delete country manager: ${error instanceof Error ? error.message : 'Unknown error'}`);

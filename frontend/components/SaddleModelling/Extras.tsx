@@ -11,6 +11,7 @@ import { ExtraEditModal } from '@/components/shared/ExtraEditModal';
 import { ExtraAddModal } from '@/components/shared/ExtraAddModal';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 export default function Extras() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,7 +35,7 @@ export default function Extras() {
     setError('');
     
     try {
-      console.log('Fetching extras with filters:', filters);
+      logger.log('Fetching extras with filters:', filters);
       const data = await fetchExtras({
         page: pagination.currentPage,
         searchTerm,
@@ -103,7 +104,7 @@ export default function Extras() {
       // Refresh data to ensure consistency
       await fetchExtrasData();
     } catch (error) {
-      console.error('Error updating extra:', error);
+      logger.error('Error updating extra:', error);
       throw error; // Re-throw to let modal handle the error display
     }
   };
@@ -120,7 +121,7 @@ export default function Extras() {
         // Refresh data to ensure consistency
         await fetchExtrasData();
       } catch (error) {
-        console.error('Error deleting extra:', error);
+        logger.error('Error deleting extra:', error);
         setError('Failed to delete extra. Please try again.');
       }
     }
@@ -139,7 +140,7 @@ export default function Extras() {
       fetchExtrasData();
       setIsAddModalOpen(false);
     } catch (error) {
-      console.error('Error creating extra:', error);
+      logger.error('Error creating extra:', error);
       throw error; // Re-throw to show error in modal
     }
   };

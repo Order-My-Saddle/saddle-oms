@@ -26,7 +26,7 @@ export interface EntityTableProps<T> {
   onDelete?: (entity: T) => void;
   onApprove?: (entity: T) => void;
   // Customization
-  entityType?: 'order' | 'customer' | 'product' | 'fitter' | 'user' | 'warehouse' | 'supplier' | 'factory' | 'access-filter-group' | 'country-manager';
+  entityType?: 'order' | 'customer' | 'product' | 'fitter' | 'user' | 'warehouse' | 'supplier' | 'factory' | 'access-filter-group' | 'country-manager' | 'saddle';
   showActions?: boolean;
   searchPlaceholder?: string;
   actionButtons?: {

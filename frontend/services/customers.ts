@@ -1,4 +1,5 @@
 import { fetchEntities } from './api';
+import { logger } from '@/utils/logger';
 
 export interface Customer {
   id: string;
@@ -44,7 +45,7 @@ export async function fetchCustomers({
   orderBy?: string;
   order?: 'asc' | 'desc';
 } = {}): Promise<CustomersResponse> {
-  console.log('fetchCustomers: Called with params:', { page, searchTerm, filters, orderBy, order });
+  logger.log('fetchCustomers: Called with params:', { page, searchTerm, filters, orderBy, order });
   
   // Build filter parameters for NestJS backend
   const extraParams: Record<string, string | number | boolean> = {};
@@ -52,7 +53,7 @@ export async function fetchCustomers({
   // Handle individual field filters (NestJS uses plain query params with ILIKE)
   Object.entries(filters).forEach(([key, value]) => {
     if (value && value.trim()) {
-      console.log(`fetchCustomers: Processing filter ${key}:`, value);
+      logger.log(`fetchCustomers: Processing filter ${key}:`, value);
       if (key === 'name' || key === 'email' || key === 'city' || key === 'country') {
         extraParams[key] = value;
       } else if (key === 'id') {
@@ -65,7 +66,7 @@ export async function fetchCustomers({
     }
   });
 
-  console.log('fetchCustomers: Calling fetchEntities with entity "customers" and params:', extraParams);
+  logger.log('fetchCustomers: Calling fetchEntities with entity "customers" and params:', extraParams);
 
   // Pass searchTerm directly to fetchEntities (it appends &search= to the URL).
   // Also pass extraParams which may contain field-specific filters.
@@ -117,7 +118,7 @@ function getAuthHeaders() {
 export async function createCustomer(customerData: Partial<Customer>): Promise<Customer> {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-  console.log('Creating customer with data:', customerData);
+  logger.log('Creating customer with data:', customerData);
 
   const response = await fetch(`${API_URL}/api/v1/customers`, {
     method: 'POST',
@@ -128,19 +129,19 @@ export async function createCustomer(customerData: Partial<Customer>): Promise<C
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Customer creation failed:', response.status, errorText);
+    logger.error('Customer creation failed:', response.status, errorText);
     throw new Error(`Failed to create customer: ${response.status} ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Customer creation successful:', result);
+  logger.log('Customer creation successful:', result);
   return result;
 }
 
 export async function updateCustomer(id: string, customerData: Partial<Customer>): Promise<Customer> {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-  console.log('Updating customer with ID:', id, 'Data:', customerData);
+  logger.log('Updating customer with ID:', id, 'Data:', customerData);
 
   const response = await fetch(`${API_URL}/api/v1/customers/${id}`, {
     method: 'PUT',
@@ -151,12 +152,12 @@ export async function updateCustomer(id: string, customerData: Partial<Customer>
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Customer update failed:', response.status, errorText);
+    logger.error('Customer update failed:', response.status, errorText);
     throw new Error(`Failed to update customer: ${response.status} ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Customer update successful:', result);
+  logger.log('Customer update successful:', result);
   return result;
 }
 
@@ -164,7 +165,7 @@ export async function updateCustomer(id: string, customerData: Partial<Customer>
 export async function deleteCustomer(id: string): Promise<void> {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-  console.log('Deleting customer with ID:', id);
+  logger.log('Deleting customer with ID:', id);
 
   const response = await fetch(`${API_URL}/api/v1/customers/${id}`, {
     method: 'DELETE',
@@ -174,10 +175,10 @@ export async function deleteCustomer(id: string): Promise<void> {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Customer deletion failed:', response.status, errorText);
+    logger.error('Customer deletion failed:', response.status, errorText);
     throw new Error(`Failed to delete customer: ${response.status} ${response.statusText}`);
   }
 
-  console.log('Customer deletion successful');
+  logger.log('Customer deletion successful');
 }
 

@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 interface OptionEditModalProps {
   option: Option | null;
@@ -60,7 +61,7 @@ export function OptionEditModal({ option, isOpen, onClose, onSave }: OptionEditM
       await onSave(editedOption);
       onClose();
     } catch (error) {
-      console.error('Error saving option:', error);
+      logger.error('Error saving option:', error);
       setError(error instanceof Error ? error.message : 'Failed to save option. Please try again.');
     } finally {
       setSaving(false);

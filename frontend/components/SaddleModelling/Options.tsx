@@ -8,6 +8,7 @@ import { useTableFilters, usePagination } from '@/hooks';
 import { getOptionTableColumns } from '@/utils/optionTableColumns';
 import { PageHeader } from '@/components/shared/PageHeader';
 import { fetchOptions, updateOption, deleteOption, createOption, type Option } from '@/services/options';
+import { logger } from '@/utils/logger';
 import { OptionDetailModal } from '@/components/shared/OptionDetailModal';
 import { OptionEditModal } from '@/components/shared/OptionEditModal';
 import { OptionAddModal } from '@/components/shared/OptionAddModal';
@@ -34,7 +35,7 @@ export default function Options() {
     setError('');
     
     try {
-      console.log('Fetching options with filters:', filters);
+      logger.log('Fetching options with filters:', filters);
       const data = await fetchOptions({
         page: pagination.currentPage,
         searchTerm,
@@ -103,7 +104,7 @@ export default function Options() {
       // Refresh data to ensure consistency
       await fetchOptionsData();
     } catch (error) {
-      console.error('Error updating option:', error);
+      logger.error('Error updating option:', error);
       throw error; // Re-throw to let modal handle the error display
     }
   };
@@ -120,7 +121,7 @@ export default function Options() {
         // Refresh data to ensure consistency
         await fetchOptionsData();
       } catch (error) {
-        console.error('Error deleting option:', error);
+        logger.error('Error deleting option:', error);
         setError('Failed to delete option. Please try again.');
       }
     }
@@ -139,7 +140,7 @@ export default function Options() {
       fetchOptionsData();
       setIsAddModalOpen(false);
     } catch (error) {
-      console.error('Error creating option:', error);
+      logger.error('Error creating option:', error);
       throw error; // Re-throw to show error in modal
     }
   };

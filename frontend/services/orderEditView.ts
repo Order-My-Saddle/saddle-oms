@@ -1,5 +1,6 @@
 // Order Edit View API Service - Single endpoint for comprehensive order editing
 import { fetchEntities } from './api';
+import { logger } from '@/utils/logger';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -75,7 +76,7 @@ export interface OrderEditData {
  * Fetch comprehensive order data for editing using the new OrderEditView
  */
 export async function fetchOrderEditData(orderId: number): Promise<OrderEditData> {
-  console.log('Fetching order edit data for:', orderId);
+  logger.log('Fetching order edit data for:', orderId);
   
   try {
     const response = await fetch(`${API_URL}/order_edit/${orderId}`, {
@@ -135,7 +136,7 @@ export async function fetchOrderEditData(orderId: number): Promise<OrderEditData
     };
     
   } catch (error) {
-    console.error('Error fetching order edit data:', error);
+    logger.error('Error fetching order edit data:', error);
     throw error;
   }
 }
@@ -152,7 +153,7 @@ export async function searchCustomers(searchTerm: string): Promise<any[]> {
     });
     return response['hydra:member'] || [];
   } catch (error) {
-    console.error('Error searching customers:', error);
+    logger.error('Error searching customers:', error);
     return [];
   }
 }
@@ -166,7 +167,7 @@ export async function searchFitters(searchTerm: string): Promise<any[]> {
     });
     return response['hydra:member'] || [];
   } catch (error) {
-    console.error('Error searching fitters:', error);
+    logger.error('Error searching fitters:', error);
     return [];
   }
 }
@@ -175,7 +176,7 @@ export async function searchFitters(searchTerm: string): Promise<any[]> {
  * Save order changes (use existing update order endpoint)
  */
 export async function saveOrderEditData(orderId: number, orderData: Partial<OrderEditData>): Promise<any> {
-  console.log('Saving order edit data:', orderId, orderData);
+  logger.log('Saving order edit data:', orderId, orderData);
   
   try {
     // Use the enriched orders endpoint for updates
@@ -195,7 +196,7 @@ export async function saveOrderEditData(orderId: number, orderData: Partial<Orde
     
     return await response.json();
   } catch (error) {
-    console.error('Error saving order edit data:', error);
+    logger.error('Error saving order edit data:', error);
     throw error;
   }
 }

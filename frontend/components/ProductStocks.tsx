@@ -9,6 +9,7 @@ import { getProductStockTableColumns } from '@/utils/productStockTableColumns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
+import { logger } from '@/utils/logger';
 
 export interface ProductStock {
   id: string;
@@ -50,13 +51,13 @@ export default function ProductStocks() {
   
   // Handle view product stock details
   const handleViewProductStock = (productStock: ProductStock) => {
-    console.log('View product stock', productStock);
+    logger.log('View product stock', productStock);
     // Implement view logic
   };
   
   // Handle edit product stock
   const handleEditProductStock = (productStock: ProductStock) => {
-    console.log('Edit product stock', productStock);
+    logger.log('Edit product stock', productStock);
     // Implement edit logic
   };
 

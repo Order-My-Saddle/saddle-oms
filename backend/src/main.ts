@@ -2,6 +2,7 @@ import "reflect-metadata";
 import "dotenv/config";
 import {
   ClassSerializerInterceptor,
+  LogLevel,
   ValidationPipe,
   VersioningType,
 } from "@nestjs/common";
@@ -15,7 +16,13 @@ import { AllConfigType } from "./config/config.type";
 import { ResolvePromisesInterceptor } from "./utils/serializer.interceptor";
 
 async function bootstrap() {
+  const debugLog = process.env.DEBUG_LOG === "true";
+  const logLevels: LogLevel[] = debugLog
+    ? ["error", "warn", "log", "debug", "verbose"]
+    : ["error", "warn", "log"];
+
   const app = await NestFactory.create(AppModule, {
+    logger: logLevels,
     cors: {
       origin: ["http://localhost:3000"],
       credentials: true,

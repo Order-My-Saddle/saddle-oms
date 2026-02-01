@@ -1,4 +1,5 @@
 import { fetchEntities } from './api';
+import { logger } from '@/utils/logger';
 
 function getToken() {
   if (typeof window !== 'undefined') {
@@ -7,22 +8,22 @@ function getToken() {
       const stored = localStorage.getItem('auth_token');
       if (stored && stored !== 'null') {
         const parsedToken = JSON.parse(stored);
-        console.log('🔑 Found token in auth_token localStorage');
+        logger.log('🔑 Found token in auth_token localStorage');
         return parsedToken;
       }
     } catch (e) {
-      console.log('🔑 Failed to parse auth_token from localStorage, trying token key...');
+      logger.log('🔑 Failed to parse auth_token from localStorage, trying token key...');
     }
 
     // Check localStorage for 'token' key
     try {
       const token = localStorage.getItem('token');
       if (token && token !== 'null') {
-        console.log('🔑 Found token in token localStorage');
+        logger.log('🔑 Found token in token localStorage');
         return token;
       }
     } catch (e) {
-      console.log('🔑 No token found in localStorage, trying cookies...');
+      logger.log('🔑 No token found in localStorage, trying cookies...');
     }
 
     // Fallback to cookies
@@ -30,11 +31,11 @@ function getToken() {
     for (let cookie of cookies) {
       const [name, value] = cookie.trim().split('=');
       if (name === 'token') {
-        console.log('🔑 Found token in cookies');
+        logger.log('🔑 Found token in cookies');
         return value;
       }
     }
-    console.log('🔑 No token found anywhere');
+    logger.log('🔑 No token found anywhere');
   }
   return null;
 }
@@ -84,14 +85,14 @@ export async function fetchSuppliers({
   orderBy?: string;
   order?: 'asc' | 'desc';
 } = {}): Promise<SuppliersResponse> {
-  console.log('fetchSuppliers: Called with params:', { page, searchTerm, filters, orderBy, order });
+  logger.log('fetchSuppliers: Called with params:', { page, searchTerm, filters, orderBy, order });
   
   // Build filter parameters for API Platform
   const extraParams: Record<string, string | number | boolean> = {};
 
   // Handle search term by filtering on name and username
   if (searchTerm && searchTerm.trim()) {
-    console.log(`fetchSuppliers: Processing searchTerm:`, searchTerm);
+    logger.log(`fetchSuppliers: Processing searchTerm:`, searchTerm);
     // Use name filter for partial matching (the API should support partial matching on name)
     extraParams['name'] = searchTerm.trim();
   }
@@ -99,7 +100,7 @@ export async function fetchSuppliers({
   // Handle individual field filters
   Object.entries(filters).forEach(([key, value]) => {
     if (value && value.trim()) {
-      console.log(`fetchSuppliers: Processing filter ${key}:`, value);
+      logger.log(`fetchSuppliers: Processing filter ${key}:`, value);
       // For text fields, use partial matching
       if (key === 'name' || key === 'username' || key === 'city' || key === 'country') {
         extraParams[key] = value;
@@ -115,7 +116,7 @@ export async function fetchSuppliers({
     }
   });
 
-  console.log('fetchSuppliers: Calling fetchEntities with entity "factories" and params:', extraParams);
+  logger.log('fetchSuppliers: Calling fetchEntities with entity "factories" and params:', extraParams);
 
   return await fetchEntities({
     entity: 'factories',
@@ -168,7 +169,7 @@ export async function createSupplier(supplierData: Partial<Supplier>): Promise<S
     entities: [entity]
   };
 
-  console.log('Attempting supplier creation with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
+  logger.log('Attempting supplier creation with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
 
   const response = await fetch(`${API_URL}/save`, {
     method: 'POST',
@@ -186,17 +187,17 @@ export async function createSupplier(supplierData: Partial<Supplier>): Promise<S
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Supplier creation failed:', response.status, errorText);
+    logger.error('Supplier creation failed:', response.status, errorText);
     throw new Error(`Failed to create supplier: ${response.status} ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Supplier creation result:', result);
+  logger.log('Supplier creation result:', result);
 
   // Check for errors in SaveBundle response
   if (result.Errors && result.Errors.length > 0) {
-    console.error('SaveBundle errors:', result.Errors);
-    console.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
+    logger.error('SaveBundle errors:', result.Errors);
+    logger.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
     const errorMessages = result.Errors.map((err: any) => {
       return err.ErrorMessage || err.message || err.Message || err.error || err.description || JSON.stringify(err);
     }).join(', ');
@@ -210,7 +211,7 @@ export async function createSupplier(supplierData: Partial<Supplier>): Promise<S
     return result.entities[0];
   } else {
     // If no entity returned in SaveBundle but no errors, creation was likely successful
-    console.log('No entities in SaveBundle response but no errors, returning optimistic data');
+    logger.log('No entities in SaveBundle response but no errors, returning optimistic data');
     return {
       id: 'pending', // Will be set by backend
       ...supplierData
@@ -262,7 +263,7 @@ export async function updateSupplier(id: number | string, supplierData: Partial<
     entities: [entity]
   };
 
-  console.log('Attempting supplier update with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
+  logger.log('Attempting supplier update with BreezeJS SaveBundle:', JSON.stringify(saveBundle, null, 2));
 
   const response = await fetch(`${API_URL}/save`, {
     method: 'POST',
@@ -280,18 +281,18 @@ export async function updateSupplier(id: number | string, supplierData: Partial<
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('Update supplier error response:', errorText);
+    logger.error('Update supplier error response:', errorText);
     throw new Error(`Failed to update supplier: ${response.statusText}`);
   }
 
   const result = await response.json();
-  console.log('Supplier update result:', result);
+  logger.log('Supplier update result:', result);
 
   // Check for errors in SaveBundle response
   if (result.Errors && result.Errors.length > 0) {
-    console.error('SaveBundle errors:', result.Errors);
+    logger.error('SaveBundle errors:', result.Errors);
     // Log the full error structure to understand the format
-    console.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
+    logger.error('Full error objects:', JSON.stringify(result.Errors, null, 2));
     const errorMessages = result.Errors.map((err: any) => {
       // Try different error message fields
       return err.ErrorMessage || err.message || err.Message || err.error || err.description || JSON.stringify(err);
@@ -308,7 +309,7 @@ export async function updateSupplier(id: number | string, supplierData: Partial<
     return result.entities[0];
   } else {
     // If no entity returned in SaveBundle but no errors, update was likely successful
-    console.log('No entities in SaveBundle response but no errors, returning optimistic data');
+    logger.log('No entities in SaveBundle response but no errors, returning optimistic data');
     return {
       id: id,
       ...supplierData

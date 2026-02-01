@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/shared/PageHeader';
 import { Warehouse, deleteWarehouse } from '@/services/warehouses';
 import { useUserRole } from '@/hooks/useUserRole';
 import { hasScreenPermission } from '@/utils/rolePermissions';
+import { logger } from '@/utils/logger';
 
 export default function Warehouses() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -77,7 +78,7 @@ export default function Warehouses() {
       setIsDeleteOpen(false);
       setSelectedWarehouse(null);
     } catch (error) {
-      console.error('Failed to delete warehouse:', error);
+      logger.error('Failed to delete warehouse:', error);
       // TODO: Show error notification
     }
   };
