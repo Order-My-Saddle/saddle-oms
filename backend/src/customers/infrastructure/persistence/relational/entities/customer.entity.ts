@@ -1,9 +1,4 @@
-import {
-  Column,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-} from "typeorm";
+import { Column, Entity, Index, PrimaryGeneratedColumn } from "typeorm";
 
 /**
  * Customer TypeORM Entity
@@ -75,7 +70,11 @@ export class CustomerEntity {
   }
 
   get hasFitter(): boolean {
-    return this.fitterId !== null && this.fitterId !== undefined && this.fitterId !== 0;
+    return (
+      this.fitterId !== null &&
+      this.fitterId !== undefined &&
+      this.fitterId !== 0
+    );
   }
 
   get displayName(): string {

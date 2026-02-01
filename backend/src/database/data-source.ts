@@ -33,9 +33,9 @@ export const AppDataSource = new DataSource({
         ? {
             rejectUnauthorized:
               process.env.DATABASE_REJECT_UNAUTHORIZED === "true",
-            ca: process.env.DATABASE_CA ?? undefined,
-            key: process.env.DATABASE_KEY ?? undefined,
-            cert: process.env.DATABASE_CERT ?? undefined,
+            ca: process.env.DATABASE_CA?.replace(/\\n/g, "\n") ?? undefined,
+            key: process.env.DATABASE_KEY?.replace(/\\n/g, "\n") ?? undefined,
+            cert: process.env.DATABASE_CERT?.replace(/\\n/g, "\n") ?? undefined,
           }
         : undefined,
   },

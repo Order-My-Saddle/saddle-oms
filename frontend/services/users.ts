@@ -1,6 +1,22 @@
 import { fetchEntities } from './api';
 import { User, UserRole } from '@/types/Role';
 
+const backendRoleToFrontend: Record<string, UserRole> = {
+  admin: UserRole.ADMIN,
+  fitter: UserRole.FITTER,
+  factory: UserRole.SUPPLIER,
+  supervisor: UserRole.SUPERVISOR,
+  customsaddler: UserRole.SUPPLIER,
+  user: UserRole.USER,
+};
+
+function mapBackendRole(typeName?: string): UserRole {
+  if (!typeName) return UserRole.USER;
+  // If already in ROLE_ format, return as-is
+  if (typeName.startsWith('ROLE_')) return typeName as UserRole;
+  return backendRoleToFrontend[typeName.toLowerCase()] || UserRole.USER;
+}
+
 export interface CreateUserData {
   username: string;
   email?: string;
@@ -126,23 +142,15 @@ export async function fetchUsers({
   const backendFilters: Record<string, string> = {};
 
   // Map frontend filters to backend format
+  if (filters.username) backendFilters.username = filters.username;
   if (filters.email) backendFilters.email = filters.email;
   if (filters.firstName) backendFilters.firstName = filters.firstName;
   if (filters.lastName) backendFilters.lastName = filters.lastName;
   if (filters.role) backendFilters.role = filters.role;
-  if (filters.username) {
-    // Map username search to email search (closest match)
-    backendFilters.email = filters.username;
-  }
 
-  // Handle search term - map to email filter for now
+  // Search bar: searches across username, name, and email
   if (searchTerm.trim()) {
-    if (searchTerm.includes('@')) {
-      backendFilters.email = searchTerm;
-    } else {
-      // For non-email searches, try firstName
-      backendFilters.firstName = searchTerm;
-    }
+    backendFilters.search = searchTerm.trim();
   }
 
   // Add filters as JSON if we have any
@@ -193,26 +201,34 @@ export async function fetchUsers({
 
   // Map backend response to frontend format
   const mappedUsers = (result.data || []).map((backendUser: any) => {
-    // Map backend user fields to frontend User type
+    // Split single "name" field into firstName/lastName
+    const nameParts = (backendUser.name || '').split(' ').filter((p: string) => p.length > 0);
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
     return {
       ...backendUser,
-      // Backend already has firstName/lastName, use them directly
-      firstName: backendUser.firstName || '',
-      lastName: backendUser.lastName || '',
-      // Ensure we have a proper username field
-      username: backendUser.email || backendUser.username || '',
+      firstName: backendUser.firstName || firstName,
+      lastName: backendUser.lastName || lastName,
+      username: backendUser.username || '',
+      email: backendUser.email || '',
+      // Map backend typeName to frontend UserRole enum format
+      role: mapBackendRole(backendUser.typeName || backendUser.role),
     };
   });
 
-  console.log(`🔍 fetchUsers: Processed ${mappedUsers.length} users from backend`);
+  const totalItems = result.totalCount ?? result.data?.length ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+
+  console.log(`🔍 fetchUsers: Processed ${mappedUsers.length} users from backend (total: ${totalItems})`);
 
   return {
     'hydra:member': mappedUsers,
-    'hydra:totalItems': result.data?.length || 0,
-    hasNext: result.hasNext,
+    'hydra:totalItems': totalItems,
+    hasNext: result.hasNextPage ?? result.hasNext ?? false,
     hasPrevious: page > 1,
     currentPage: page,
-    totalPages: result.hasNext ? page + 1 : page, // Estimate since backend uses infinity pagination
+    totalPages,
   };
 }
 
@@ -612,20 +628,9 @@ export async function fetchUserCount(): Promise<number> {
     }
 
     const result = await response.json();
-
-    // For infinity pagination, we estimate based on whether there are more results
-    // This is a simple approach - for exact counts, backend would need modification
-    const currentPageCount = result.data?.length || 0;
-
-    if (result.hasNext) {
-      // If there are more pages, there are at least more than current page
-      console.log('📊 Has more pages, estimating user count > 1 page');
-      return currentPageCount > 0 ? 50 : 0; // Rough estimate for UI display
-    } else {
-      // This is the only page, so count is exact
-      console.log('📊 Only page, exact count:', currentPageCount);
-      return currentPageCount;
-    }
+    const total = result.totalCount ?? result.data?.length ?? 0;
+    console.log('📊 Total user count:', total);
+    return total;
   } catch (error) {
     console.error('📊 Error fetching user count:', error);
     return 0;

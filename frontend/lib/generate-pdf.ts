@@ -1,47 +1,26 @@
 import jsPDF from 'jspdf';
 
+interface SaddleSpec {
+  optionId: number;
+  optionName: string;
+  displayValue: string;
+}
+
 interface OrderData {
-  orderId: number;
-  saddle: {
-    model: string;
-    leatherType: string;
-    seatSize: string;
-    flapLength: string;
-    kneeRoll: string;
-    frontGusset: string;
-    rearGusset: string;
-    gussetLeather: string;
-    panelMaterial: string;
-    treeSize: string;
-    stirrupBars: string;
-    billets: string;
-    seatLeather: string;
-    seatOption: string;
-    cantleOption: string;
-    skirt: string;
-    kneeRollPadLeather: string;
-    flapLeather: string;
-    outerReinforcement: string;
-    loops: string;
-    panelLeather: string;
-    facingFront: string;
-    facingBackRear: string;
-    gulletLining: string;
-    stitchColor: string;
-    weltColor: string;
-  };
+  orderId: number | string;
+  saddle: Record<string, string>;
+  saddleSpecs: SaddleSpec[];
   fitter: {
-    inInventory: string;
-    userName: string;
     fullName: string;
+    email: string;
+    [key: string]: string;
+  };
+  customer?: {
+    name: string;
     address: string;
-    zipcode: string;
-    state: string;
     city: string;
+    zipcode: string;
     country: string;
-    phone: string;
-    cell: string;
-    currency: string;
     email: string;
   };
   price: {
@@ -52,97 +31,268 @@ interface OrderData {
     fittingEval: number;
     callFee: number;
     girth: number;
-    additional: string;
-    shipping: string;
-    tax: string;
+    additional: number;
+    shipping: number;
+    tax: number;
     total: number;
   };
   notes: string;
   serialno: string;
   orderDate: string;
+  orderStatus: string;
+  currency: string;
+  history: Array<{ date: string; user: string; action: string }>;
 }
 
+// Option group mapping based on the Options table "group" column
+const optionGroups: Record<string, string> = {
+  'Seat Size': '',
+  'Tree Size': '',
+  'Billets': '',
+  'Outer Reinforcement (Wear Strip)': '',
+  'Stirrup Bars': 'SEAT',
+  'Seat Leather': 'SEAT',
+  'SEAT Option': 'SEAT',
+  'Skirt': 'SEAT',
+  'Welt Color': 'SEAT',
+  'CANTLE Option': 'CANTLE',
+  'Flap Length': 'FLAPS',
+  'Knee Roll': 'FLAPS',
+  'Knee Roll/ Pad Leather': 'FLAPS',
+  'Flap Leather': 'FLAPS',
+  'Loops': 'FLAPS',
+  'Facing - Front (on FLAPS for NON Mono)': 'FLAPS',
+  'Stitch Color': 'FLAPS',
+  'Front Gusset': 'PANEL',
+  'Rear Gusset': 'PANEL',
+  'Gusset Leather': 'PANEL',
+  'Panel Material': 'PANEL',
+  'Panel Leather': 'PANEL',
+  'Facing - Back/Rear': 'PANEL',
+  'Gullet Lining': 'PANEL',
+};
+
+function formatNow(): string {
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2, '0');
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const yyyy = now.getFullYear();
+  const h = now.getHours();
+  const min = String(now.getMinutes()).padStart(2, '0');
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${dd}-${mm}-${yyyy} ${h12}:${min}${ampm}`;
+}
+
+function drawCheckbox(doc: jsPDF, x: number, y: number, size: number = 3) {
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.3);
+  doc.rect(x, y - size + 0.5, size, size);
+}
+
+function addHeader(doc: jsPDF, title: string) {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text(title, 20, 20);
+
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'italic');
+  doc.text('Order my saddle', pageWidth - 20, 20, { align: 'right' });
+  doc.setFont('helvetica', 'normal');
+}
+
+/**
+ * Generate the "Print order" PDF matching production format.
+ */
 export function generateOrderPDF(orderData: OrderData) {
   const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 20;
-  const contentWidth = pageWidth - (margin * 2);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const contentWidth = pageWidth - margin * 2;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const labelX = margin + 5;
+  const valueX = margin + 95; // Column for checkbox + value
 
-  // Helper function to add wrapped text
-  const addWrappedText = (text: string, x: number, y: number, maxWidth: number) => {
-    const lines = doc.splitTextToSize(text, maxWidth);
-    doc.text(lines, x, y);
-    return lines.length;
-  };
+  addHeader(doc, `Order status printed on ${formatNow()}`);
 
-  // Add header
-  doc.setFontSize(16);
-  doc.text(`Order #${orderData.orderId}`, margin, 20);
-  doc.setFontSize(10);
-  doc.text(`Order date: ${orderData.orderDate}`, margin, 30);
+  let y = 40;
+  const boxStartY = y;
 
-  // Add saddle information section
-  doc.setFontSize(12);
-  doc.text('Saddle Information', margin, 45);
-  doc.setFontSize(10);
-  let y = 55;
-
-  // Add saddle details
-  Object.entries(orderData.saddle).forEach(([key, value]) => {
-    const label = key.replace(/([A-Z])/g, ' $1').trim();
-    const text = `${label}: ${value}`;
-    const lines = addWrappedText(text, margin, y, contentWidth);
-    y += (lines * 5);
-  });
-
-  // Add fitter information section
+  // --- Order ID header line ---
   y += 10;
-  doc.setFontSize(12);
-  doc.text('Fitter Information', margin, y);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Order ID: NL ${orderData.orderId}`, labelX, y);
+  doc.text(orderData.fitter.fullName, pageWidth / 2, y, { align: 'center' });
+  doc.text(`Status: ${orderData.orderStatus}`, pageWidth - margin - 5, y, { align: 'right' });
+
+  y += 8;
+  doc.setFontSize(9);
+
+  // --- Model, Leathertype, SerialNumber ---
+  const headerFields: [string, string][] = [
+    ['Model:', orderData.saddle.model || ''],
+    ['Leathertype:', orderData.saddle.leatherType || ''],
+    ['SerialNumber:', orderData.serialno || ''],
+  ];
+  for (const [label, value] of headerFields) {
+    doc.setFont('helvetica', 'bold');
+    doc.text(label, labelX, y);
+    doc.setFont('helvetica', 'normal');
+    drawCheckbox(doc, valueX, y);
+    doc.text(value, valueX + 6, y);
+    y += 6;
+  }
+
+  y += 4;
   doc.setFontSize(10);
-  y += 10;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Options', labelX, y);
+  y += 7;
+  doc.setFontSize(9);
 
-  // Add fitter details
-  Object.entries(orderData.fitter).forEach(([key, value]) => {
-    const label = key.replace(/([A-Z])/g, ' $1').trim();
-    const text = `${label}: ${value}`;
-    const lines = addWrappedText(text, margin, y, contentWidth);
-    y += (lines * 5);
-  });
+  // --- Group specs ---
+  const ungrouped: SaddleSpec[] = [];
+  const grouped: Record<string, SaddleSpec[]> = { SEAT: [], CANTLE: [], FLAPS: [], PANEL: [] };
 
-  // Add price information section
-  y += 10;
-  doc.setFontSize(12);
-  doc.text('Price Information', margin, y);
-  doc.setFontSize(10);
-  y += 10;
-
-  // Add price details
-  Object.entries(orderData.price).forEach(([key, value]) => {
-    const label = key.replace(/([A-Z])/g, ' $1').trim();
-    let displayValue = value;
-    if (typeof value === 'number') {
-      displayValue = value.toLocaleString('en-US', {
-        style: 'currency',
-        currency: 'USD'
-      });
+  for (const spec of orderData.saddleSpecs) {
+    const group = optionGroups[spec.optionName];
+    if (group && grouped[group]) {
+      grouped[group].push(spec);
+    } else {
+      ungrouped.push(spec);
     }
-    const text = `${label}: ${displayValue}`;
-    const lines = addWrappedText(text, margin, y, contentWidth);
-    y += (lines * 5);
-  });
+  }
 
-  // Add notes section
-  y += 10;
-  doc.setFontSize(12);
-  doc.text('Notes', margin, y);
-  doc.setFontSize(10);
-  y += 10;
-  addWrappedText(orderData.notes, margin, y, contentWidth);
+  function checkPageBreak(needed: number) {
+    if (y + needed > pageHeight - 30) {
+      // Draw partial border on current page
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.rect(margin, boxStartY, contentWidth, y - boxStartY + 5);
+      doc.addPage();
+      y = 20;
+    }
+  }
 
-  // Add serial number
-  y += 20;
-  doc.text(`Serial Number: ${orderData.serialno}`, margin, y);
+  function renderSpec(spec: SaddleSpec, labelIndent: number) {
+    const val = spec.displayValue || '';
+    const maxValWidth = contentWidth - (valueX - margin) - 10;
+    const lines = doc.splitTextToSize(val, maxValWidth);
+    const lineHeight = lines.length * 5;
+    checkPageBreak(lineHeight + 2);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${spec.optionName}:`, labelIndent, y);
+    doc.setFont('helvetica', 'normal');
+    drawCheckbox(doc, valueX, y);
+    doc.text(lines, valueX + 6, y);
+    y += Math.max(lineHeight, 5) + 1;
+  }
+
+  // Ungrouped specs (Seat Size, Tree Size, Billets, Outer Reinforcement)
+  for (const spec of ungrouped) {
+    renderSpec(spec, labelX);
+  }
+
+  // Grouped specs
+  const groupOrder = ['SEAT', 'CANTLE', 'FLAPS', 'PANEL'];
+  for (const groupName of groupOrder) {
+    const specs = grouped[groupName];
+    if (specs.length === 0) continue;
+
+    y += 3;
+    checkPageBreak(12);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${groupName}:`, labelX, y);
+    doc.setFontSize(9);
+    y += 6;
+
+    for (const spec of specs) {
+      renderSpec(spec, labelX + 20);
+    }
+  }
+
+  // Draw border box
+  const boxHeight = y - boxStartY + 10;
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.5);
+  doc.rect(margin, boxStartY, contentWidth, boxHeight);
+
+  return doc;
+}
+
+/**
+ * Generate the "Print label" PDF - 2-up label format.
+ */
+export function generateLabelPDF(orderData: OrderData) {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  addHeader(doc, `Printed labels on ${formatNow()}`);
+
+  const labelWidth = (pageWidth - 50) / 2;
+  const labelHeight = 130;
+  const startY = 35;
+
+  const labelSpecs = [
+    'Seat Size', 'Tree Size', 'Flap Length', 'Knee Roll',
+    'Front Gusset', 'Rear Gusset', 'Gusset Leather', 'Panel Material',
+  ];
+
+  function drawLabel(x: number, topY: number) {
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.5);
+    doc.rect(x, topY, labelWidth, labelHeight);
+
+    let ly = topY + 8;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Order ID: ${orderData.orderId} NL`, x + 5, ly);
+
+    ly += 8;
+    doc.setFontSize(8);
+    const labelCol = x + 5;
+    const valCol = x + 35;
+
+    const fields: [string, string[]][] = [
+      ['Order date:', [orderData.orderDate]],
+      ['Fitter:', [orderData.fitter.fullName, orderData.fitter.email]],
+      ['', ['']], // spacer
+      ['Status:', [orderData.orderStatus]],
+      ['Model:', [orderData.saddle.model || '']],
+      ['Leathertype:', [orderData.saddle.leatherType || '']],
+    ];
+
+    for (const [label, lines] of fields) {
+      if (label) {
+        doc.setFont('helvetica', 'bold');
+        doc.text(label, labelCol, ly);
+      }
+      doc.setFont('helvetica', 'normal');
+      for (let i = 0; i < lines.length; i++) {
+        doc.text(lines[i], valCol, ly + (i * 4));
+      }
+      ly += lines.length * 4 + 1;
+    }
+
+    // Saddle specs
+    for (const specName of labelSpecs) {
+      const spec = orderData.saddleSpecs.find(s => s.optionName === specName);
+      if (spec && spec.displayValue) {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${spec.optionName}:`, labelCol, ly);
+        doc.setFont('helvetica', 'normal');
+        doc.text(spec.displayValue, valCol, ly);
+        ly += 5;
+      }
+    }
+  }
+
+  drawLabel(20, startY);
+  drawLabel(20 + labelWidth + 10, startY);
 
   return doc;
 }

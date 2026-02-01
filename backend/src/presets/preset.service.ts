@@ -9,7 +9,6 @@ import { PresetEntity } from "./infrastructure/persistence/relational/entities/p
 import { CreatePresetDto } from "./dto/create-preset.dto";
 import { UpdatePresetDto } from "./dto/update-preset.dto";
 import { PresetDto } from "./dto/preset.dto";
-import { plainToClass } from "class-transformer";
 
 /**
  * Simplified Preset Service using direct TypeORM operations
@@ -146,9 +145,11 @@ export class PresetService {
    * Convert entity to DTO
    */
   private toDto(preset: PresetEntity): PresetDto {
-    const dto = plainToClass(PresetDto, preset, {
-      excludeExtraneousValues: true,
-    });
+    const dto = new PresetDto();
+    dto.id = preset.id;
+    dto.name = preset.name;
+    dto.sequence = preset.sequence;
+    dto.deleted = preset.deleted;
     dto.isActive = preset.deleted === 0;
     dto.displayName = preset.name;
     return dto;

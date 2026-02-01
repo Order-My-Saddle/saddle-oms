@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsOptional, IsString, ValidateNested } from "class-validator";
 import { Transform, Type, plainToInstance } from "class-transformer";
 import { User } from "../domain/user";
 import { RoleDto } from "../../roles/dto/role.dto";
@@ -11,11 +11,19 @@ import {
 
 export class FilterUserDto extends BaseFilterDto {
   @ApiPropertyOptional({
+    description: "Filter by username",
+    example: "adamwhitehouse",
+  })
+  @IsOptional()
+  @IsString()
+  username?: string;
+
+  @ApiPropertyOptional({
     description: "Filter by user email",
     example: "john@example.com",
   })
   @IsOptional()
-  @IsEmail()
+  @IsString()
   email?: string;
 
   @ApiPropertyOptional({
@@ -41,6 +49,14 @@ export class FilterUserDto extends BaseFilterDto {
   @IsOptional()
   @IsString()
   role?: string;
+
+  @ApiPropertyOptional({
+    description: "Search across username, name, and email",
+    example: "adam",
+  })
+  @IsOptional()
+  @IsString()
+  search?: string;
 
   @ApiPropertyOptional({
     type: RoleDto,
@@ -71,18 +87,20 @@ export class SortUserDto extends SortDto {
   direction: "asc" | "desc";
 
   // Legacy compatibility
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: "Legacy field name for sorting",
     deprecated: true,
   })
+  @IsOptional()
   @Type(() => String)
   @IsString()
   orderBy?: keyof User;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: "Legacy sort direction",
     deprecated: true,
   })
+  @IsOptional()
   @IsString()
   order?: string;
 }

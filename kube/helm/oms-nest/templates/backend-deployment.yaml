@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "oms-nest.fullname" . }}-backend
+  labels:
+    {{- include "oms-nest.backend.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.backend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "oms-nest.backend.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        {{- include "oms-nest.backend.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.backend.migration.enabled }}
+      initContainers:
+        - name: run-migrations
+          image: {{ include "oms-nest.backend.image" . }}
+          command: {{- toYaml .Values.backend.migration.command | nindent 12 }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.secrets.name }}
+          env:
+            - name: NODE_ENV
+              value: {{ .Values.global.environment }}
+            - name: APP_PORT
+              value: {{ .Values.backend.port | quote }}
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      {{- end }}
+      containers:
+        - name: backend
+          image: {{ include "oms-nest.backend.image" . }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.backend.port }}
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: {{ .Values.secrets.name }}
+          env:
+            - name: NODE_ENV
+              value: {{ .Values.global.environment }}
+            - name: APP_PORT
+              value: {{ .Values.backend.port | quote }}
+            - name: REDIS_HOST
+              value: {{ include "oms-nest.redis.serviceName" . }}
+            - name: REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            {{- if .Values.maildev.enabled }}
+            - name: MAIL_HOST
+              value: {{ include "oms-nest.maildev.serviceName" . }}
+            - name: MAIL_PORT
+              value: {{ .Values.maildev.ports.smtp | quote }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.backend.probes.liveness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.backend.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.backend.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.backend.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.backend.probes.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.backend.probes.readiness.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.backend.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.backend.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.backend.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.backend.probes.readiness.failureThreshold }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.backend.probes.startup.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.backend.probes.startup.initialDelaySeconds }}
+            periodSeconds: {{ .Values.backend.probes.startup.periodSeconds }}
+            timeoutSeconds: {{ .Values.backend.probes.startup.timeoutSeconds }}
+            failureThreshold: {{ .Values.backend.probes.startup.failureThreshold }}
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+      terminationGracePeriodSeconds: 30

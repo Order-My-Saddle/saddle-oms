@@ -1,0 +1,38 @@
+# Staging environment overrides
+
+global:
+  environment: staging
+
+backend:
+  replicas: 2
+  hpa:
+    minReplicas: 2
+    maxReplicas: 6
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1000m"
+      memory: 1Gi
+
+frontend:
+  replicas: 1
+  hpa:
+    minReplicas: 1
+    maxReplicas: 4
+
+redis:
+  persistence:
+    enabled: false
+
+maildev:
+  enabled: true
+
+ingress:
+  frontend:
+    host: nest-staging.ordermysaddle.com
+  backend:
+    host: api-nest-staging.ordermysaddle.com
+  tls:
+    secretName: oms-nest-staging-tls

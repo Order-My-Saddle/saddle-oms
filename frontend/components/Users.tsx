@@ -44,7 +44,7 @@ export default function Users() {
       const result = await fetchUsers({
         page: pagination.currentPage,
         limit: pagination.itemsPerPage,
-        orderBy: 'email', // Use backend-supported field
+        orderBy: 'username',
         order: 'asc',
         searchTerm: searchTerm,
         filters: filters,
@@ -270,7 +270,7 @@ export default function Users() {
     <div className="p-8 space-y-6">
       <PageHeader
         title="Users"
-        description={`Manage and track all users${totalUsers > 0 ? ` (${totalUsers}${hasNext ? '+' : ''} users)` : ''}`}
+        description={`Manage and track all users${totalUsers > 0 ? ` (${totalUsers} users)` : ''}`}
         actions={
           canCreate ? (
             <Button onClick={handleCreateUser} className="bg-[#7b2326] hover:bg-[#8b2329] text-white">

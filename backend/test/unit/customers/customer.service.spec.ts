@@ -8,7 +8,6 @@ import { Email } from "../../../src/customers/domain/value-objects/email.value-o
 import { CustomerStatus } from "../../../src/customers/domain/value-objects/customer-status.value-object";
 import { CreateCustomerDto } from "../../../src/customers/dto/create-customer.dto";
 import { UpdateCustomerDto } from "../../../src/customers/dto/update-customer.dto";
-import { QueryCustomerDto } from "../../../src/customers/dto/query-customer.dto";
 import { CustomerMapper } from "../../../src/customers/mappers/customer-dto.mapper";
 
 // Mock the static methods
@@ -94,6 +93,7 @@ describe("CustomerService", () => {
       findById: jest.fn(),
       findByEmail: jest.fn(),
       findAll: jest.fn(),
+      findAllPaginated: jest.fn(),
       findByFitterId: jest.fn(),
       findActiveCustomersWithoutFitter: jest.fn(),
       countByFitterId: jest.fn(),
@@ -103,6 +103,7 @@ describe("CustomerService", () => {
       countActive: jest.fn(),
       findActive: jest.fn(),
       bulkCreate: jest.fn(),
+      existsByEmail: jest.fn(),
     };
 
     const mockCustomerMapper = {
@@ -214,51 +215,87 @@ describe("CustomerService", () => {
   });
 
   describe("findAll", () => {
-    it("should return all customers with basic filters", async () => {
+    it("should return paginated customers with filters", async () => {
       // Arrange
-      const queryDto = {
-        getCustomerFilters: jest.fn().mockReturnValue({
-          fitterId: 2001,
-          country: "USA",
-          city: "New York",
-          active: true,
-        }),
-      } as unknown as QueryCustomerDto;
-
       const customers = [mockCustomer];
-      customerRepository.findAll.mockResolvedValue(customers);
+      customerRepository.findAllPaginated.mockResolvedValue({
+        customers,
+        total: 1,
+      });
 
       // Act
-      const result = await service.findAll(queryDto);
+      const result = await service.findAll(
+        1,
+        30,
+        "John",
+        undefined,
+        "New York",
+        "USA",
+        2001,
+      );
 
       // Assert
-      expect(result).toEqual([mockCustomerDto]);
-      expect(queryDto.getCustomerFilters).toHaveBeenCalled();
-      expect(customerRepository.findAll).toHaveBeenCalledWith({
+      expect(result).toEqual({
+        data: [mockCustomerDto],
+        total: 1,
+        pages: 1,
+      });
+      expect(customerRepository.findAllPaginated).toHaveBeenCalledWith({
+        page: 1,
+        limit: 30,
         fitterId: 2001,
+        name: "John",
+        email: undefined,
         country: "USA",
         city: "New York",
-        isActive: true,
+        search: undefined,
+        id: undefined,
       });
       expect(customerMapper.toDto).toHaveBeenCalledWith(mockCustomer);
     });
 
-    it("should return empty array when no customers match filters", async () => {
+    it("should return empty result when no customers match filters", async () => {
       // Arrange
-      const queryDto = {
-        getCustomerFilters: jest.fn().mockReturnValue({
-          email: "nonexistent@example.com",
-        }),
-      } as unknown as QueryCustomerDto;
-
-      customerRepository.findAll.mockResolvedValue([]);
+      customerRepository.findAllPaginated.mockResolvedValue({
+        customers: [],
+        total: 0,
+      });
 
       // Act
-      const result = await service.findAll(queryDto);
+      const result = await service.findAll(
+        1,
+        30,
+        undefined,
+        "nonexistent@example.com",
+      );
 
       // Assert
-      expect(result).toEqual([]);
-      expect(customerRepository.findAll).toHaveBeenCalled();
+      expect(result).toEqual({ data: [], total: 0, pages: 0 });
+      expect(customerRepository.findAllPaginated).toHaveBeenCalled();
+    });
+
+    it("should use default page and limit when not provided", async () => {
+      // Arrange
+      customerRepository.findAllPaginated.mockResolvedValue({
+        customers: [],
+        total: 0,
+      });
+
+      // Act
+      await service.findAll();
+
+      // Assert
+      expect(customerRepository.findAllPaginated).toHaveBeenCalledWith({
+        page: 1,
+        limit: 30,
+        fitterId: undefined,
+        name: undefined,
+        email: undefined,
+        country: undefined,
+        city: undefined,
+        search: undefined,
+        id: undefined,
+      });
     });
   });
 

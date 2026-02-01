@@ -1,0 +1,87 @@
+{{- if .Values.prometheusRules.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "oms-nest.fullname" . }}-alerts
+  labels:
+    {{- include "oms-nest.labels" . | nindent 4 }}
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: oms-nest.rules
+      rules:
+        - alert: OmsBackendDown
+          expr: |
+            up{job="{{ include "oms-nest.fullname" . }}-backend"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            service: oms-nest-backend
+          annotations:
+            summary: "OMS backend is down"
+            description: "OMS NestJS backend has been unreachable for more than 2 minutes."
+
+        - alert: OmsBackendHighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{job="{{ include "oms-nest.fullname" . }}-backend", status=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_total{job="{{ include "oms-nest.fullname" . }}-backend"}[5m]))
+            ) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+            service: oms-nest-backend
+          annotations:
+            summary: "OMS backend high 5xx error rate"
+            description: "OMS backend 5xx error rate is above 5% for the last 5 minutes. Current value: {{ "{{ $value | humanizePercentage }}" }}"
+
+        - alert: OmsBackendHighLatency
+          expr: |
+            histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="{{ include "oms-nest.fullname" . }}-backend"}[5m])) by (le)) > 2
+          for: 5m
+          labels:
+            severity: warning
+            service: oms-nest-backend
+          annotations:
+            summary: "OMS backend high latency"
+            description: "OMS backend p95 latency is above 2 seconds for the last 5 minutes. Current value: {{ "{{ $value | humanizeDuration }}" }}"
+
+        - alert: OmsBackendPodRestarting
+          expr: |
+            increase(kube_pod_container_status_restarts_total{container="backend", namespace=~"oms-nest-.*"}[1h]) > 3
+          for: 0m
+          labels:
+            severity: warning
+            service: oms-nest-backend
+          annotations:
+            summary: "OMS backend pod restarting frequently"
+            description: "OMS backend pod {{ "{{ $labels.pod }}" }} has restarted more than 3 times in the last hour."
+
+        - alert: OmsBackendHighMemory
+          expr: |
+            container_memory_working_set_bytes{container="backend", namespace=~"oms-nest-.*"}
+            /
+            container_spec_memory_limit_bytes{container="backend", namespace=~"oms-nest-.*"}
+            > 0.85
+          for: 5m
+          labels:
+            severity: warning
+            service: oms-nest-backend
+          annotations:
+            summary: "OMS backend high memory usage"
+            description: "OMS backend pod {{ "{{ $labels.pod }}" }} memory usage is above 85% of limit. Current value: {{ "{{ $value | humanizePercentage }}" }}"
+
+        - alert: OmsRedisDown
+          expr: |
+            up{job="{{ include "oms-nest.fullname" . }}-redis"} == 0
+            or
+            absent(up{job="{{ include "oms-nest.fullname" . }}-redis"})
+          for: 1m
+          labels:
+            severity: critical
+            service: oms-nest-redis
+          annotations:
+            summary: "OMS Redis is down"
+            description: "OMS in-cluster Redis has been unreachable for more than 1 minute."
+{{- end }}

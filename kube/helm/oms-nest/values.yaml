@@ -1,0 +1,148 @@
+# Default shared values for oms-nest Helm chart
+# Override per environment in values-staging.yaml / values-production.yaml
+
+global:
+  environment: staging
+  imagePullSecrets:
+    - name: ghcr-credentials
+
+backend:
+  image:
+    repository: ghcr.io/ordermysaddle/oms_nest/backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  port: 3001
+  replicas: 2
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1000m"
+      memory: 1Gi
+  probes:
+    liveness:
+      path: /health/live
+      initialDelaySeconds: 30
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      path: /health/ready
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    startup:
+      path: /health
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 5
+      failureThreshold: 30
+  migration:
+    enabled: true
+    command: ["npm", "run", "migration:run"]
+
+frontend:
+  image:
+    repository: ghcr.io/ordermysaddle/oms_nest/frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  port: 3000
+  replicas: 1
+  hpa:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  probes:
+    liveness:
+      path: /
+      initialDelaySeconds: 15
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      path: /
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: 7-alpine
+  port: 6379
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+  persistence:
+    enabled: false
+    size: 2Gi
+    storageClass: do-block-storage
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-issuer
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+  frontend:
+    host: nest-staging.ordermysaddle.com
+  backend:
+    host: api-nest-staging.ordermysaddle.com
+  tls:
+    secretName: oms-nest-staging-tls
+
+secrets:
+  name: oms-nest-secrets
+
+networkPolicies:
+  enabled: true
+
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  path: /metrics
+  port: 3001
+
+prometheusRules:
+  enabled: true
+
+maildev:
+  enabled: false
+  image:
+    repository: maildev/maildev
+    tag: latest
+  ports:
+    web: 1080
+    smtp: 1025
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi

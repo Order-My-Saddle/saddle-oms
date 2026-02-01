@@ -468,7 +468,7 @@ describe("OrderController", () => {
       orderService.update.mockResolvedValue(updatedOrder);
 
       // Act
-      const result = await controller.update(orderId, updateDto);
+      const result = await controller.update(orderId, updateDto, {} as any);
 
       // Assert
       expect(result).toEqual(updatedOrder);
@@ -489,7 +489,7 @@ describe("OrderController", () => {
       orderService.update.mockResolvedValue(partiallyUpdatedOrder);
 
       // Act
-      const result = await controller.update(orderId, updateDto);
+      const result = await controller.update(orderId, updateDto, {} as any);
 
       // Assert
       expect(result).toEqual(partiallyUpdatedOrder);

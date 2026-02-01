@@ -8,10 +8,12 @@ import {
   Delete,
   UseGuards,
   ParseIntPipe,
+  Query,
 } from "@nestjs/common";
 import { ApiTags, ApiBearerAuth } from "@nestjs/swagger";
 import { PresetService } from "./preset.service";
 import { AuthGuard } from "@nestjs/passport";
+import { AuditLog } from "../audit-logging/decorators";
 
 @ApiTags("Presets")
 @Controller({
@@ -24,13 +26,22 @@ export class PresetController {
   constructor(private readonly presetService: PresetService) {}
 
   @Post()
+  @AuditLog({ entity: "Preset" })
   async create(@Body() createPresetDto: any) {
     return this.presetService.create(createPresetDto);
   }
 
   @Get()
-  async findAll() {
-    return this.presetService.findAll();
+  async findAll(
+    @Query("page") page?: number,
+    @Query("limit") limit?: number,
+    @Query("search") search?: string,
+  ) {
+    return this.presetService.findAll(
+      page ? Number(page) : 1,
+      limit ? Number(limit) : 10,
+      search,
+    );
   }
 
   @Get(":id")
@@ -39,6 +50,7 @@ export class PresetController {
   }
 
   @Patch(":id")
+  @AuditLog({ entity: "Preset" })
   async update(
     @Param("id", ParseIntPipe) id: number,
     @Body() updatePresetDto: any,
@@ -47,6 +59,7 @@ export class PresetController {
   }
 
   @Delete(":id")
+  @AuditLog({ entity: "Preset" })
   async remove(@Param("id", ParseIntPipe) id: number) {
     return this.presetService.remove(id);
   }

@@ -38,12 +38,12 @@ export class UsersService {
    * Determine user role based on database fields (user_type and supervisor)
    * from the credentials table.
    *
-   * Priority:
-   * 1. supervisor=1 → supervisor role
-   * 2. user_type=2 → admin role
-   * 3. user_type=3 → factory role
-   * 4. user_type=4 → customsaddler role
-   * 5. user_type=1 → verify in fitters table → fitter role
+   * Role priority:
+   * 1. is_supervisor=1 → supervisor (highest priority, overrides user_type)
+   * 2. user_type=2 → admin
+   * 3. user_type=3 → factory
+   * 4. user_type=4 → customsaddler
+   * 5. user_type=1 → fitter (verified in fitters table)
    * 6. Fallback: check fitters table for legacy cases
    * 7. Default: user role
    *
@@ -58,17 +58,17 @@ export class UsersService {
     userType?: number | null,
     isSupervisor?: number | null,
   ): Promise<{ id: number; name: string }> {
-    // Priority 1: Check supervisor flag from database
+    // Supervisor check takes highest priority
     if (isSupervisor === 1) {
-      const role = await this.roleRepository.findOne({
+      const supervisorRole = await this.roleRepository.findOne({
         where: { name: "supervisor" },
       });
-      return role && role.name
-        ? { id: role.id, name: role.name }
+      return supervisorRole && supervisorRole.name
+        ? { id: supervisorRole.id, name: supervisorRole.name }
         : { id: RoleEnum.supervisor, name: "supervisor" };
     }
 
-    // Priority 2: Use user_type from database
+    // Use user_type from database to determine role
     if (userType !== undefined && userType !== null) {
       switch (userType) {
         case 2: // admin
@@ -247,6 +247,10 @@ export class UsersService {
       sortOptions,
       paginationOptions,
     });
+  }
+
+  count(filterOptions?: FilterUserDto | null): Promise<number> {
+    return this.usersRepository.count(filterOptions);
   }
 
   findById(id: User["id"]): Promise<NullableType<User>> {

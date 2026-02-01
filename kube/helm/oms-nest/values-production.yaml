@@ -1,0 +1,44 @@
+# Production environment overrides
+
+global:
+  environment: production
+
+backend:
+  replicas: 3
+  hpa:
+    minReplicas: 3
+    maxReplicas: 10
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "2000m"
+      memory: 2Gi
+
+frontend:
+  replicas: 2
+  hpa:
+    minReplicas: 2
+    maxReplicas: 6
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1000m"
+      memory: 1Gi
+
+redis:
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClass: do-block-storage
+
+ingress:
+  frontend:
+    host: nest-production.ordermysaddle.com
+  backend:
+    host: api-nest-production.ordermysaddle.com
+  tls:
+    secretName: oms-nest-production-tls

@@ -173,6 +173,87 @@ export class CustomerRepository implements ICustomerRepository {
     return this.mapper.toDomainArray(entities);
   }
 
+  async findAllPaginated(options: {
+    page: number;
+    limit: number;
+    fitterId?: number;
+    name?: string;
+    email?: string;
+    country?: string;
+    city?: string;
+    search?: string;
+    id?: number;
+  }): Promise<{ customers: Customer[]; total: number }> {
+    const { page, limit, fitterId, name, email, country, city, search, id } =
+      options;
+
+    const queryBuilder = this.repository
+      .createQueryBuilder("customer")
+      .where("customer.deleted = 0");
+
+    // Exact ID filter
+    if (id !== undefined) {
+      queryBuilder.andWhere("customer.id = :id", { id });
+    }
+
+    // Universal search: match across name, email, city, country, or ID
+    if (search) {
+      const isNumeric = /^\d+$/.test(search);
+      if (isNumeric) {
+        queryBuilder.andWhere(
+          "(customer.id = :searchId OR customer.name ILIKE :search OR customer.email ILIKE :search OR customer.city ILIKE :search OR customer.country ILIKE :search)",
+          { searchId: parseInt(search, 10), search: `%${search}%` },
+        );
+      } else {
+        queryBuilder.andWhere(
+          "(customer.name ILIKE :search OR customer.email ILIKE :search OR customer.city ILIKE :search OR customer.country ILIKE :search)",
+          { search: `%${search}%` },
+        );
+      }
+    }
+
+    if (fitterId !== undefined) {
+      queryBuilder.andWhere("customer.fitter_id = :fitterId", { fitterId });
+    }
+
+    if (name) {
+      queryBuilder.andWhere("customer.name ILIKE :name", {
+        name: `%${name}%`,
+      });
+    }
+
+    if (email) {
+      queryBuilder.andWhere("customer.email ILIKE :email", {
+        email: `%${email}%`,
+      });
+    }
+
+    if (country) {
+      queryBuilder.andWhere("customer.country ILIKE :country", {
+        country: `%${country}%`,
+      });
+    }
+
+    if (city) {
+      queryBuilder.andWhere("customer.city ILIKE :city", {
+        city: `%${city}%`,
+      });
+    }
+
+    queryBuilder.orderBy("customer.name", "ASC");
+
+    const total = await queryBuilder.getCount();
+    const entities = await queryBuilder
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
+    return {
+      customers: this.mapper.toDomainArray(entities),
+      total,
+    };
+  }
+
   async countByFitterId(fitterId: number): Promise<number> {
     return this.repository.count({
       where: {

@@ -29,7 +29,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { updateOrder } from '@/services/api';
 import DashboardOrderStatusFlow from './DashboardOrderStatusFlow';
 import Reports from '@/components/Reports';
-import { OrderDetailModal } from '@/components/shared/OrderDetailModal';
+import { OrderDetails } from '@/components/OrderDetails';
 import { OrderEditModal } from '@/components/shared/OrderEditModal';
 import { OrderApprovalModal } from '@/components/shared/OrderApprovalModal';
 import { EditOrder } from '@/components/EditOrder';
@@ -283,10 +283,11 @@ export default function Dashboard() {
               status: order.orderStatus || order.status || '',
               orderStatus: order.orderStatus || order.status || '',
               orderTime: order.orderTime || order.createdAt || '',
-              isUrgent: order.urgent || false,
-              // Extract seat sizes from reference or seatSizes array if not already present
-              seatSize: order.seatSizes ? 
-                (Array.isArray(order.seatSizes) ? order.seatSizes.join(', ') : order.seatSizes) : 
+              isUrgent: order.urgent === true || order.urgency === 1 || order.urgency === true || false,
+              urgent: order.urgent === true || order.urgency === 1 || order.urgency === true || false,
+              // Extract seat sizes from reference, seat_sizes or seatSizes array if not already present
+              seatSize: (order.seat_sizes || order.seatSizes) ?
+                (Array.isArray(order.seat_sizes || order.seatSizes) ? (order.seat_sizes || order.seatSizes).join(', ') : (order.seat_sizes || order.seatSizes)) :
                 extractSeatSizes(order),
               // Only add computed names if the direct fields aren't available
               ...(order.customerName ? {} : { customer: getCustomerName(order) || '' }),
@@ -764,14 +765,20 @@ export default function Dashboard() {
       </Tabs>
       
       {/* Order Detail Modal */}
-      <OrderDetailModal
-        order={selectedOrder}
-        isOpen={isOrderModalOpen}
-        onClose={() => {
-          setIsOrderModalOpen(false);
-          setSelectedOrder(null);
-        }}
-      />
+      <Dialog open={isOrderModalOpen} onOpenChange={(open) => {
+        setIsOrderModalOpen(open);
+        if (!open) setSelectedOrder(null);
+      }}>
+        {selectedOrder && (
+          <OrderDetails
+            order={selectedOrder as any}
+            onClose={() => {
+              setIsOrderModalOpen(false);
+              setSelectedOrder(null);
+            }}
+          />
+        )}
+      </Dialog>
       
       {/* Order Edit Modal */}
       <OrderEditModal

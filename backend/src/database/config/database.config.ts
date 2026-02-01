@@ -92,8 +92,8 @@ export default registerAs<DatabaseConfig>("database", () => {
       : 100,
     sslEnabled: process.env.DATABASE_SSL_ENABLED === "true",
     rejectUnauthorized: process.env.DATABASE_REJECT_UNAUTHORIZED === "true",
-    ca: process.env.DATABASE_CA,
-    key: process.env.DATABASE_KEY,
-    cert: process.env.DATABASE_CERT,
+    ca: process.env.DATABASE_CA?.replace(/\\n/g, "\n"),
+    key: process.env.DATABASE_KEY?.replace(/\\n/g, "\n"),
+    cert: process.env.DATABASE_CERT?.replace(/\\n/g, "\n"),
   };
 });

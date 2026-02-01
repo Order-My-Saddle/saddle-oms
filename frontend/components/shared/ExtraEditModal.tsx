@@ -6,7 +6,6 @@ import { Extra } from '@/services/extras';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertTriangle } from 'lucide-react';
 
 interface ExtraEditModalProps {
@@ -16,21 +15,35 @@ interface ExtraEditModalProps {
   onSave: (updatedExtra: Partial<Extra>) => Promise<void>;
 }
 
+const PRICE_TIERS = [
+  { key: 'price1' as const, label: 'USD ($)', symbol: '$' },
+  { key: 'price2' as const, label: 'EUR (€)', symbol: '€' },
+  { key: 'price3' as const, label: 'GBP (£)', symbol: '£' },
+  { key: 'price4' as const, label: 'CAD (C$)', symbol: 'C$' },
+  { key: 'price5' as const, label: 'AUD (A$)', symbol: 'A$' },
+  { key: 'price6' as const, label: 'NOK (N€)', symbol: 'N€' },
+  { key: 'price7' as const, label: 'DKK (D€)', symbol: 'D€' },
+];
+
 export function ExtraEditModal({ extra, isOpen, onClose, onSave }: ExtraEditModalProps) {
   const [editedExtra, setEditedExtra] = useState<Partial<Extra>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Set initial extra data
   useEffect(() => {
     if (extra) {
       setEditedExtra({
         ...extra,
         name: extra.name || '',
         sequence: extra.sequence ?? 0,
-        active: extra.active ?? true,
-        price: extra.price ?? 0,
         description: extra.description || '',
+        price1: extra.price1 ?? 0,
+        price2: extra.price2 ?? 0,
+        price3: extra.price3 ?? 0,
+        price4: extra.price4 ?? 0,
+        price5: extra.price5 ?? 0,
+        price6: extra.price6 ?? 0,
+        price7: extra.price7 ?? 0,
       });
       setError('');
     }
@@ -43,20 +56,10 @@ export function ExtraEditModal({ extra, isOpen, onClose, onSave }: ExtraEditModa
     setError('');
 
     try {
-      // Validate required fields
       if (!editedExtra.name?.trim()) {
         throw new Error('Extra name is required');
       }
 
-      if (editedExtra.sequence === undefined || editedExtra.sequence < 0) {
-        throw new Error('Sequence must be a non-negative number');
-      }
-
-      if (editedExtra.price !== undefined && editedExtra.price < 0) {
-        throw new Error('Price must be a non-negative number');
-      }
-
-      // Call the onSave callback
       await onSave(editedExtra);
       onClose();
     } catch (error) {
@@ -80,66 +83,55 @@ export function ExtraEditModal({ extra, isOpen, onClose, onSave }: ExtraEditModa
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Extra {extra.id}</DialogTitle>
+          <DialogTitle>Edit Extra</DialogTitle>
           <DialogDescription>
             Update the extra information below.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-1 gap-4 mt-4">
-          <div>
-            <label className="block font-semibold text-sm text-gray-600 mb-1">
-              Name: <span className="text-red-500">*</span>
-            </label>
-            <Input
-              value={editedExtra.name || ''}
-              onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="Extra Name"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block font-semibold text-sm text-gray-600 mb-1">
-                Sequence: <span className="text-red-500">*</span>
+                Name: <span className="text-red-500">*</span>
+              </label>
+              <Input
+                value={editedExtra.name || ''}
+                onChange={(e) => handleChange('name', e.target.value)}
+                placeholder="Extra Name"
+                required
+              />
+            </div>
+            <div>
+              <label className="block font-semibold text-sm text-gray-600 mb-1">
+                Sequence:
               </label>
               <Input
                 type="number"
                 min="0"
-                value={editedExtra.sequence || ''}
+                value={editedExtra.sequence ?? 0}
                 onChange={(e) => handleChange('sequence', parseInt(e.target.value) || 0)}
                 placeholder="Display Order"
-                required
               />
             </div>
+          </div>
 
-            <div>
-              <label className="block font-semibold text-sm text-gray-600 mb-1">Price:</label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={editedExtra.price || ''}
-                onChange={(e) => handleChange('price', parseFloat(e.target.value) || 0)}
-                placeholder="0.00"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-sm text-gray-600 mb-1">Status:</label>
-              <Select
-                value={editedExtra.active ? 'true' : 'false'}
-                onValueChange={(value) => handleChange('active', value === 'true')}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Active</SelectItem>
-                  <SelectItem value="false">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+          <div>
+            <label className="block font-semibold text-sm text-gray-600 mb-2">Default Prices:</label>
+            <div className="grid grid-cols-4 gap-3">
+              {PRICE_TIERS.map(({ key, label }) => (
+                <div key={key}>
+                  <label className="block text-xs text-gray-500 mb-1">{label}</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editedExtra[key] ?? 0}
+                    onChange={(e) => handleChange(key, parseFloat(e.target.value) || 0)}
+                    placeholder="0.00"
+                  />
+                </div>
+              ))}
             </div>
           </div>
 

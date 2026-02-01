@@ -1,0 +1,58 @@
+{{/*
+  Optional Helm hook for heavy migrations.
+
+  Uncomment and use this Job template when you need to run a one-time
+  migration that is too heavy for the init container approach.
+
+  Usage:
+    helm upgrade --install oms-nest-staging ./kube/helm/oms-nest/ \
+      -f values-staging.yaml \
+      --set migrationJob.enabled=true \
+      --set backend.migration.enabled=false
+*/}}
+{{- if .Values.migrationJob | default false }}
+{{- if .Values.migrationJob.enabled | default false }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "oms-nest.fullname" . }}-migration-{{ .Release.Revision }}
+  labels:
+    {{- include "oms-nest.backend.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-upgrade,pre-install
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        {{- include "oms-nest.backend.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      restartPolicy: Never
+      containers:
+        - name: migration
+          image: {{ include "oms-nest.backend.image" . }}
+          command: ["npm", "run", "migration:run"]
+          envFrom:
+            - secretRef:
+                name: {{ .Values.secrets.name }}
+          env:
+            - name: NODE_ENV
+              value: {{ .Values.global.environment }}
+            - name: APP_PORT
+              value: {{ .Values.backend.port | quote }}
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1000m"
+              memory: 1Gi
+{{- end }}
+{{- end }}

@@ -279,6 +279,8 @@ export class AuditLoggingService {
     orderStatusFrom?: number,
     orderStatusTo?: number,
     userType = 1,
+    entityType?: string,
+    entityId?: string,
   ): Promise<AuditLogDto> {
     const createDto: CreateAuditLogDto = {
       userId,
@@ -287,6 +289,8 @@ export class AuditLoggingService {
       action,
       orderStatusFrom,
       orderStatusTo,
+      entityType,
+      entityId,
       timestamp: new Date().toISOString(),
     };
 
@@ -330,6 +334,8 @@ export class AuditLoggingService {
     entity.action = createDto.action;
     entity.orderStatusFrom = createDto.orderStatusFrom || null;
     entity.orderStatusTo = createDto.orderStatusTo || null;
+    entity.entityType = createDto.entityType || null;
+    entity.entityId = createDto.entityId || null;
     entity.timestamp = new Date(createDto.timestamp);
 
     return entity;
@@ -347,6 +353,8 @@ export class AuditLoggingService {
       action: entity.action,
       orderStatusFrom: entity.orderStatusFrom,
       orderStatusTo: entity.orderStatusTo,
+      entityType: entity.entityType,
+      entityId: entity.entityId,
       timestamp:
         entity.timestamp instanceof Date
           ? entity.timestamp.toISOString()

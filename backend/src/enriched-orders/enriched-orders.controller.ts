@@ -1,11 +1,16 @@
 import {
   Controller,
   Get,
+  Patch,
+  Body,
+  Param,
+  ParseIntPipe,
   Query,
   UseGuards,
   Logger,
   HttpException,
   HttpStatus,
+  NotFoundException,
 } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
@@ -76,6 +81,80 @@ export class EnrichedOrdersController {
     }
   }
 
+  @Get("edit-options")
+  async getEditFormOptions() {
+    try {
+      this.logger.log("Fetching edit form options");
+      const result = await this.enrichedOrdersService.getEditFormOptions();
+      return result;
+    } catch (error) {
+      this.logger.error("Failed to fetch edit form options", error);
+      throw new HttpException(
+        {
+          message: "Failed to fetch edit form options",
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Get("detail/:id")
+  async getOrderDetail(@Param("id", ParseIntPipe) id: number) {
+    try {
+      this.logger.log(`Fetching order detail for ID: ${id}`);
+      const result = await this.enrichedOrdersService.getOrderDetail(id);
+
+      if (!result) {
+        throw new NotFoundException(`Order with ID ${id} not found`);
+      }
+
+      return result;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.logger.error(`Failed to fetch order detail for ID ${id}`, error);
+      throw new HttpException(
+        {
+          message: "Failed to fetch order detail",
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Patch("update-status/:id")
+  async updateOrderStatus(
+    @Param("id", ParseIntPipe) id: number,
+    @Body() body: { status: string },
+  ) {
+    try {
+      this.logger.log(`Updating order status for ID ${id} to: ${body.status}`);
+      const result = await this.enrichedOrdersService.updateOrderStatus(
+        id,
+        body.status,
+      );
+      return result;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.logger.error(`Failed to update order status for ID ${id}`, error);
+      throw new HttpException(
+        {
+          message: "Failed to update order status",
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
   @Get("health")
   async getHealth() {
     await Promise.resolve();
@@ -132,6 +211,10 @@ export class EnrichedOrdersController {
       // Seat size filters (searches in special_notes field)
       seatSizes: query.seatSizes ? String(query.seatSizes).trim() : undefined,
       seatSize: query.seatSize ? String(query.seatSize).trim() : undefined,
+      // Customer country filter
+      customerCountry: query.customerCountry
+        ? String(query.customerCountry).trim()
+        : undefined,
     };
   }
 

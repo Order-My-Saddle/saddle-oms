@@ -6,7 +6,7 @@ import { Fitter } from '@/services/fitters';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Eye, EyeOff } from 'lucide-react';
 
 interface FitterEditModalProps {
   fitter: Fitter | null;
@@ -19,6 +19,9 @@ export function FitterEditModal({ fitter, isOpen, onClose, onSave }: FitterEditM
   const [editedFitter, setEditedFitter] = useState<Partial<Fitter>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (fitter) {
@@ -39,6 +42,9 @@ export function FitterEditModal({ fitter, isOpen, onClose, onSave }: FitterEditM
         enabled: fitter.enabled ?? true,
       });
       setError('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setShowPassword(false);
     }
   }, [fitter]);
 
@@ -84,10 +90,26 @@ export function FitterEditModal({ fitter, isOpen, onClose, onSave }: FitterEditM
         throw new Error('Please enter a valid email address');
       }
 
-      console.log('FitterEditModal: All validations passed, calling onSave with data:', JSON.stringify(editedFitter, null, 2));
+      // Password validation (only if a new password is provided)
+      if (newPassword) {
+        if (newPassword.length < 6) {
+          throw new Error('Password must be at least 6 characters');
+        }
+        if (newPassword !== confirmPassword) {
+          throw new Error('Passwords do not match');
+        }
+      }
+
+      // Build save payload, include password only if provided
+      const saveData: Partial<Fitter> & { password?: string } = { ...editedFitter };
+      if (newPassword) {
+        saveData.password = newPassword;
+      }
+
+      console.log('FitterEditModal: All validations passed, calling onSave');
 
       // Call the onSave callback
-      await onSave(editedFitter);
+      await onSave(saveData);
       onClose();
     } catch (error) {
       console.error('Error saving fitter:', error);
@@ -182,6 +204,44 @@ export function FitterEditModal({ fitter, isOpen, onClose, onSave }: FitterEditM
                 <SelectItem value="false">Disabled</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block font-semibold text-sm text-gray-600 mb-1">
+                New Password:
+              </label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Leave blank to keep current"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-semibold text-sm text-gray-600 mb-1">
+                Confirm Password:
+              </label>
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                autoComplete="new-password"
+              />
+            </div>
           </div>
 
           <div>

@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  Req,
 } from "@nestjs/common";
 import {
   ApiTags,
@@ -31,6 +32,7 @@ import { QueryOrderDto } from "./dto/query-order.dto";
 import { OrderSearchDto } from "./dto/order-search.dto";
 import { OrderDto } from "./dto/order.dto";
 import { AuthGuard } from "@nestjs/passport";
+import { AuditLog } from "../audit-logging/decorators";
 
 /**
  * Order REST API Controller
@@ -52,6 +54,7 @@ export class OrderController {
   ) {}
 
   @Post()
+  @AuditLog({ entity: "Order", action: "create_order" })
   @ApiOperation({
     summary: "Create a new order",
     description:
@@ -503,6 +506,7 @@ export class OrderController {
   }
 
   @Patch(":id")
+  @AuditLog({ entity: "Order", action: "update_order", trackStatusChange: true })
   @ApiOperation({
     summary: "Update order",
     description:
@@ -525,11 +529,21 @@ export class OrderController {
   async update(
     @Param("id", ParseIntPipe) id: number,
     @Body() updateOrderDto: UpdateOrderDto,
+    @Req() req: any,
   ): Promise<OrderDto> {
+    if (updateOrderDto.status !== undefined) {
+      try {
+        const current = await this.orderService.findOne(id);
+        req.__auditContext = { previousStatus: current.status };
+      } catch {
+        // If we can't fetch current status, proceed without it
+      }
+    }
     return this.orderService.update(id, updateOrderDto);
   }
 
   @Patch(":id/cancel")
+  @AuditLog({ entity: "Order", action: "cancel_order" })
   @ApiOperation({
     summary: "Cancel order",
     description: "Cancel an order with a reason",
@@ -569,6 +583,7 @@ export class OrderController {
   }
 
   @Delete(":id")
+  @AuditLog({ entity: "Order", action: "delete_order" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: "Delete order",

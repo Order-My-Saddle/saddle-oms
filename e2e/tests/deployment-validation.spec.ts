@@ -49,7 +49,6 @@ test.describe('OMS Staging V2 Deployment Validation', () => {
   test('Database connectivity works via API health', async ({ request }) => {
     const apiURL = process.env.API_URL || 'https://api-staging-v2.ordermysaddle.com';
 
-    // Health check endpoint validates database connectivity
     const response = await request.get(`${apiURL}/api/health`);
     expect([200, 503]).toContain(response.status());
 
@@ -60,14 +59,22 @@ test.describe('OMS Staging V2 Deployment Validation', () => {
   test('All core entity endpoints are available', async ({ request }) => {
     const apiURL = process.env.API_URL || 'https://api-staging-v2.ordermysaddle.com';
 
-    // Core NestJS backend endpoints (v1 API)
+    // Core NestJS backend endpoints (v1 API) - all enabled modules
     const endpoints = [
       '/api/v1/customers',
       '/api/v1/orders',
       '/api/v1/fitters',
       '/api/v1/factories',
       '/api/v1/enriched_orders',
-      '/api/v1/saddles',  // Models are stored in saddles table
+      '/api/v1/saddles',
+      '/api/v1/brands',
+      '/api/v1/options',
+      '/api/v1/extras',
+      '/api/v1/leathertypes',
+      '/api/v1/presets',
+      '/api/v1/users',
+      '/api/v1/warehouses',
+      '/api/v1/saddle-stock',
     ];
 
     for (const endpoint of endpoints) {

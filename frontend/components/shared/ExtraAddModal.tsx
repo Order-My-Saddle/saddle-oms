@@ -4,9 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Extra } from '@/services/extras';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
 
 interface ExtraAddModalProps {
@@ -15,27 +14,37 @@ interface ExtraAddModalProps {
   onSave: (newExtra: Partial<Extra>) => Promise<void>;
 }
 
+const PRICE_TIERS = [
+  { key: 'price1' as const, label: 'USD ($)', symbol: '$' },
+  { key: 'price2' as const, label: 'EUR (€)', symbol: '€' },
+  { key: 'price3' as const, label: 'GBP (£)', symbol: '£' },
+  { key: 'price4' as const, label: 'CAD (C$)', symbol: 'C$' },
+  { key: 'price5' as const, label: 'AUD (A$)', symbol: 'A$' },
+  { key: 'price6' as const, label: 'NOK (N€)', symbol: 'N€' },
+  { key: 'price7' as const, label: 'DKK (D€)', symbol: 'D€' },
+];
+
+const INITIAL_STATE: Partial<Extra> = {
+  name: '',
+  sequence: 0,
+  description: '',
+  price1: 0,
+  price2: 0,
+  price3: 0,
+  price4: 0,
+  price5: 0,
+  price6: 0,
+  price7: 0,
+};
+
 export function ExtraAddModal({ isOpen, onClose, onSave }: ExtraAddModalProps) {
-  const [newExtra, setNewExtra] = useState<Partial<Extra>>({
-    name: '',
-    sequence: 0,
-    active: true,
-    price: 0,
-    description: '',
-  });
+  const [newExtra, setNewExtra] = useState<Partial<Extra>>(INITIAL_STATE);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      setNewExtra({
-        name: '',
-        sequence: 0,
-        active: true,
-        price: 0,
-        description: '',
-      });
+      setNewExtra({ ...INITIAL_STATE });
       setError('');
     }
   }, [isOpen]);
@@ -45,20 +54,10 @@ export function ExtraAddModal({ isOpen, onClose, onSave }: ExtraAddModalProps) {
     setError('');
 
     try {
-      // Validate required fields
       if (!newExtra.name?.trim()) {
         throw new Error('Extra name is required');
       }
 
-      if (newExtra.sequence === undefined || newExtra.sequence < 0) {
-        throw new Error('Sequence must be a non-negative number');
-      }
-
-      if (newExtra.price === undefined || newExtra.price < 0) {
-        throw new Error('Price must be a non-negative number');
-      }
-
-      // Call the onSave callback
       await onSave(newExtra);
       onClose();
     } catch (error) {
@@ -87,16 +86,49 @@ export function ExtraAddModal({ isOpen, onClose, onSave }: ExtraAddModalProps) {
         </DialogHeader>
 
         <div className="grid grid-cols-1 gap-4 mt-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block font-semibold text-sm text-gray-600 mb-1">
+                Extra Name: <span className="text-red-500">*</span>
+              </label>
+              <Input
+                value={newExtra.name || ''}
+                onChange={(e) => handleChange('name', e.target.value)}
+                placeholder="Extra Name"
+                required
+              />
+            </div>
+            <div>
+              <label className="block font-semibold text-sm text-gray-600 mb-1">
+                Sequence:
+              </label>
+              <Input
+                type="number"
+                min="0"
+                value={newExtra.sequence ?? 0}
+                onChange={(e) => handleChange('sequence', parseInt(e.target.value) || 0)}
+                placeholder="Display Order"
+              />
+            </div>
+          </div>
+
           <div>
-            <label className="block font-semibold text-sm text-gray-600 mb-1">
-              Extra Name: <span className="text-red-500">*</span>
-            </label>
-            <Input
-              value={newExtra.name || ''}
-              onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="Extra Name"
-              required
-            />
+            <label className="block font-semibold text-sm text-gray-600 mb-2">Default Prices:</label>
+            <div className="grid grid-cols-4 gap-3">
+              {PRICE_TIERS.map(({ key, label }) => (
+                <div key={key}>
+                  <label className="block text-xs text-gray-500 mb-1">{label}</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={newExtra[key] ?? 0}
+                    onChange={(e) => handleChange(key, parseFloat(e.target.value) || 0)}
+                    placeholder="0.00"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -109,52 +141,6 @@ export function ExtraAddModal({ isOpen, onClose, onSave }: ExtraAddModalProps) {
               placeholder="Description (optional)"
               rows={3}
             />
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block font-semibold text-sm text-gray-600 mb-1">
-                Price: <span className="text-red-500">*</span>
-              </label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={newExtra.price || ''}
-                onChange={(e) => handleChange('price', parseFloat(e.target.value) || 0)}
-                placeholder="0.00"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-sm text-gray-600 mb-1">
-                Sequence:
-              </label>
-              <Input
-                type="number"
-                min="0"
-                value={newExtra.sequence || ''}
-                onChange={(e) => handleChange('sequence', parseInt(e.target.value) || 0)}
-                placeholder="Display Order"
-              />
-            </div>
-
-            <div>
-              <label className="block font-semibold text-sm text-gray-600 mb-1">Status:</label>
-              <Select
-                value={newExtra.active ? 'true' : 'false'}
-                onValueChange={(value) => handleChange('active', value === 'true')}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Active</SelectItem>
-                  <SelectItem value="false">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </div>
 

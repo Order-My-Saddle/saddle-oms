@@ -23,9 +23,9 @@ import {
 import { CustomerService } from "./customer.service";
 import { CreateCustomerDto } from "./dto/create-customer.dto";
 import { UpdateCustomerDto } from "./dto/update-customer.dto";
-import { QueryCustomerDto } from "./dto/query-customer.dto";
 import { CustomerDto } from "./dto/customer.dto";
 import { AuthGuard } from "@nestjs/passport";
+import { AuditLog } from "../audit-logging/decorators";
 
 /**
  * Customer REST API Controller
@@ -44,6 +44,7 @@ export class CustomerController {
   constructor(private readonly customerService: CustomerService) {}
 
   @Post()
+  @AuditLog({ entity: "Customer" })
   @ApiOperation({
     summary: "Create a new customer",
     description: "Creates a new customer with the provided information",
@@ -76,16 +77,59 @@ export class CustomerController {
   @ApiResponse({
     status: 200,
     description: "Customers retrieved successfully",
-    type: [CustomerDto],
+    schema: {
+      type: "object",
+      properties: {
+        data: {
+          type: "array",
+          items: { $ref: "#/components/schemas/CustomerDto" },
+        },
+        total: { type: "number" },
+        pages: { type: "number" },
+      },
+    },
+  })
+  @ApiQuery({ name: "page", required: false, type: Number })
+  @ApiQuery({ name: "limit", required: false, type: Number })
+  @ApiQuery({
+    name: "search",
+    required: false,
+    type: String,
+    description: "Search across name, email, city, country, and ID",
   })
   @ApiQuery({
-    name: "query",
-    type: QueryCustomerDto,
+    name: "id",
     required: false,
-    description: "Query parameters for filtering and pagination",
+    type: Number,
+    description: "Filter by exact customer ID",
   })
-  async findAll(@Query() query: QueryCustomerDto): Promise<CustomerDto[]> {
-    return this.customerService.findAll(query);
+  @ApiQuery({ name: "name", required: false, type: String })
+  @ApiQuery({ name: "email", required: false, type: String })
+  @ApiQuery({ name: "city", required: false, type: String })
+  @ApiQuery({ name: "country", required: false, type: String })
+  @ApiQuery({ name: "fitterId", required: false, type: Number })
+  async findAll(
+    @Query("page") page?: number,
+    @Query("limit") limit?: number,
+    @Query("search") search?: string,
+    @Query("id") id?: number,
+    @Query("name") name?: string,
+    @Query("email") email?: string,
+    @Query("city") city?: string,
+    @Query("country") country?: string,
+    @Query("fitterId") fitterId?: number,
+  ): Promise<{ data: CustomerDto[]; total: number; pages: number }> {
+    return this.customerService.findAll(
+      page ? +page : undefined,
+      limit ? +limit : undefined,
+      name,
+      email,
+      city,
+      country,
+      fitterId ? +fitterId : undefined,
+      search,
+      id ? +id : undefined,
+    );
   }
 
   @Get("without-fitter")
@@ -148,6 +192,7 @@ export class CustomerController {
   }
 
   @Patch(":id")
+  @AuditLog({ entity: "Customer" })
   @ApiOperation({
     summary: "Update customer",
     description: "Update customer information",
@@ -178,6 +223,7 @@ export class CustomerController {
   }
 
   @Delete(":id")
+  @AuditLog({ entity: "Customer" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: "Delete customer",
@@ -201,6 +247,7 @@ export class CustomerController {
   }
 
   @Post(":customerId/assign-fitter/:fitterId")
+  @AuditLog({ entity: "Customer", action: "assign_fitter", idParam: "customerId" })
   @ApiOperation({
     summary: "Assign fitter to customer",
     description: "Assign a fitter to a customer for management",

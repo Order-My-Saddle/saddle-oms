@@ -29,11 +29,8 @@ import { getFitterName, getCustomerName, getSupplierName, getSeatSize, getStatus
 import { getOrderTableColumns } from '../utils/orderTableColumns';
 import { seatSizes, statuses, orderStatuses } from '../utils/orderConstants';
 import { getEnrichedOrders, searchByOrderId } from '../services/enrichedOrders';
-import { useFitters, useModels } from '../hooks/useEntities';
+import { useFitters } from '../hooks/useEntities';
 import { extractDynamicFactories, extractDynamicSeatSizes } from '../utils/orderProcessing';
-
-const brands = ['Custom', 'C3'];
-const countries = ['United States', 'Canada', 'United Kingdom'];
 
 export default function Reports() {
   const [page, setPage] = useState(1);
@@ -55,12 +52,31 @@ export default function Reports() {
     value: fitter.name || fitter.username || fitter.id
   }));
   
-  // Fetch models for saddle dropdown
-  const { data: modelsData } = useModels({ partial: true });
-  const modelsList = modelsData.map((model: any) => ({
-    label: model.name || 'Unknown Model',
-    value: model.name || model.id
-  }));
+  // Extract unique saddle names (brand + model) from orders
+  const modelsList = React.useMemo(() => {
+    const saddles = new Set<string>();
+    orders.forEach(order => {
+      const brand = order.brand_name || order.brandName || '';
+      const model = order.model_name || order.modelName || '';
+      const saddleName = [brand, model].filter(Boolean).join(' - ');
+      if (saddleName.trim()) {
+        saddles.add(saddleName.trim());
+      }
+    });
+    return Array.from(saddles).sort().map(name => ({ label: name, value: name }));
+  }, [orders]);
+
+  // Extract unique customer countries from orders
+  const dynamicCountries = React.useMemo(() => {
+    const countriesSet = new Set<string>();
+    orders.forEach(order => {
+      const country = order.customer_country || order.customerCountry;
+      if (country && typeof country === 'string' && country.trim()) {
+        countriesSet.add(country.trim());
+      }
+    });
+    return Array.from(countriesSet).sort();
+  }, [orders]);
 
   useEffect(() => {
     setLoading(true);
@@ -90,6 +106,8 @@ export default function Reports() {
           }
         } else if (key === 'seatSize') {
           filters.seatSizes = headerFilters[key];
+        } else if (key === 'customerCountry') {
+          filters.customerCountry = headerFilters[key];
         }
       }
     });
@@ -145,20 +163,9 @@ export default function Reports() {
   const [orderedDate, setOrderedDate] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
   const [paymentDate, setPaymentDate] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
 
-  // Extract unique seat sizes from orders
+  // Extract unique seat sizes from orders (handles both snake_case and camelCase)
   const dynamicSeatSizes = React.useMemo(() => {
-    const sizes = new Set<string>();
-    orders.forEach(order => {
-      if (Array.isArray(order.seatSizes)) {
-        order.seatSizes.forEach((size: any) => sizes.add(String(size)));
-      } else if (order.seatSize) {
-        sizes.add(String(order.seatSize));
-      } else if (order.reference) {
-        const match = order.reference.match(/(\d{2}(?:\.5)?)/g);
-        if (match) match.forEach((size: string) => sizes.add(size));
-      }
-    });
-    return Array.from(sizes).sort();
+    return extractDynamicSeatSizes(orders);
   }, [orders]);
 
   const columns = getOrderTableColumns(
@@ -222,8 +229,8 @@ export default function Reports() {
     orderTime: order.orderTime || order.createdAt || '',
     createdAt: order.createdAt || '',
     status: order.orderStatus || '',
-    urgent: order.urgent || false,
-    isUrgent: order.urgent || false,
+    urgent: order.urgent === true || order.urgency === 1 || order.urgency === true || false,
+    isUrgent: order.urgent === true || order.urgency === 1 || order.urgency === true || false,
     customer: getCustomerName(order) || '',
     fitter: getFitterName(order) || '',
     supplier: getSupplierName(order) || ''
@@ -246,7 +253,7 @@ export default function Reports() {
     const matchesCustomer = !headerFilters.customer || getCustomerName(order).toLowerCase().includes(headerFilters.customer.toLowerCase());
     const matchesSupplier = !headerFilters.supplier || (order.supplier || '').toLowerCase().includes(headerFilters.supplier.toLowerCase());
     const matchesSaddle = !headerFilters.saddle || (order.modelName || order.model || '').toLowerCase().includes(headerFilters.saddle.toLowerCase());
-    const matchesCustomerCountry = !headerFilters.customerCountry || (order.customerCountry || order.customer?.country || '').toLowerCase().includes(headerFilters.customerCountry.toLowerCase());
+    const matchesCustomerCountry = !headerFilters.customerCountry || (order.customerCountry || order.customer_country || order.customer?.country || '').toLowerCase().includes(headerFilters.customerCountry.toLowerCase());
 
     let matchesDate = true;
     if (date.from || date.to) {
@@ -530,7 +537,7 @@ export default function Reports() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all-customer-countries">All Countries</SelectItem>
-                  {countries.map(country => (
+                  {dynamicCountries.map(country => (
                     <SelectItem key={country} value={country}>{country}</SelectItem>
                   ))}
                 </SelectContent>
@@ -545,7 +552,7 @@ export default function Reports() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all-fitter-countries">All Countries</SelectItem>
-                  {countries.map(country => (
+                  {dynamicCountries.map(country => (
                     <SelectItem key={country} value={country}>{country}</SelectItem>
                   ))}
                 </SelectContent>

@@ -158,11 +158,14 @@ npm run test:cov
 ## Roles
 
 Defined in `src/roles/roles.enum.ts`:
-- USER (id: 1)
-- FITTER (id: 2)
-- SUPPLIER (id: 3)
-- ADMIN (id: 4)
+- FITTER (id: 1)
+- ADMIN (id: 2)
+- FACTORY (id: 3)
+- CUSTOMSADDLER (id: 4)
 - SUPERVISOR (id: 5)
+- USER (id: 6)
+
+**Hierarchy**: SUPERVISOR > ADMIN > FITTER/FACTORY > USER. Users with `is_supervisor=1` in the database get the SUPERVISOR role regardless of `user_type`.
 
 ## Common Tasks
 

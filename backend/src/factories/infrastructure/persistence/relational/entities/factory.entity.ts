@@ -6,10 +6,7 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
   Index,
-  ManyToOne,
-  JoinColumn,
 } from "typeorm";
-import { UserEntity } from "../../../../../users/infrastructure/persistence/relational/entities/user.entity";
 
 /**
  * Factory TypeORM Entity
@@ -61,10 +58,6 @@ export class FactoryEntity {
   })
   emailaddress: string | null;
 
-  @ManyToOne(() => UserEntity, { eager: false })
-  @JoinColumn({ name: "user_id", referencedColumnName: "id" })
-  user?: UserEntity;
-
   @Column({ name: "deleted", type: "smallint", default: 0 })
   deleted: number;
 
@@ -94,9 +87,6 @@ export class FactoryEntity {
   }
 
   get displayName(): string {
-    if (this.user?.name) {
-      return this.user.name;
-    }
     return this.city ? `Factory in ${this.city}` : `Factory #${this.id}`;
   }
 

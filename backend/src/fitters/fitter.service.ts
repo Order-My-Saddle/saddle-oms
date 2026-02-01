@@ -1,7 +1,9 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import bcrypt from "bcryptjs";
 import { FitterEntity } from "./infrastructure/persistence/relational/entities/fitter.entity";
+import { UserEntity } from "../users/infrastructure/persistence/relational/entities/user.entity";
 import { CreateFitterDto } from "./dto/create-fitter.dto";
 import { UpdateFitterDto } from "./dto/update-fitter.dto";
 import { FitterDto } from "./dto/fitter.dto";
@@ -17,6 +19,8 @@ export class FitterService {
   constructor(
     @InjectRepository(FitterEntity)
     private readonly fitterRepository: Repository<FitterEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
   ) {}
 
   /**
@@ -129,6 +133,18 @@ export class FitterService {
       fitter.currency = updateFitterDto.currency;
     if (updateFitterDto.emailaddress !== undefined)
       fitter.emailaddress = updateFitterDto.emailaddress;
+
+    // Update the linked user's password if provided
+    if (updateFitterDto.password && fitter.userId) {
+      const user = await this.userRepository.findOne({
+        where: { id: fitter.userId },
+      });
+      if (user) {
+        const salt = await bcrypt.genSalt();
+        user.password = await bcrypt.hash(updateFitterDto.password, salt);
+        await this.userRepository.save(user);
+      }
+    }
 
     const savedFitter = await this.fitterRepository.save(fitter);
     return this.toDto(savedFitter);

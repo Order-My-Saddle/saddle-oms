@@ -46,39 +46,29 @@ export async function fetchCustomers({
 } = {}): Promise<CustomersResponse> {
   console.log('fetchCustomers: Called with params:', { page, searchTerm, filters, orderBy, order });
   
-  // Build filter parameters for API Platform
+  // Build filter parameters for NestJS backend
   const extraParams: Record<string, string | number | boolean> = {};
-  
-  // Handle individual field filters
+
+  // Handle individual field filters (NestJS uses plain query params with ILIKE)
   Object.entries(filters).forEach(([key, value]) => {
     if (value && value.trim()) {
       console.log(`fetchCustomers: Processing filter ${key}:`, value);
-      // For text fields, use partial matching with API Platform filters
-      if (key === 'name') {
-        extraParams['name[contains]'] = value;
-      } else if (key === 'email') {
-        extraParams['email[contains]'] = value;
-      } else if (key === 'city') {
-        extraParams['city[contains]'] = value;
-      } else if (key === 'country') {
-        extraParams['country[contains]'] = value;
+      if (key === 'name' || key === 'email' || key === 'city' || key === 'country') {
+        extraParams[key] = value;
       } else if (key === 'id') {
         extraParams['id'] = value;
       } else if (key === 'fitter') {
-        extraParams['fitter.name[contains]'] = value;
-      }
-      // For other exact matches
-      else {
+        extraParams['fitterId'] = value;
+      } else {
         extraParams[key] = value;
       }
     }
   });
 
-  // Add groups parameter to include related entities
-  extraParams['groups[]'] = 'Entity';
-
   console.log('fetchCustomers: Calling fetchEntities with entity "customers" and params:', extraParams);
 
+  // Pass searchTerm directly to fetchEntities (it appends &search= to the URL).
+  // Also pass extraParams which may contain field-specific filters.
   return await fetchEntities({
     entity: 'customers',
     page,
@@ -191,34 +181,3 @@ export async function deleteCustomer(id: string): Promise<void> {
   console.log('Customer deletion successful');
 }
 
-/**
- * Get the total count of customers (for pagination display)
- */
-export async function fetchCustomerCount(): Promise<number> {
-  try {
-    console.log('📊 fetchCustomerCount: Getting total customer count');
-
-    // Get total count using minimal data transfer (limit=1) with full pagination metadata
-    const result = await fetchEntities({
-      entity: 'customers',
-      page: 1,
-      partial: false, // Required for hydra:totalItems in API Platform 2.5.7
-      extraParams: {
-        'groups[]': 'Entity',
-        'limit': 1, // Minimize data transfer
-      },
-    });
-
-    // Return the total count if available
-    if (result['hydra:totalItems'] !== undefined && result['hydra:totalItems'] !== null) {
-      console.log('📊 Got total customer count from API:', result['hydra:totalItems']);
-      return result['hydra:totalItems'];
-    }
-
-    console.warn('📊 Could not get customer count from API, using fallback');
-    return 0;
-  } catch (error) {
-    console.error('📊 Error fetching customer count:', error);
-    return 0;
-  }
-}

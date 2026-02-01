@@ -142,18 +142,18 @@ test.describe('Authentication Flow', () => {
     // Logout and test regular user (if available)
     await authHelper.logout();
 
-    // Try with regular user if configured
-    if (TEST_USERS.user) {
-      await authHelper.login(TEST_USERS.user);
+    // Try with fitter user
+    if (TEST_USERS.fitter) {
+      await authHelper.login(TEST_USERS.fitter);
       await expect(page).toHaveURL('/dashboard');
 
-      // Regular user might have restricted access to certain pages
+      // Fitter should have restricted access to admin pages
       await page.goto('/users');
       await page.waitForTimeout(2000);
 
-      // Either should stay on users page (has access) or be redirected
+      // Fitter should be redirected away from /users
       const finalUrl = page.url();
-      console.log(`User role access to /users: ${finalUrl}`);
+      console.log(`Fitter role access to /users: ${finalUrl}`);
     }
   });
 });

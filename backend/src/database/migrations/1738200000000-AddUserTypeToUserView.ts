@@ -54,9 +54,7 @@ export class AddUserTypeToUserView1738200000000 implements MigrationInterface {
       FROM credentials
     `);
 
-    console.log(
-      "✅ User view updated with user_type and supervisor columns",
-    );
+    console.log("✅ User view updated with user_type and supervisor columns");
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

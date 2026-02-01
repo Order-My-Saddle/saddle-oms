@@ -1,0 +1,123 @@
+import {
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+  Logger,
+  HttpException,
+  HttpStatus,
+  ForbiddenException,
+  Request,
+} from "@nestjs/common";
+import { AuthGuard } from "@nestjs/passport";
+import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { SaddleStockService } from "./saddle-stock.service";
+import { QuerySaddleStockDto } from "./dto/query-saddle-stock.dto";
+import { RoleEnum } from "../roles/roles.enum";
+
+@ApiTags("Saddle Stock")
+@Controller({
+  path: "saddle-stock",
+  version: "1",
+})
+@ApiBearerAuth()
+@UseGuards(AuthGuard("jwt"))
+export class SaddleStockController {
+  private readonly logger = new Logger(SaddleStockController.name);
+
+  constructor(private readonly saddleStockService: SaddleStockService) {}
+
+  @Get()
+  async getSaddleStock(
+    @Query() query: QuerySaddleStockDto,
+    @Request() req: any,
+  ) {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        throw new HttpException("Unauthorized", HttpStatus.UNAUTHORIZED);
+      }
+
+      const userRoleId = req.user?.role?.id;
+
+      const type: "my" | "available" | "all" =
+        query.type === "available"
+          ? "available"
+          : query.type === "all"
+            ? "all"
+            : "my";
+
+      if (
+        (type === "my" || type === "available") &&
+        userRoleId !== RoleEnum.fitter
+      ) {
+        throw new ForbiddenException(
+          "Saddle stock my/available is fitter-only",
+        );
+      }
+
+      if (
+        type === "all" &&
+        ![RoleEnum.admin, RoleEnum.supervisor].includes(userRoleId)
+      ) {
+        throw new ForbiddenException(
+          "All saddle stock requires admin/supervisor role",
+        );
+      }
+      const page = this.parsePositiveInt(query.page, 1);
+      const limit = Math.min(this.parsePositiveInt(query.limit, 30), 100);
+      const search = query.search ? String(query.search).trim() : undefined;
+
+      this.logger.log(
+        `Fetching ${type} saddle stock for user ${userId}, page ${page}`,
+      );
+
+      const result = await this.saddleStockService.getSaddleStock(
+        type,
+        userId,
+        page,
+        limit,
+        search,
+      );
+
+      return {
+        "@context": "/api/contexts/SaddleStock",
+        "@type": "hydra:Collection",
+        "@id": `/api/v1/saddle-stock?type=${type}`,
+        "hydra:member": result.data,
+        "hydra:totalItems": result.total,
+        "hydra:view": {
+          "@id": `/api/v1/saddle-stock?type=${type}&page=${result.page}`,
+          "@type": "hydra:PartialCollectionView",
+          "hydra:first": `/api/v1/saddle-stock?type=${type}&page=1`,
+          "hydra:last": `/api/v1/saddle-stock?type=${type}&page=${result.pages}`,
+          ...(result.page < result.pages && {
+            "hydra:next": `/api/v1/saddle-stock?type=${type}&page=${result.page + 1}`,
+          }),
+          ...(result.page > 1 && {
+            "hydra:previous": `/api/v1/saddle-stock?type=${type}&page=${result.page - 1}`,
+          }),
+        },
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      this.logger.error("Failed to fetch saddle stock", error);
+      throw new HttpException(
+        {
+          message: "Failed to fetch saddle stock",
+          details: error.message,
+          timestamp: new Date().toISOString(),
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  private parsePositiveInt(value: any, defaultValue: number): number {
+    if (value === undefined || value === null) return defaultValue;
+    const parsed = parseInt(String(value), 10);
+    return isNaN(parsed) || parsed <= 0 ? defaultValue : parsed;
+  }
+}

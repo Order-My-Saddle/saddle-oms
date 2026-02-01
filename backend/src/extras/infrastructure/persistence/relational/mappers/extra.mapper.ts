@@ -9,9 +9,9 @@ export class ExtraMapper {
       new ExtraId(entity.id),
       entity.name,
       entity.description || "",
-      entity.price || 0,
-      true, // Default isOptional since entity doesn't have this field
-      ExtraStatus.ACTIVE, // Default status since entity doesn't have this field
+      entity.price1 || 0,
+      true,
+      ExtraStatus.ACTIVE,
       entity.createdAt || new Date(),
       entity.updatedAt || new Date(),
     );
@@ -22,8 +22,7 @@ export class ExtraMapper {
     entity.id = domain.id.value;
     entity.name = domain.name;
     entity.description = domain.description;
-    entity.price = domain.price;
-    // isOptional and status don't exist in entity, skip them
+    entity.price1 = domain.price;
     entity.createdAt = domain.createdAt;
     entity.updatedAt = domain.updatedAt;
     return entity;

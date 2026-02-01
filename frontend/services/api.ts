@@ -374,6 +374,16 @@ export async function fetchEntities({
     delete result.data;
   }
 
+  // Special handling for presets entity to map backend fields to frontend interface
+  if (entity === 'presets' && result.data && Array.isArray(result.data)) {
+    result['hydra:member'] = result.data.map((preset: any) => ({
+      ...preset,
+      active: preset.isActive ?? (preset.deleted === 0),
+    }));
+    result['hydra:totalItems'] = result.total || result.data.length;
+    delete result.data;
+  }
+
   // Generic transformation for any entity returning NestJS format { data: [], total, pages }
   if (!result['hydra:member'] && result.data && Array.isArray(result.data)) {
     result['hydra:member'] = result.data;

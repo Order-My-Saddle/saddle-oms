@@ -95,4 +95,13 @@ export class CreateFitterDto {
   @IsEmail()
   @Length(0, 255)
   emailaddress?: string;
+
+  @ApiPropertyOptional({
+    description: "New password for the fitter (admin only)",
+    example: "newPassword123",
+  })
+  @IsOptional()
+  @IsString()
+  @Length(6, 128)
+  password?: string;
 }

@@ -1,0 +1,448 @@
+import { Test, TestingModule } from "@nestjs/testing";
+import { HttpException, NotFoundException } from "@nestjs/common";
+import { EnrichedOrdersController } from "../../../src/enriched-orders/enriched-orders.controller";
+import { EnrichedOrdersService } from "../../../src/enriched-orders/enriched-orders.service";
+
+describe("EnrichedOrdersController", () => {
+  let controller: EnrichedOrdersController;
+  let service: jest.Mocked<EnrichedOrdersService>;
+
+  const mockEnrichedOrder = {
+    id: 1,
+    orderNumber: "ORD-001",
+    customerName: "John Doe",
+    brandName: "Premium Brand",
+    modelName: "Classic Model",
+    urgency: "urgent",
+    status: "pending",
+  };
+
+  const mockServiceResponse = {
+    data: [mockEnrichedOrder],
+    pagination: {
+      currentPage: 1,
+      totalPages: 5,
+      totalItems: 100,
+      itemsPerPage: 50,
+      hasNext: true,
+      hasPrevious: false,
+    },
+    metadata: {
+      queriedAt: new Date().toISOString(),
+      cached: false,
+      processingTimeMs: 50,
+    },
+  };
+
+  beforeEach(async () => {
+    const mockService = {
+      getEnrichedOrders: jest.fn(),
+      getOrderDetail: jest.fn(),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [EnrichedOrdersController],
+      providers: [
+        {
+          provide: EnrichedOrdersService,
+          useValue: mockService,
+        },
+      ],
+    }).compile();
+
+    controller = module.get<EnrichedOrdersController>(EnrichedOrdersController);
+    service = module.get(EnrichedOrdersService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe("getEnrichedOrders", () => {
+    it("should return enriched orders in Hydra format", async () => {
+      // Arrange
+      const query = {
+        page: 1,
+        limit: 50,
+      };
+
+      service.getEnrichedOrders.mockResolvedValue(mockServiceResponse);
+
+      // Act
+      const result = await controller.getEnrichedOrders(query as any);
+
+      // Assert
+      expect(result).toMatchObject({
+        "@context": "/api/contexts/EnrichedOrder",
+        "@type": "hydra:Collection",
+        "@id": "/api/enriched_orders",
+        "hydra:member": [mockEnrichedOrder],
+        "hydra:totalItems": 100,
+      });
+      expect(result["hydra:view"]).toBeDefined();
+      expect(result["hydra:view"]["hydra:next"]).toBe(
+        "/api/enriched_orders?page=2",
+      );
+    });
+
+    it("should sanitize query parameters", async () => {
+      // Arrange
+      const query = {
+        page: "2",
+        limit: "150",
+        partial: "true",
+        searchTerm: "  test  ",
+      };
+
+      service.getEnrichedOrders.mockResolvedValue(mockServiceResponse);
+
+      // Act
+      await controller.getEnrichedOrders(query as any);
+
+      // Assert
+      expect(service.getEnrichedOrders).toHaveBeenCalledWith(
+        expect.objectContaining({
+          page: 2,
+          limit: 100,
+          partial: true,
+          searchTerm: "test",
+        }),
+      );
+    });
+
+    it("should limit maximum page size to 100", async () => {
+      // Arrange
+      const query = {
+        page: 1,
+        limit: 500,
+      };
+
+      service.getEnrichedOrders.mockResolvedValue(mockServiceResponse);
+
+      // Act
+      await controller.getEnrichedOrders(query as any);
+
+      // Assert
+      expect(service.getEnrichedOrders).toHaveBeenCalledWith(
+        expect.objectContaining({
+          limit: 100,
+        }),
+      );
+    });
+
+    it("should use default pagination values", async () => {
+      // Arrange
+      const query = {};
+
+      service.getEnrichedOrders.mockResolvedValue(mockServiceResponse);
+
+      // Act
+      await controller.getEnrichedOrders(query as any);
+
+      // Assert
+      expect(service.getEnrichedOrders).toHaveBeenCalledWith(
+        expect.objectContaining({
+          page: 1,
+          limit: 50,
+          orderDirection: "DESC",
+        }),
+      );
+    });
+
+    it("should sanitize order by column", async () => {
+      // Arrange
+      const query = {
+        orderBy: "created_at",
+      };
+
+      service.getEnrichedOrders.mockResolvedValue(mockServiceResponse);
+
+      // Act
+      await controller.getEnrichedOrders(query as any);
+
+      // Assert
+      expect(service.getEnrichedOrders).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: "created_at",
+        }),
+      );
+    });
+
+    it("should reject invalid order by column", async () => {
+      // Arrange
+      const query = {
+        orderBy: "invalid_column; DROP TABLE orders;",
+      };
+
+      service.getEnrichedOrders.mockResolvedValue(mockServiceResponse);
+
+      // Act
+      await controller.getEnrichedOrders(query as any);
+
+      // Assert
+      expect(service.getEnrichedOrders).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: undefined,
+        }),
+      );
+    });
+
+    it("should handle multiple filter parameters", async () => {
+      // Arrange
+      const query = {
+        page: 1,
+        limit: 20,
+        urgency: "urgent",
+        fitterId: "5",
+        customerId: "10",
+        brandId: "3",
+        status: "pending",
+      };
+
+      service.getEnrichedOrders.mockResolvedValue(mockServiceResponse);
+
+      // Act
+      await controller.getEnrichedOrders(query as any);
+
+      // Assert
+      expect(service.getEnrichedOrders).toHaveBeenCalledWith(
+        expect.objectContaining({
+          urgency: "urgent",
+          fitterId: 5,
+          customerId: 10,
+          brandId: 3,
+          status: "pending",
+        }),
+      );
+    });
+
+    it("should include previous link when not on first page", async () => {
+      // Arrange
+      const query = {
+        page: 2,
+      };
+
+      const response = {
+        ...mockServiceResponse,
+        pagination: {
+          ...mockServiceResponse.pagination,
+          currentPage: 2,
+          hasPrevious: true,
+        },
+      };
+
+      service.getEnrichedOrders.mockResolvedValue(response);
+
+      // Act
+      const result = await controller.getEnrichedOrders(query as any);
+
+      // Assert
+      expect(result["hydra:view"]["hydra:previous"]).toBe(
+        "/api/enriched_orders?page=1",
+      );
+    });
+
+    it("should not include next link on last page", async () => {
+      // Arrange
+      const query = {
+        page: 5,
+      };
+
+      const response = {
+        ...mockServiceResponse,
+        pagination: {
+          ...mockServiceResponse.pagination,
+          currentPage: 5,
+          hasNext: false,
+        },
+      };
+
+      service.getEnrichedOrders.mockResolvedValue(response);
+
+      // Act
+      const result = await controller.getEnrichedOrders(query as any);
+
+      // Assert
+      expect(result["hydra:view"]["hydra:next"]).toBeUndefined();
+    });
+
+    it("should throw HttpException on service error", async () => {
+      // Arrange
+      const query = {};
+      service.getEnrichedOrders.mockRejectedValue(new Error("Database error"));
+
+      // Act & Assert
+      await expect(controller.getEnrichedOrders(query as any)).rejects.toThrow(
+        HttpException,
+      );
+    });
+  });
+
+  describe("getOrderDetail", () => {
+    it("should return order detail", async () => {
+      // Arrange
+      service.getOrderDetail.mockResolvedValue(mockEnrichedOrder);
+
+      // Act
+      const result = await controller.getOrderDetail(1);
+
+      // Assert
+      expect(result).toEqual(mockEnrichedOrder);
+      expect(service.getOrderDetail).toHaveBeenCalledWith(1);
+    });
+
+    it("should throw NotFoundException when order not found", async () => {
+      // Arrange
+      service.getOrderDetail.mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(controller.getOrderDetail(999)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it("should propagate service errors as HttpException", async () => {
+      // Arrange
+      service.getOrderDetail.mockRejectedValue(new Error("Database error"));
+
+      // Act & Assert
+      await expect(controller.getOrderDetail(1)).rejects.toThrow(HttpException);
+    });
+  });
+
+  describe("getHealth", () => {
+    it("should return health status", async () => {
+      // Arrange
+
+      // Act
+      const result = await controller.getHealth();
+
+      // Assert
+      expect(result).toMatchObject({
+        status: "healthy",
+        service: "enriched-orders",
+        version: "1.0.0",
+      });
+      expect(result.timestamp).toBeDefined();
+    });
+  });
+
+  describe("sanitizeQuery (private method via getEnrichedOrders)", () => {
+    it("should parse positive integers correctly", async () => {
+      // Arrange
+      const query = {
+        id: "123",
+        orderId: "456",
+        fitterId: "789",
+      };
+
+      service.getEnrichedOrders.mockResolvedValue(mockServiceResponse);
+
+      // Act
+      await controller.getEnrichedOrders(query as any);
+
+      // Assert
+      expect(service.getEnrichedOrders).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 123,
+          orderId: 456,
+          fitterId: 789,
+        }),
+      );
+    });
+
+    it("should handle invalid positive integers", async () => {
+      // Arrange
+      const query = {
+        fitterId: "invalid",
+        customerId: "-5",
+      };
+
+      service.getEnrichedOrders.mockResolvedValue(mockServiceResponse);
+
+      // Act
+      await controller.getEnrichedOrders(query as any);
+
+      // Assert
+      expect(service.getEnrichedOrders).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fitterId: undefined,
+          customerId: undefined,
+        }),
+      );
+    });
+
+    it("should trim string filters", async () => {
+      // Arrange
+      const query = {
+        customerName: "  John Doe  ",
+        fitterName: "  Jane Smith  ",
+        search: "  test search  ",
+      };
+
+      service.getEnrichedOrders.mockResolvedValue(mockServiceResponse);
+
+      // Act
+      await controller.getEnrichedOrders(query as any);
+
+      // Assert
+      expect(service.getEnrichedOrders).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customerName: "John Doe",
+          fitterName: "Jane Smith",
+          search: "test search",
+        }),
+      );
+    });
+
+    it("should handle boolean partial field", async () => {
+      // Arrange
+      const query1 = { partial: "true" };
+      const query2 = { partial: true };
+      const query3 = { partial: "false" };
+
+      service.getEnrichedOrders.mockResolvedValue(mockServiceResponse);
+
+      // Act & Assert
+      await controller.getEnrichedOrders(query1 as any);
+      expect(service.getEnrichedOrders).toHaveBeenCalledWith(
+        expect.objectContaining({ partial: true }),
+      );
+
+      await controller.getEnrichedOrders(query2 as any);
+      expect(service.getEnrichedOrders).toHaveBeenCalledWith(
+        expect.objectContaining({ partial: true }),
+      );
+
+      await controller.getEnrichedOrders(query3 as any);
+      expect(service.getEnrichedOrders).toHaveBeenCalledWith(
+        expect.objectContaining({ partial: false }),
+      );
+    });
+
+    it("should sanitize order direction", async () => {
+      // Arrange
+      const query1 = { orderDirection: "ASC" };
+      const query2 = { orderDirection: "DESC" };
+      const query3 = { orderDirection: "INVALID" };
+
+      service.getEnrichedOrders.mockResolvedValue(mockServiceResponse);
+
+      // Act & Assert
+      await controller.getEnrichedOrders(query1 as any);
+      expect(service.getEnrichedOrders).toHaveBeenCalledWith(
+        expect.objectContaining({ orderDirection: "ASC" }),
+      );
+
+      await controller.getEnrichedOrders(query2 as any);
+      expect(service.getEnrichedOrders).toHaveBeenCalledWith(
+        expect.objectContaining({ orderDirection: "DESC" }),
+      );
+
+      await controller.getEnrichedOrders(query3 as any);
+      expect(service.getEnrichedOrders).toHaveBeenCalledWith(
+        expect.objectContaining({ orderDirection: "DESC" }),
+      );
+    });
+  });
+});

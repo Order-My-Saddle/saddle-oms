@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { DivideIcon as LucideIcon, LayoutDashboard, Package, Users, ShoppingCart, Boxes, BarChart3, Search, ChevronRight, ChevronLeft, Wrench, PackageCheck, Factory, Archive } from 'lucide-react';
+import { DivideIcon as LucideIcon, LayoutDashboard, Package, Users, ShoppingCart, Boxes, BarChart3, Search, ChevronRight, ChevronLeft, Wrench, PackageCheck, Factory, Archive, Warehouse } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
 import { SaddlesSidebarSection } from './SaddlesSidebarSection';
@@ -45,6 +45,13 @@ const navItems: NavItem[] = [
     icon: PackageCheck,
     href: '/available-saddle-stock',
     permission: 'AVAILABLE_SADDLE_STOCK'
+  },
+  {
+    id: 'allSaddleStock',
+    label: 'All Saddle Stock',
+    icon: Warehouse,
+    href: '/saddle-stock',
+    permission: 'ALL_SADDLE_STOCK'
   },
   {
     id: 'factories',

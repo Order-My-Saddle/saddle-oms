@@ -125,7 +125,8 @@ export class User {
   @ApiProperty({
     type: String,
     example: "supervisor",
-    description: "Dynamically computed role name (fitter, admin, factory, supervisor, user)",
+    description:
+      "Dynamically computed role name (fitter, admin, factory, supervisor, user)",
     required: false,
   })
   typeName?: string;
@@ -133,7 +134,8 @@ export class User {
   @ApiProperty({
     type: Number,
     example: 2,
-    description: "User type from credentials table (1=fitter, 2=admin, 3=factory, 4=customsaddler)",
+    description:
+      "User type from credentials table (1=fitter, 2=admin, 3=factory, 4=customsaddler)",
     required: false,
   })
   @Expose({ groups: ["me", "admin"] })
@@ -142,7 +144,8 @@ export class User {
   @ApiProperty({
     type: Number,
     example: 0,
-    description: "Supervisor flag from credentials table (0=not supervisor, 1=supervisor)",
+    description:
+      "Supervisor flag from credentials table (0=not supervisor, 1=supervisor)",
     required: false,
   })
   @Expose({ groups: ["me", "admin"] })

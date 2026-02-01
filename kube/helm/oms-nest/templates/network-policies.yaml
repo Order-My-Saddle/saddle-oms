@@ -1,0 +1,109 @@
+{{- if .Values.networkPolicies.enabled }}
+# Default deny all ingress traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "oms-nest.fullname" . }}-default-deny
+  labels:
+    {{- include "oms-nest.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+# Allow ingress controller to reach frontend and backend
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "oms-nest.fullname" . }}-allow-ingress
+  labels:
+    {{- include "oms-nest.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - backend
+          - frontend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.port }}
+        - protocol: TCP
+          port: {{ .Values.frontend.port }}
+---
+# Allow backend to reach Redis
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "oms-nest.fullname" . }}-allow-redis
+  labels:
+    {{- include "oms-nest.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+      ports:
+        - protocol: TCP
+          port: {{ .Values.redis.port }}
+---
+# Allow Prometheus to scrape backend metrics
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "oms-nest.fullname" . }}-allow-prometheus
+  labels:
+    {{- include "oms-nest.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: backend
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: {{ .Values.backend.port }}
+{{- if .Values.maildev.enabled }}
+---
+# Allow backend to reach Maildev SMTP
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "oms-nest.fullname" . }}-allow-maildev
+  labels:
+    {{- include "oms-nest.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: maildev
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: backend
+      ports:
+        - protocol: TCP
+          port: {{ .Values.maildev.ports.smtp }}
+{{- end }}
+{{- end }}

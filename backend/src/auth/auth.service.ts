@@ -27,6 +27,7 @@ import { RoleEnum } from "../roles/roles.enum";
 import { SessionService } from "../session/session.service";
 import { StatusEnum } from "../statuses/statuses.enum";
 import { User } from "../users/domain/user";
+import { AuditLoggingService } from "../audit-logging/audit-logging.service";
 
 @Injectable()
 export class AuthService {
@@ -36,6 +37,7 @@ export class AuthService {
     private sessionService: SessionService,
     private mailService: MailService,
     private configService: ConfigService<AllConfigType>,
+    private auditLoggingService: AuditLoggingService,
   ) {}
 
   async validateLogin(loginDto: AuthEmailLoginDto): Promise<LoginResponseDto> {
@@ -116,7 +118,7 @@ export class AuthService {
 
     // Resolve user role based on database fields (user_type and supervisor)
     const userRole = await this.usersService.getUserRole(
-      user.id,
+      user.legacyId ?? user.id,
       user.username,
       user.userType,
       user.isSupervisor,
@@ -128,7 +130,7 @@ export class AuthService {
       fitter: "ROLE_FITTER",
       admin: "ROLE_ADMIN",
       factory: "ROLE_SUPPLIER", // Note: backend "factory" maps to frontend "SUPPLIER"
-      customsaddler: "ROLE_USER",
+      customsaddler: "ROLE_SUPPLIER",
       supervisor: "ROLE_SUPERVISOR",
       user: "ROLE_USER",
     };
@@ -151,6 +153,15 @@ export class AuthService {
         }),
       },
     );
+
+    // Fire-and-forget audit log for login
+    const userId =
+      typeof user.id === "string" ? parseInt(user.id, 10) || 0 : user.id;
+    this.auditLoggingService
+      .logAction(userId, "user_login", undefined, undefined, undefined, 1, "User", String(user.id))
+      .catch(() => {
+        // Silently ignore audit log failures
+      });
 
     return {
       token,

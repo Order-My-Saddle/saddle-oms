@@ -12,6 +12,16 @@ interface ExtraDetailModalProps {
   onEdit?: () => void;
 }
 
+const PRICE_TIERS = [
+  { key: 'price1' as const, label: 'USD', symbol: '$' },
+  { key: 'price2' as const, label: 'EUR', symbol: '€' },
+  { key: 'price3' as const, label: 'GBP', symbol: '£' },
+  { key: 'price4' as const, label: 'CAD', symbol: 'C$' },
+  { key: 'price5' as const, label: 'AUD', symbol: 'A$' },
+  { key: 'price6' as const, label: 'NOK', symbol: 'N€' },
+  { key: 'price7' as const, label: 'DKK', symbol: 'D€' },
+];
+
 export function ExtraDetailModal({ extra, isOpen, onClose, onEdit }: ExtraDetailModalProps) {
   if (!extra) return null;
 
@@ -28,44 +38,30 @@ export function ExtraDetailModal({ extra, isOpen, onClose, onEdit }: ExtraDetail
         <div className="grid grid-cols-1 gap-6 mt-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block font-semibold text-sm text-gray-600 mb-1">Extra ID</label>
-              <p className="text-sm text-gray-900 p-2 bg-gray-50 rounded border">
-                {extra.id}
-              </p>
-            </div>
-
-            <div>
               <label className="block font-semibold text-sm text-gray-600 mb-1">Name</label>
               <p className="text-sm text-gray-900 p-2 bg-gray-50 rounded border">
                 {extra.name || '-'}
               </p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block font-semibold text-sm text-gray-600 mb-1">Sequence</label>
               <p className="text-sm text-gray-900 p-2 bg-gray-50 rounded border">
                 {extra.sequence ?? '-'}
               </p>
             </div>
+          </div>
 
-            <div>
-              <label className="block font-semibold text-sm text-gray-600 mb-1">Price</label>
-              <p className="text-sm text-gray-900 p-2 bg-gray-50 rounded border">
-                {extra.price !== undefined ? `$${extra.price.toFixed(2)}` : '-'}
-              </p>
-            </div>
-
-            <div>
-              <label className="block font-semibold text-sm text-gray-600 mb-1">Status</label>
-              <p className={`text-sm p-2 rounded border inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                extra.active
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-red-100 text-red-800'
-              }`}>
-                {extra.active ? 'Active' : 'Inactive'}
-              </p>
+          <div>
+            <label className="block font-semibold text-sm text-gray-600 mb-2">Default Prices</label>
+            <div className="grid grid-cols-4 gap-3">
+              {PRICE_TIERS.map(({ key, label, symbol }) => (
+                <div key={key}>
+                  <label className="block text-xs text-gray-500 mb-1">{label}</label>
+                  <p className="text-sm text-gray-900 p-2 bg-gray-50 rounded border">
+                    {symbol} {(extra[key] ?? 0).toFixed(2)}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -88,7 +84,6 @@ export function ExtraDetailModal({ extra, isOpen, onClose, onEdit }: ExtraDetail
                   </p>
                 </div>
               )}
-
               {extra.updatedAt && (
                 <div>
                   <label className="block font-semibold text-sm text-gray-600 mb-1">Last Updated</label>

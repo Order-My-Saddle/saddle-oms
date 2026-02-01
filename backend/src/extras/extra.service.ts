@@ -11,9 +11,6 @@ import { UpdateExtraDto } from "./dto/update-extra.dto";
 import { ExtraDto } from "./dto/extra.dto";
 import { plainToClass } from "class-transformer";
 
-/**
- * Simplified Extra Service using direct TypeORM operations
- */
 @Injectable()
 export class ExtraService {
   constructor(
@@ -21,11 +18,7 @@ export class ExtraService {
     private readonly extraRepository: Repository<ExtraEntity>,
   ) {}
 
-  /**
-   * Create a new extra
-   */
   async create(createExtraDto: CreateExtraDto): Promise<ExtraDto> {
-    // Check if extra with this name already exists
     const existingExtra = await this.extraRepository.findOne({
       where: { name: createExtraDto.name, deletedAt: IsNull() },
     });
@@ -34,15 +27,23 @@ export class ExtraService {
       throw new ConflictException("Extra with this name already exists");
     }
 
-    const extra = this.extraRepository.create(createExtraDto);
+    const extra = this.extraRepository.create({
+      name: createExtraDto.name,
+      description: createExtraDto.description,
+      price1: createExtraDto.price1 ?? 0,
+      price2: createExtraDto.price2 ?? 0,
+      price3: createExtraDto.price3 ?? 0,
+      price4: createExtraDto.price4 ?? 0,
+      price5: createExtraDto.price5 ?? 0,
+      price6: createExtraDto.price6 ?? 0,
+      price7: createExtraDto.price7 ?? 0,
+      sequence: createExtraDto.sequence ?? 0,
+    });
     const savedExtra = await this.extraRepository.save(extra);
 
     return this.toDto(savedExtra);
   }
 
-  /**
-   * Find extra by ID (UUID only)
-   */
   async findOne(id: string): Promise<ExtraDto> {
     const extra = await this.extraRepository.findOne({
       where: { id, deletedAt: IsNull() },
@@ -55,9 +56,6 @@ export class ExtraService {
     return this.toDto(extra);
   }
 
-  /**
-   * Find all extras with filtering and pagination
-   */
   async findAll(
     page: number = 1,
     limit: number = 10,
@@ -83,9 +81,6 @@ export class ExtraService {
     };
   }
 
-  /**
-   * Update extra
-   */
   async update(id: string, updateExtraDto: UpdateExtraDto): Promise<ExtraDto> {
     const extra = await this.extraRepository.findOne({
       where: { id, deletedAt: IsNull() },
@@ -95,7 +90,6 @@ export class ExtraService {
       throw new NotFoundException("Extra not found");
     }
 
-    // Check for name conflicts if name is being changed
     if (updateExtraDto.name && updateExtraDto.name !== extra.name) {
       const existingExtra = await this.extraRepository.findOne({
         where: { name: updateExtraDto.name, deletedAt: IsNull() },
@@ -105,15 +99,31 @@ export class ExtraService {
       }
     }
 
-    Object.assign(extra, updateExtraDto);
+    if (updateExtraDto.name !== undefined) extra.name = updateExtraDto.name;
+    if (updateExtraDto.description !== undefined)
+      extra.description = updateExtraDto.description;
+    if (updateExtraDto.price1 !== undefined)
+      extra.price1 = updateExtraDto.price1;
+    if (updateExtraDto.price2 !== undefined)
+      extra.price2 = updateExtraDto.price2;
+    if (updateExtraDto.price3 !== undefined)
+      extra.price3 = updateExtraDto.price3;
+    if (updateExtraDto.price4 !== undefined)
+      extra.price4 = updateExtraDto.price4;
+    if (updateExtraDto.price5 !== undefined)
+      extra.price5 = updateExtraDto.price5;
+    if (updateExtraDto.price6 !== undefined)
+      extra.price6 = updateExtraDto.price6;
+    if (updateExtraDto.price7 !== undefined)
+      extra.price7 = updateExtraDto.price7;
+    if (updateExtraDto.sequence !== undefined)
+      extra.sequence = updateExtraDto.sequence;
+
     const savedExtra = await this.extraRepository.save(extra);
 
     return this.toDto(savedExtra);
   }
 
-  /**
-   * Remove extra (soft delete)
-   */
   async remove(id: string): Promise<void> {
     const extra = await this.extraRepository.findOne({
       where: { id, deletedAt: IsNull() },
@@ -127,9 +137,6 @@ export class ExtraService {
     await this.extraRepository.save(extra);
   }
 
-  /**
-   * Get active extras only
-   */
   async findActiveExtras(): Promise<ExtraDto[]> {
     const extras = await this.extraRepository.find({
       where: { deletedAt: IsNull() },
@@ -139,9 +146,6 @@ export class ExtraService {
     return extras.map((extra) => this.toDto(extra));
   }
 
-  /**
-   * Convert entity to DTO
-   */
   private toDto(extra: ExtraEntity): ExtraDto {
     const dto = plainToClass(ExtraDto, extra, {
       excludeExtraneousValues: true,

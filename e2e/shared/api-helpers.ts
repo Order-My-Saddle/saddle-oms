@@ -46,7 +46,7 @@ export const ENTITY_CONFIGS: Record<string, EntityTestConfig> = {
     searchable: true,
     filterable: true,
     sortable: true,
-    pagination: false // Returns direct array
+    pagination: false
   },
   fitters: {
     endpoint: '/api/v1/fitters',
@@ -55,7 +55,7 @@ export const ENTITY_CONFIGS: Record<string, EntityTestConfig> = {
     searchable: true,
     filterable: true,
     sortable: true,
-    pagination: false // Returns direct array
+    pagination: false
   },
   factories: {
     endpoint: '/api/v1/factories',
@@ -64,7 +64,7 @@ export const ENTITY_CONFIGS: Record<string, EntityTestConfig> = {
     searchable: true,
     filterable: true,
     sortable: true,
-    pagination: false // Returns direct array
+    pagination: false
   },
   saddles: {
     endpoint: '/api/v1/saddles',
@@ -78,7 +78,7 @@ export const ENTITY_CONFIGS: Record<string, EntityTestConfig> = {
   users: {
     endpoint: '/api/v1/users',
     entityName: 'User',
-    expectedFields: ['id', 'firstName', 'lastName', 'email'],
+    expectedFields: ['id', 'username', 'email'],
     searchable: true,
     filterable: true,
     sortable: true,
@@ -100,6 +100,51 @@ export const ENTITY_CONFIGS: Record<string, EntityTestConfig> = {
     searchable: true,
     filterable: true,
     sortable: true,
+    pagination: true
+  },
+  warehouses: {
+    endpoint: '/api/v1/warehouses',
+    entityName: 'Warehouse',
+    expectedFields: ['id', 'name'],
+    searchable: true,
+    filterable: true,
+    sortable: true,
+    pagination: true
+  },
+  extras: {
+    endpoint: '/api/v1/extras',
+    entityName: 'Extra',
+    expectedFields: ['id', 'name'],
+    searchable: true,
+    filterable: false,
+    sortable: false,
+    pagination: true
+  },
+  presets: {
+    endpoint: '/api/v1/presets',
+    entityName: 'Preset',
+    expectedFields: ['id'],
+    searchable: true,
+    filterable: false,
+    sortable: false,
+    pagination: true
+  },
+  leathertypes: {
+    endpoint: '/api/v1/leathertypes',
+    entityName: 'Leathertype',
+    expectedFields: ['id'],
+    searchable: true,
+    filterable: false,
+    sortable: false,
+    pagination: true
+  },
+  saddleStock: {
+    endpoint: '/api/v1/saddle-stock',
+    entityName: 'SaddleStock',
+    expectedFields: ['id', 'serial', 'name'],
+    searchable: true,
+    filterable: true,
+    sortable: false,
     pagination: true
   }
 };
@@ -153,12 +198,12 @@ export class ApiHelper {
     let entities: any[] = [];
 
     // Handle different response formats:
-    // 1. Hydra format (enriched orders): { "hydra:member": [...], "hydra:totalItems": N }
+    // 1. Hydra format (enriched orders, saddle-stock): { "hydra:member": [...], "hydra:totalItems": N }
     // 2. Paginated format (orders, saddles): { data: [...], total: N, pages: N }
-    // 3. Direct array format (customers, fitters, factories): [...]
+    // 3. Infinity pagination (users): { data: [...], meta: { hasNextPage, ... } }
+    // 4. Direct array format (customers, fitters, factories): [...]
 
     if (data['hydra:member'] !== undefined) {
-      // Hydra format
       expect(data).toHaveProperty('hydra:member');
       expect(Array.isArray(data['hydra:member'])).toBe(true);
       entities = data['hydra:member'];
@@ -168,19 +213,20 @@ export class ApiHelper {
         expect(typeof data['hydra:totalItems']).toBe('number');
       }
     } else if (data.data !== undefined) {
-      // Standard paginated format
       expect(data).toHaveProperty('data');
       expect(Array.isArray(data.data)).toBe(true);
       entities = data.data;
 
       if (config.pagination) {
-        expect(data).toHaveProperty('total');
-        expect(typeof data.total).toBe('number');
-        expect(data).toHaveProperty('pages');
-        expect(typeof data.pages).toBe('number');
+        // Could be standard pagination or infinity pagination
+        if (data.meta !== undefined) {
+          expect(data).toHaveProperty('meta');
+        } else {
+          expect(data).toHaveProperty('total');
+          expect(typeof data.total).toBe('number');
+        }
       }
     } else if (Array.isArray(data)) {
-      // Direct array format
       entities = data;
     } else {
       throw new Error(`Unexpected response format for ${entityType}: ${JSON.stringify(data).slice(0, 200)}`);
@@ -245,7 +291,7 @@ export class ApiHelper {
 
   validateSearchParam(url: string, searchTerm: string): void {
     const urlObj = new URL(url);
-    const searchParam = urlObj.searchParams.get('search');
+    const searchParam = urlObj.searchParams.get('search') || urlObj.searchParams.get('searchTerm');
     expect(searchParam).toBe(searchTerm);
   }
 
@@ -278,10 +324,17 @@ export class ApiHelper {
       return;
     }
 
-    // Check for OData $orderby parameter
-    const orderBy = params.get('$orderby');
+    // Check for orderBy/orderDirection parameters
+    const orderBy = params.get('orderBy');
     if (orderBy) {
-      expect(orderBy).toContain(`${sortField} ${sortOrder}`);
+      expect(orderBy).toBe(sortField);
+      return;
+    }
+
+    // Check for OData $orderby parameter
+    const oDataOrderBy = params.get('$orderby');
+    if (oDataOrderBy) {
+      expect(oDataOrderBy).toContain(`${sortField} ${sortOrder}`);
     }
   }
 

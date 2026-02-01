@@ -7,7 +7,7 @@ import { EntityTable } from '@/components/shared/EntityTable';
 import { useTableFilters, usePagination } from '@/hooks';
 import { getCustomerTableColumns } from '@/utils/customerTableColumns';
 import { PageHeader } from '@/components/shared/PageHeader';
-import { fetchCustomers, updateCustomer, deleteCustomer, createCustomer, fetchCustomerCount, type Customer } from '@/services/customers';
+import { fetchCustomers, updateCustomer, deleteCustomer, createCustomer, type Customer } from '@/services/customers';
 import { CustomerDetailModal } from '@/components/shared/CustomerDetailModal';
 import { CustomerEditModal } from '@/components/shared/CustomerEditModal';
 
@@ -19,7 +19,6 @@ export default function Customers() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [totalItemsState, setTotalItemsState] = useState(0);
-  const [actualTotalCount, setActualTotalCount] = useState(0);
 
   // Modal states
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -95,20 +94,6 @@ export default function Customers() {
     fetchCustomersData();
   }, [currentPage]);
 
-  // Fetch the total customer count once when component mounts
-  useEffect(() => {
-    const loadTotalCount = async () => {
-      try {
-        const count = await fetchCustomerCount();
-        setActualTotalCount(count);
-      } catch (error) {
-        console.error('📊 Failed to load customer count:', error);
-      }
-    };
-
-    loadTotalCount();
-  }, []); // Only run once on mount
-  
   // Handle filter changes
   const handleFilterChange = (key: string, value: string) => {
     updateFilter(key, value);
@@ -270,7 +255,7 @@ export default function Customers() {
             onPageChange: (newPage: number) => {
               setCurrentPage(newPage);
             },
-            totalItems: actualTotalCount > 0 ? actualTotalCount : totalItemsState,
+            totalItems: totalItemsState,
             itemsPerPage: itemsPerPage,
           };
           return paginationData;

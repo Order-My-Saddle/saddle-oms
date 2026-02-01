@@ -4,7 +4,7 @@ import { Customer } from "./domain/customer";
 import { CustomerId } from "./domain/value-objects/customer-id.value-object";
 import { CreateCustomerDto } from "./dto/create-customer.dto";
 import { UpdateCustomerDto } from "./dto/update-customer.dto";
-import { QueryCustomerDto } from "./dto/query-customer.dto";
+
 import { CustomerDto } from "./dto/customer.dto";
 import { CustomerMapper as DtoMapper } from "./mappers/customer-dto.mapper";
 
@@ -65,36 +65,36 @@ export class CustomerService {
   /**
    * Find all customers with filtering and pagination
    */
-  async findAll(queryDto: QueryCustomerDto): Promise<CustomerDto[]> {
-    const filters = queryDto.getCustomerFilters();
+  async findAll(
+    page: number = 1,
+    limit: number = 30,
+    name?: string,
+    email?: string,
+    city?: string,
+    country?: string,
+    fitterId?: number,
+    search?: string,
+    id?: number,
+  ): Promise<{ data: CustomerDto[]; total: number; pages: number }> {
+    const { customers, total } = await this.customerRepository.findAllPaginated(
+      {
+        page,
+        limit,
+        fitterId,
+        name,
+        email,
+        country,
+        city,
+        search,
+        id,
+      },
+    );
 
-    const customers = await this.customerRepository.findAll({
-      fitterId: filters.fitterId,
-      country: filters.country,
-      city: filters.city,
-      isActive: filters.active,
-    });
-
-    // Apply additional filtering if needed
-    let filteredCustomers = customers;
-
-    if (filters.email) {
-      filteredCustomers = filteredCustomers.filter((customer) => {
-        const email = customer.email;
-        return (
-          email &&
-          email.value.toLowerCase().includes(filters.email!.toLowerCase())
-        );
-      });
-    }
-
-    if (filters.name) {
-      filteredCustomers = filteredCustomers.filter((customer) =>
-        customer.name.toLowerCase().includes(filters.name!.toLowerCase()),
-      );
-    }
-
-    return filteredCustomers.map((customer) => this.dtoMapper.toDto(customer));
+    return {
+      data: customers.map((customer) => this.dtoMapper.toDto(customer)),
+      total,
+      pages: Math.ceil(total / limit),
+    };
   }
 
   /**

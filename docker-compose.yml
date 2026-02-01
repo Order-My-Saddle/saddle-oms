@@ -1,0 +1,108 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: development
+      APP_PORT: "3001"
+      DATABASE_TYPE: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_USERNAME: oms
+      DATABASE_PASSWORD: oms_password
+      DATABASE_NAME: oms_nest
+      DATABASE_SYNCHRONIZE: "false"
+      DATABASE_SSL_ENABLED: "false"
+      AUTH_JWT_SECRET: local-dev-jwt-secret-change-me
+      AUTH_JWT_TOKEN_EXPIRES_IN: 1d
+      AUTH_REFRESH_SECRET: local-dev-refresh-secret-change-me
+      AUTH_REFRESH_TOKEN_EXPIRES_IN: 7d
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      MAIL_HOST: maildev
+      MAIL_PORT: "1025"
+      MAIL_USER: ""
+      MAIL_PASSWORD: ""
+      MAIL_DEFAULT_EMAIL: noreply@ordermysaddle.com
+      MAIL_DEFAULT_NAME: "OMS Local"
+    volumes:
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      PORT: "3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17.6-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: oms_nest
+      POSTGRES_USER: oms
+      POSTGRES_PASSWORD: oms_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oms -d oms_nest"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 100mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  maildev:
+    image: maildev/maildev
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+    restart: unless-stopped
+
+  adminer:
+    image: adminer
+    ports:
+      - "8080:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

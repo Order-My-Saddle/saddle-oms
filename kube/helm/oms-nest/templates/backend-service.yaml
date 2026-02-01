@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "oms-nest.fullname" . }}-backend
+  labels:
+    {{- include "oms-nest.backend.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.backend.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "oms-nest.backend.selectorLabels" . | nindent 4 }}

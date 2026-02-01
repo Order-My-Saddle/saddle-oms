@@ -42,7 +42,11 @@ describe("OrderSearchService", () => {
     fitterStock: false,
     customOrder: false,
     changed: null,
-    // NOTE: seatSizes removed - legacy system stores seat size in special_notes field
+    serialNumber: null,
+    leatherId: null,
+    orderStatus: 0,
+    orderTime: null,
+    seatSizes: null,
     customerName: "John Smith",
     saddleId: "saddle-123",
     createdAt: new Date("2023-01-01"),

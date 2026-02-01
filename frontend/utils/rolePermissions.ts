@@ -56,8 +56,9 @@ export const SCREEN_PERMISSIONS = {
 
   // Saddle Stock Management
   REPAIRS: [UserRole.USER, UserRole.FITTER, UserRole.ADMIN, UserRole.SUPERVISOR],
-  MY_SADDLE_STOCK: [UserRole.USER, UserRole.FITTER, UserRole.ADMIN, UserRole.SUPERVISOR],
-  AVAILABLE_SADDLE_STOCK: [UserRole.USER, UserRole.FITTER, UserRole.ADMIN, UserRole.SUPERVISOR],
+  MY_SADDLE_STOCK: [UserRole.FITTER],
+  AVAILABLE_SADDLE_STOCK: [UserRole.FITTER],
+  ALL_SADDLE_STOCK: [UserRole.ADMIN, UserRole.SUPERVISOR],
   
   // User Actions - ADMIN and SUPERVISOR
   USER_CREATE: [UserRole.ADMIN, UserRole.SUPERVISOR],

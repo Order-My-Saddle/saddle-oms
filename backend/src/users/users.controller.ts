@@ -35,6 +35,7 @@ import { User } from "./domain/user";
 import { UsersService } from "./users.service";
 import { RolesGuard } from "../roles/roles.guard";
 import { infinityPagination } from "../utils/infinity-pagination";
+import { AuditLog } from "../audit-logging/decorators";
 
 @ApiBearerAuth()
 @Roles(RoleEnum.admin, RoleEnum.supervisor)
@@ -54,6 +55,7 @@ export class UsersController {
     groups: ["admin"],
   })
   @Post()
+  @AuditLog({ entity: "User" })
   @HttpCode(HttpStatus.CREATED)
   create(@Body() createProfileDto: CreateUserDto): Promise<User> {
     return this.usersService.create(createProfileDto);
@@ -76,8 +78,8 @@ export class UsersController {
       limit = 50;
     }
 
-    return infinityPagination(
-      await this.usersService.findManyWithPagination({
+    const [users, totalCount] = await Promise.all([
+      this.usersService.findManyWithPagination({
         filterOptions: query?.filters,
         sortOptions: query?.sort,
         paginationOptions: {
@@ -85,8 +87,24 @@ export class UsersController {
           limit,
         },
       }),
-      { page, limit },
+      this.usersService.count(query?.filters),
+    ]);
+
+    // Populate typeName (role) for each user
+    const usersWithRoles = await Promise.all(
+      users.map(async (user) => {
+        const role = await this.usersService.getUserRole(
+          user.legacyId ?? user.id,
+          user.username,
+          user.userType,
+          user.isSupervisor,
+        );
+        user.typeName = role.name;
+        return user;
+      }),
     );
+
+    return infinityPagination(usersWithRoles, { page, limit }, totalCount);
   }
 
   @ApiOkResponse({
@@ -113,6 +131,7 @@ export class UsersController {
     groups: ["admin"],
   })
   @Patch(":id")
+  @AuditLog({ entity: "User" })
   @HttpCode(HttpStatus.OK)
   @ApiParam({
     name: "id",
@@ -127,6 +146,7 @@ export class UsersController {
   }
 
   @Delete(":id")
+  @AuditLog({ entity: "User" })
   @ApiParam({
     name: "id",
     type: String,

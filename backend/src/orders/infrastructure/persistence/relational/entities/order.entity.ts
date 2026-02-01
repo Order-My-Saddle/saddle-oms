@@ -222,6 +222,23 @@ export class OrderEntity {
   @Column({ name: "custom_order", type: "boolean", default: false })
   customOrder: boolean;
 
+  @Column({
+    name: "serial_number",
+    type: "varchar",
+    length: 100,
+    nullable: true,
+  })
+  serialNumber: string | null;
+
+  @Column({ name: "leather_id", type: "integer", nullable: true })
+  leatherId: number | null;
+
+  @Column({ name: "order_status", type: "integer", default: 0 })
+  orderStatus: number;
+
+  @Column({ name: "order_time", type: "integer", nullable: true })
+  orderTime: number | null;
+
   // Legacy changed timestamp (Unix timestamp)
   @Column({ type: "bigint", nullable: true })
   changed: number | null;
@@ -242,6 +259,10 @@ export class OrderEntity {
     this.balanceOwing = 0;
     this.isUrgent = false;
     this.customerName = null;
+    this.serialNumber = null;
+    this.leatherId = null;
+    this.orderStatus = 0;
+    this.orderTime = null;
     // Legacy boolean flags
     this.rushed = false;
     this.repair = false;

@@ -7,21 +7,26 @@ export interface TestUser {
   expectedRedirect?: string;
 }
 
-// Test users for different roles (updated for NestJS backend)
+// Test users for different roles (matching NestJS backend seed data)
 export const TEST_USERS: Record<string, TestUser> = {
   admin: {
-    username: 'admin@example.com',
-    password: 'secret',
+    username: 'admin@omsaddle.com',
+    password: 'AdminPass123!',
     role: 'admin',
     expectedRedirect: '/dashboard'
   },
-  user: {
-    username: 'user@example.com',
-    password: 'secret',
-    role: 'user',
+  fitter: {
+    username: 'sarah.thompson@fitters.com',
+    password: 'FitterPass123!',
+    role: 'fitter',
+    expectedRedirect: '/dashboard'
+  },
+  supervisor: {
+    username: 'admin@omsaddle.com',
+    password: 'AdminPass123!',
+    role: 'supervisor',
     expectedRedirect: '/dashboard'
   }
-  // Note: These credentials should match seeded test users in NestJS backend
 };
 
 export class AuthHelper {
@@ -38,7 +43,7 @@ export class AuthHelper {
     await this.page.fill('input[placeholder="Wachtwoord"]', user.password);
 
     // Submit form
-    await this.page.click('button[type="submit"], button:has-text("Login"), button:has-text("Sign In")');
+    await this.page.click('button[type="submit"]');
 
     // Wait for response (either success redirect or error message)
     await this.page.waitForTimeout(3000);

@@ -1,0 +1,178 @@
+/**
+ * OMS Nest Kubernetes Deployment Pipeline
+ *
+ * Jenkins parameterized pipeline for deploying to staging or production.
+ * Triggered by GitHub Actions after successful CI builds.
+ *
+ * Jenkins jobs:
+ *   - oms-nest-deploy-staging:    auto-deploy on develop merges
+ *   - oms-nest-deploy-production: manual approval gate on main merges
+ *
+ * Required Jenkins credentials:
+ *   - kubeconfig-oms:         Kubernetes cluster kubeconfig
+ *   - ghcr-credentials:       GitHub Container Registry PAT
+ *   - slack-webhook-url:      Slack notification webhook
+ */
+
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'BACKEND_IMAGE_TAG', defaultValue: 'latest', description: 'Backend Docker image tag')
+        string(name: 'FRONTEND_IMAGE_TAG', defaultValue: 'latest', description: 'Frontend Docker image tag')
+        choice(name: 'ENVIRONMENT', choices: ['staging', 'production'], description: 'Target deployment environment')
+    }
+
+    environment {
+        KUBECONFIG = credentials('kubeconfig-oms')
+        HELM_CHART_PATH = 'kube/helm/oms-nest'
+        SLACK_WEBHOOK = credentials('slack-webhook-url')
+    }
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Validate') {
+            steps {
+                script {
+                    def namespace = "oms-nest-${params.ENVIRONMENT}"
+                    def valuesFile = "kube/helm/oms-nest/values-${params.ENVIRONMENT}.yaml"
+
+                    echo "Deploying to ${params.ENVIRONMENT}"
+                    echo "  Backend:  ${params.BACKEND_IMAGE_TAG}"
+                    echo "  Frontend: ${params.FRONTEND_IMAGE_TAG}"
+                    echo "  Namespace: ${namespace}"
+
+                    // Validate Helm chart
+                    sh """
+                        helm lint ${HELM_CHART_PATH} -f ${valuesFile}
+                    """
+
+                    // Dry-run template rendering
+                    sh """
+                        helm template oms-nest-${params.ENVIRONMENT} ${HELM_CHART_PATH} \
+                            -f ${valuesFile} \
+                            --set backend.image.tag=${params.BACKEND_IMAGE_TAG} \
+                            --set frontend.image.tag=${params.FRONTEND_IMAGE_TAG} \
+                            -n ${namespace} \
+                            > /dev/null
+                    """
+                }
+            }
+        }
+
+        stage('Approval Gate') {
+            when {
+                expression { params.ENVIRONMENT == 'production' }
+            }
+            steps {
+                script {
+                    slackSend(
+                        color: '#FFA500',
+                        message: ":warning: *OMS Nest Production Deploy* awaiting approval\nBackend: `${params.BACKEND_IMAGE_TAG}` | Frontend: `${params.FRONTEND_IMAGE_TAG}`\n<${env.BUILD_URL}|Approve/Reject>",
+                        channel: '#oms-deployments'
+                    )
+                }
+                timeout(time: 15, unit: 'MINUTES') {
+                    input message: "Deploy to PRODUCTION?",
+                          ok: "Deploy",
+                          submitter: "admin,devops"
+                }
+            }
+        }
+
+        stage('Setup Namespace') {
+            steps {
+                script {
+                    def namespace = "oms-nest-${params.ENVIRONMENT}"
+
+                    sh """
+                        kubectl create namespace ${namespace} --dry-run=client -o yaml | kubectl apply -f -
+                        kubectl label namespace ${namespace} environment=${params.ENVIRONMENT} --overwrite
+                    """
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                script {
+                    def namespace = "oms-nest-${params.ENVIRONMENT}"
+                    def releaseName = "oms-nest-${params.ENVIRONMENT}"
+                    def valuesFile = "kube/helm/oms-nest/values-${params.ENVIRONMENT}.yaml"
+
+                    sh """
+                        helm upgrade --install ${releaseName} ${HELM_CHART_PATH} \
+                            -f ${valuesFile} \
+                            --set backend.image.tag=${params.BACKEND_IMAGE_TAG} \
+                            --set frontend.image.tag=${params.FRONTEND_IMAGE_TAG} \
+                            -n ${namespace} \
+                            --atomic \
+                            --wait \
+                            --timeout 10m
+                    """
+                }
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                script {
+                    def namespace = "oms-nest-${params.ENVIRONMENT}"
+
+                    // Wait for pods to be ready
+                    sh """
+                        kubectl rollout status deployment/oms-nest-${params.ENVIRONMENT}-backend \
+                            -n ${namespace} --timeout=300s
+
+                        kubectl rollout status deployment/oms-nest-${params.ENVIRONMENT}-frontend \
+                            -n ${namespace} --timeout=300s
+                    """
+
+                    // Verify health endpoints
+                    sh """
+                        kubectl exec deployment/oms-nest-${params.ENVIRONMENT}-backend \
+                            -n ${namespace} -- \
+                            wget -q -O- http://localhost:3001/health || exit 1
+
+                        kubectl exec deployment/oms-nest-${params.ENVIRONMENT}-backend \
+                            -n ${namespace} -- \
+                            wget -q -O- http://localhost:3001/health/ready || exit 1
+                    """
+
+                    echo "Health checks passed"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            slackSend(
+                color: 'good',
+                message: ":white_check_mark: *OMS Nest ${params.ENVIRONMENT}* deployed successfully\nBackend: `${params.BACKEND_IMAGE_TAG}` | Frontend: `${params.FRONTEND_IMAGE_TAG}`\nBuild: <${env.BUILD_URL}|#${env.BUILD_NUMBER}>",
+                channel: '#oms-deployments'
+            )
+        }
+        failure {
+            slackSend(
+                color: 'danger',
+                message: ":x: *OMS Nest ${params.ENVIRONMENT}* deployment FAILED\nBackend: `${params.BACKEND_IMAGE_TAG}` | Frontend: `${params.FRONTEND_IMAGE_TAG}`\nBuild: <${env.BUILD_URL}|#${env.BUILD_NUMBER}>",
+                channel: '#oms-deployments'
+            )
+        }
+        always {
+            cleanWs()
+        }
+    }
+}

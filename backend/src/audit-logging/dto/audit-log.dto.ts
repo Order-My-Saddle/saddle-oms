@@ -55,6 +55,20 @@ export class AuditLogDto {
   @Expose()
   orderStatusTo?: number;
 
+  @ApiPropertyOptional({
+    description: "Entity type (e.g. Order, Customer, Fitter)",
+    example: "Order",
+  })
+  @Expose()
+  entityType?: string;
+
+  @ApiPropertyOptional({
+    description: "Entity ID",
+    example: "12345",
+  })
+  @Expose()
+  entityId?: string;
+
   @ApiProperty({
     description: "Timestamp when the action occurred",
     example: "2024-01-15T14:30:00.000Z",

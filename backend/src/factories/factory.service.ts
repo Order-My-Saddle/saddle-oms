@@ -47,7 +47,6 @@ export class FactoryService {
   async findOne(id: number): Promise<FactoryDto> {
     const factory = await this.factoryRepository.findOne({
       where: { id, deleted: 0 },
-      relations: ["user"],
     });
 
     if (!factory) {
@@ -68,7 +67,6 @@ export class FactoryService {
   ): Promise<{ data: FactoryDto[]; total: number; pages: number }> {
     const queryBuilder = this.factoryRepository
       .createQueryBuilder("factory")
-      .leftJoinAndSelect("factory.user", "user")
       .where("factory.deleted = 0");
 
     if (city) {
@@ -105,7 +103,6 @@ export class FactoryService {
   ): Promise<FactoryDto> {
     const factory = await this.factoryRepository.findOne({
       where: { id, deleted: 0 },
-      relations: ["user"],
     });
 
     if (!factory) {
@@ -160,7 +157,6 @@ export class FactoryService {
   async findByUserId(userId: number): Promise<FactoryDto | null> {
     const factory = await this.factoryRepository.findOne({
       where: { userId, deleted: 0 },
-      relations: ["user"],
     });
     return factory ? this.toDto(factory) : null;
   }
@@ -171,7 +167,6 @@ export class FactoryService {
   async findActiveFactories(): Promise<FactoryDto[]> {
     const factories = await this.factoryRepository.find({
       where: { deleted: 0 },
-      relations: ["user"],
       order: { city: "ASC" },
     });
     return factories.map((factory) => this.toDto(factory));
@@ -183,7 +178,6 @@ export class FactoryService {
   async findByCountry(country: string): Promise<FactoryDto[]> {
     const factories = await this.factoryRepository
       .createQueryBuilder("factory")
-      .leftJoinAndSelect("factory.user", "user")
       .where("factory.deleted = 0")
       .andWhere("factory.country ILIKE :country", { country: `%${country}%` })
       .orderBy("factory.city", "ASC")
@@ -197,7 +191,6 @@ export class FactoryService {
   async findByCity(city: string): Promise<FactoryDto[]> {
     const factories = await this.factoryRepository
       .createQueryBuilder("factory")
-      .leftJoinAndSelect("factory.user", "user")
       .where("factory.deleted = 0")
       .andWhere("factory.city ILIKE :city", { city: `%${city}%` })
       .getMany();
@@ -243,8 +236,7 @@ export class FactoryService {
     dto.deleted = factory.deleted;
     dto.isActive = factory.deleted === 0;
     dto.fullAddress = factory.fullAddress;
-    dto.displayName = factory.user?.name || factory.displayName;
-    dto.username = factory.user?.username;
+    dto.displayName = factory.displayName;
     dto.createdAt = factory.createdAt;
     dto.updatedAt = factory.updatedAt;
     return dto;

@@ -41,6 +41,8 @@ export interface EnrichedOrdersQueryDto {
   // Filter by seat size
   seatSizes?: string;
   seatSize?: string;
+  // Filter by customer country
+  customerCountry?: string;
 }
 
 export interface PaginationMetadata {
@@ -167,7 +169,8 @@ export class EnrichedOrdersService {
         fac.full_name as factory_name,
         o.factory_id,
         o.order_data,
-        o.seat_sizes
+        o.seat_sizes,
+        c.country as customer_country
       FROM orders o
       LEFT JOIN customers c ON o.customer_id = c.id
       LEFT JOIN fitters f ON o.fitter_id = f.id
@@ -392,6 +395,13 @@ export class EnrichedOrdersService {
       paramIndex++;
     }
 
+    // Filter by customer country
+    if (query.customerCountry) {
+      conditions.push(`c.country ILIKE $${paramIndex}`);
+      params.push(`%${query.customerCountry}%`);
+      paramIndex++;
+    }
+
     // Filter by seat size (searches multiple sources like the frontend display)
     const seatSizeFilter = query.seatSizes || query.seatSize;
     if (seatSizeFilter) {
@@ -506,8 +516,399 @@ export class EnrichedOrdersService {
     // Seat size filters
     if (query.seatSizes) keyParts.push(`seatSizes:${query.seatSizes}`);
     if (query.seatSize) keyParts.push(`seatSize:${query.seatSize}`);
+    // Customer country filter
+    if (query.customerCountry)
+      keyParts.push(`customerCountry:${query.customerCountry}`);
 
     return keyParts.join(":");
+  }
+
+  async getOrderDetail(orderId: number): Promise<any> {
+    this.logger.log(`Fetching order detail for ID: ${orderId}`);
+
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    try {
+      await queryRunner.connect();
+      await queryRunner.query(`SELECT set_config('rls.user_id', '0', true)`);
+
+      // Fetch comprehensive order data with all joins
+      const orderResult = await queryRunner.query(
+        `
+        SELECT
+          o.id,
+          o.id as "orderId",
+          to_timestamp(o.order_time) as "orderTime",
+          o.rushed as urgent,
+          o.special_notes as "specialNotes",
+          o.serial_number as "serialNumber",
+          o.custom_order as "customOrder",
+          o.repair,
+          o.demo,
+          o.sponsored,
+          o.order_step as "orderStep",
+          o.currency,
+          o.fitter_reference as "fitterReference",
+          o.order_data as "orderData",
+
+          -- Order address fields
+          o.name as "orderName",
+          o.horse_name as "horseName",
+          o.address as "orderAddress",
+          o.city as "orderCity",
+          o.state as "orderState",
+          o.zipcode as "orderZipcode",
+          o.country as "orderCountry",
+          o.phone_no as "orderPhone",
+          o.cell_no as "orderCell",
+          o.email as "orderEmail",
+
+          -- Shipping fields
+          o.ship_name as "shipName",
+          o.ship_address as "shipAddress",
+          o.ship_city as "shipCity",
+          o.ship_state as "shipState",
+          o.ship_zipcode as "shipZipcode",
+          o.ship_country as "shipCountry",
+
+          -- Pricing fields (stored as cents, divide by 100 for display)
+          ROUND(o.price_saddle / 100.0, 2) as "priceSaddle",
+          ROUND(o.price_tradein / 100.0, 2) as "priceTradein",
+          ROUND(o.price_deposit / 100.0, 2) as "priceDeposit",
+          ROUND(o.price_discount / 100.0, 2) as "priceDiscount",
+          ROUND(o.price_fittingeval / 100.0, 2) as "priceFittingeval",
+          ROUND(o.price_callfee / 100.0, 2) as "priceCallfee",
+          ROUND(o.price_girth / 100.0, 2) as "priceGirth",
+          ROUND(o.price_shipping / 100.0, 2) as "priceShipping",
+          ROUND(o.price_tax / 100.0, 2) as "priceTax",
+          ROUND(o.price_additional / 100.0, 2) as "priceAdditional",
+          ROUND((COALESCE(o.price_saddle,0) - COALESCE(o.price_tradein,0) - COALESCE(o.price_deposit,0) - COALESCE(o.price_discount,0) +
+           COALESCE(o.price_fittingeval,0) + COALESCE(o.price_callfee,0) + COALESCE(o.price_girth,0) +
+           COALESCE(o.price_shipping,0) + COALESCE(o.price_tax,0) + COALESCE(o.price_additional,0)) / 100.0, 2) as "totalPrice",
+
+          -- Status
+          st.name as "orderStatus",
+          o.order_status as "statusId",
+
+          -- Customer fields
+          c.id as "customerId",
+          c.name as "customerName",
+          c.email as "customerEmail",
+          c.address as "customerAddress",
+          c.city as "customerCity",
+          c.state as "customerState",
+          c.zipcode as "customerZipcode",
+          c.country as "customerCountry",
+          c.phone_no as "customerPhone",
+          c.cell_no as "customerCell",
+
+          -- Fitter fields
+          f.id as "fitterId",
+          fc.full_name as "fitterName",
+          fc.user_name as "fitterUsername",
+          f.emailaddress as "fitterEmail",
+          f.address as "fitterAddress",
+          f.city as "fitterCity",
+          f.state as "fitterState",
+          f.zipcode as "fitterZipcode",
+          f.country as "fitterCountry",
+          f.phone_no as "fitterPhone",
+          f.cell_no as "fitterCell",
+          f.currency as "fitterCurrency",
+
+          -- Factory fields
+          fa.id as "factoryId",
+          fac.full_name as "factoryName",
+          fac.user_name as "factoryUsername",
+
+          -- Saddle fields
+          s.id as "saddleId",
+          s.brand as "brandName",
+          s.model_name as "modelName",
+          s.type as "saddleType",
+
+          -- Leather
+          lt.id as "leatherId",
+          lt.name as "leatherName"
+
+        FROM orders o
+        LEFT JOIN customers c ON o.customer_id = c.id
+        LEFT JOIN fitters f ON o.fitter_id = f.id
+        LEFT JOIN credentials fc ON f.user_id = fc.user_id
+        LEFT JOIN factories fa ON o.factory_id = fa.id
+        LEFT JOIN credentials fac ON fa.user_id = fac.user_id
+        LEFT JOIN saddles s ON o.saddle_id = s.id
+        LEFT JOIN leather_types lt ON o.leather_id = lt.id
+        LEFT JOIN statuses st ON o.order_status = st.id
+        WHERE o.id = $1
+        `,
+        [orderId],
+      );
+
+      if (!orderResult || orderResult.length === 0) {
+        return null;
+      }
+
+      const order = orderResult[0];
+
+      // Map currency integer to currency code
+      const currencyMap: Record<number, string> = {
+        0: "USD",
+        1: "USD",
+        2: "EUR",
+        3: "GBP",
+        4: "AUD",
+        5: "CAD",
+        6: "CHF",
+        7: "DE",
+      };
+      order.currency = currencyMap[order.currency] || String(order.currency);
+      order.fitterCurrency =
+        currencyMap[order.fitterCurrency] || String(order.fitterCurrency || "");
+
+      // Fetch saddle specifications from orders_info + options + options_items/leather_types
+      // Leather-related option IDs use leather_types for display value
+      const leatherOptionIds = [5, 6, 10, 11, 12, 13, 14, 21, 22];
+      let saddleSpecs: any[] = [];
+      try {
+        saddleSpecs = await queryRunner.query(
+          `
+          SELECT
+            oi.option_id as "optionId",
+            o.name as "optionName",
+            oi.option_item_id as "optionItemId",
+            oitm.name as "itemName",
+            lt.name as "leatherName",
+            oi.custom,
+            o.sequence,
+            CASE
+              WHEN oi.option_id = ANY($2::int[]) THEN COALESCE(lt.name, oitm.name)
+              WHEN oi.custom != '' THEN oi.custom
+              ELSE oitm.name
+            END as "displayValue"
+          FROM orders_info oi
+          LEFT JOIN options o ON oi.option_id = o.id
+          LEFT JOIN options_items oitm ON oi.option_item_id = oitm.id
+          LEFT JOIN leather_types lt ON oi.option_item_id = lt.id
+            AND oi.option_id = ANY($2::int[])
+          WHERE oi.order_id = $1
+          ORDER BY o.sequence
+          `,
+          [orderId, leatherOptionIds],
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Failed to fetch saddle specs for order ${orderId}: ${err.message}`,
+        );
+      }
+
+      // Fetch order history from the legacy log table
+      let logEntries: any[] = [];
+      try {
+        logEntries = await queryRunner.query(
+          `
+          SELECT
+            l.id,
+            l.text as content,
+            to_timestamp(l.time) as "createdAt",
+            cr.full_name as "userName",
+            l.user_type as "userType",
+            l.only_for as "onlyFor"
+          FROM log l
+          LEFT JOIN credentials cr ON l.user_id = cr.user_id
+          WHERE l.order_id = $1
+          ORDER BY l.time DESC
+          `,
+          [orderId],
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Failed to fetch log entries for order ${orderId}: ${err.message}`,
+        );
+      }
+
+      // Also try the comment table (newer NestJS comments)
+      let commentsResult: any[] = [];
+      try {
+        commentsResult = await queryRunner.query(
+          `
+          SELECT
+            cm.id,
+            cm.content,
+            cm.type,
+            cm.is_internal as "isInternal",
+            cm.created_at as "createdAt",
+            cm.updated_at as "updatedAt",
+            cr.full_name as "userName"
+          FROM comment cm
+          LEFT JOIN credentials cr ON cm.user_id = cr.user_id
+          WHERE cm.order_id = $1
+          AND cm.deleted_at IS NULL
+          ORDER BY cm.created_at DESC
+          `,
+          [orderId],
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Failed to fetch comments for order ${orderId}: ${err.message}`,
+        );
+      }
+
+      return {
+        ...order,
+        saddleSpecs: saddleSpecs || [],
+        comments: commentsResult || [],
+        logEntries: logEntries || [],
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to fetch order detail for ID ${orderId}`,
+        error,
+      );
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async getEditFormOptions(): Promise<any> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    try {
+      await queryRunner.connect();
+      await queryRunner.query(`SELECT set_config('rls.user_id', '0', true)`);
+
+      // Fetch available fitters
+      const fitters = await queryRunner.query(`
+        SELECT f.id, c.username, CONCAT(c.first_name, ' ', c.last_name) as "fullName"
+        FROM fitters f
+        LEFT JOIN credentials c ON f.id = c.user_id AND c.user_type = 1
+        WHERE f.active = 1
+        ORDER BY c.first_name, c.last_name
+      `);
+
+      // Fetch available saddle models (brand + model)
+      const saddles = await queryRunner.query(`
+        SELECT s.id, s.brand, s.model_name as "modelName",
+          CONCAT(s.brand, ' ', s.model_name) as "displayName"
+        FROM saddles s
+        WHERE s.active = 1 AND s.deleted = 0
+        ORDER BY s.brand, s.model_name
+      `);
+
+      // Fetch available leather types
+      const leatherTypes = await queryRunner.query(`
+        SELECT id, name FROM leather_types
+        WHERE active = 1
+        ORDER BY name
+      `);
+
+      // Fetch all options with their items
+      const options = await queryRunner.query(`
+        SELECT o.id as "optionId", o.name as "optionName", o.sequence, o."group"
+        FROM options o
+        ORDER BY o.sequence
+      `);
+
+      const optionItems = await queryRunner.query(`
+        SELECT oi.id, oi.name, oi.option_id as "optionId"
+        FROM options_items oi
+        ORDER BY oi.option_id, oi.name
+      `);
+
+      // Fetch all statuses
+      const statuses = await queryRunner.query(`
+        SELECT id, name FROM statuses ORDER BY id
+      `);
+
+      return {
+        fitters,
+        saddles,
+        leatherTypes,
+        options,
+        optionItems,
+        statuses,
+      };
+    } catch (error) {
+      this.logger.error("Failed to fetch edit form options", error);
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async updateOrderStatus(orderId: number, statusName: string): Promise<any> {
+    this.logger.log(`Updating order ${orderId} status to: ${statusName}`);
+
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    try {
+      await queryRunner.connect();
+      await queryRunner.query(`SELECT set_config('rls.user_id', '0', true)`);
+
+      // Look up the status ID from the statuses table
+      const statusResult = await queryRunner.query(
+        `SELECT id FROM statuses WHERE name = $1`,
+        [statusName],
+      );
+
+      if (!statusResult || statusResult.length === 0) {
+        throw new Error(`Unknown status: ${statusName}`);
+      }
+
+      const statusId = statusResult[0].id;
+
+      // Get the old status before updating
+      const oldStatusResult = await queryRunner.query(
+        `SELECT order_status, fitter_id FROM orders WHERE id = $1`,
+        [orderId],
+      );
+
+      if (!oldStatusResult || oldStatusResult.length === 0) {
+        throw new Error(`Order ${orderId} not found`);
+      }
+
+      const oldStatusId = oldStatusResult[0].order_status;
+      const fitterId = oldStatusResult[0].fitter_id;
+
+      // Update the order's status
+      await queryRunner.query(
+        `UPDATE orders SET order_status = $1 WHERE id = $2`,
+        [statusId, orderId],
+      );
+
+      // Log the status change
+      try {
+        await queryRunner.query(
+          `INSERT INTO log (user_id, user_type, only_for, order_id, text, time, order_status_updated_from, order_status_updated_to)
+           VALUES ($1, 2, 0, $2, $3, EXTRACT(EPOCH FROM NOW())::integer, $4, $5)`,
+          [
+            fitterId || 0,
+            orderId,
+            `Changed the order status to '${statusName}'`,
+            oldStatusId,
+            statusId,
+          ],
+        );
+      } catch (logErr) {
+        this.logger.warn(`Failed to log status change: ${logErr.message}`);
+      }
+
+      this.logger.log(
+        `Successfully updated order ${orderId} to status ${statusName} (id: ${statusId})`,
+      );
+
+      return {
+        success: true,
+        orderId,
+        status: statusName,
+        statusId,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to update order status for ${orderId}`, error);
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   async invalidateCache(pattern?: string): Promise<void> {

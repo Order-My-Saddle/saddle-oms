@@ -1,0 +1,50 @@
+{{- if .Values.maildev.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "oms-nest.fullname" . }}-maildev
+  labels:
+    {{- include "oms-nest.maildev.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "oms-nest.maildev.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "oms-nest.maildev.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: maildev
+          image: {{ .Values.maildev.image.repository }}:{{ .Values.maildev.image.tag }}
+          ports:
+            - name: web
+              containerPort: {{ .Values.maildev.ports.web }}
+              protocol: TCP
+            - name: smtp
+              containerPort: {{ .Values.maildev.ports.smtp }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.maildev.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "oms-nest.maildev.serviceName" . }}
+  labels:
+    {{- include "oms-nest.maildev.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "oms-nest.maildev.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: web
+      port: {{ .Values.maildev.ports.web }}
+      targetPort: web
+      protocol: TCP
+    - name: smtp
+      port: {{ .Values.maildev.ports.smtp }}
+      targetPort: smtp
+      protocol: TCP
+{{- end }}

@@ -10,8 +10,8 @@ interface JwtPayload {
   [key: string]: any;
 }
 
-// Import jose for Edge Runtime compatible JWT verification
-import { jwtVerify } from 'jose';
+// Import jose for Edge Runtime compatible JWT handling
+import { jwtVerify, decodeJwt } from 'jose';
 
 // JWT verification function that works in Edge Runtime
 async function verifyJwt(token: string): Promise<JwtPayload | null> {
@@ -25,13 +25,23 @@ async function verifyJwt(token: string): Promise<JwtPayload | null> {
   }
 }
 
+// Decode JWT without signature verification (for role checking when verification is bypassed)
+function decodeJwtPayload(token: string): JwtPayload | null {
+  try {
+    return decodeJwt(token) as JwtPayload;
+  } catch {
+    return null;
+  }
+}
+
 // Define which roles are allowed per route
 const roleMap: Record<string, string[]> = {
   '/reports': ['admin', 'supervisor'],
   '/dashboard': ['admin', 'user', 'supervisor', 'fitter'],
   '/orders': ['admin', 'user', 'supervisor', 'fitter'],
-  '/my-saddle-stock': ['admin', 'user', 'supervisor', 'fitter'],
-  '/available-saddle-stock': ['admin', 'user', 'supervisor', 'fitter'],
+  '/my-saddle-stock': ['fitter'],
+  '/available-saddle-stock': ['fitter'],
+  '/saddle-stock': ['admin', 'supervisor'],
   '/repairs': ['admin', 'user', 'supervisor', 'fitter'],
   '/models': ['admin', 'user', 'supervisor'],
   '/customers': ['admin', 'user', 'supervisor'],
@@ -97,16 +107,24 @@ export async function middleware(request: NextRequest) {
   console.log('🔑 Middleware: Protected path found:', protectedPath);
   
   if (protectedPath) {
-    // Temporary bypass of JWT verification to test architectural fix
-    // FIXME: Re-enable JWT verification once signature mismatch is resolved
-    console.log('🔑 Middleware: Temporarily bypassing JWT verification for testing');
-    console.log('🔑 Middleware: Token present:', !!token);
-    console.log('🔑 Middleware: Allowing access to protected path:', protectedPath);
+    // Decode token to extract role (without signature verification)
+    // FIXME: Re-enable full JWT verification once signature mismatch is resolved
+    const payload = token ? decodeJwtPayload(token) : null;
+    const userRole = typeof payload?.role === 'object' && payload.role
+      ? (payload.role as any).name?.toLowerCase()
+      : undefined;
 
-    // Allow access with minimal headers
+    console.log('🔑 Middleware: Decoded role:', userRole);
+
+    const allowedRoles = roleMap[protectedPath];
+    if (allowedRoles && userRole && !allowedRoles.includes(userRole)) {
+      console.log('🔑 Middleware: Role not allowed for path:', protectedPath, 'role:', userRole);
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
     const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-user-id', 'temp-bypass');
-    requestHeaders.set('x-user-role', 'user');
+    requestHeaders.set('x-user-id', payload?.id?.toString() || 'unknown');
+    requestHeaders.set('x-user-role', userRole || 'unknown');
 
     return NextResponse.next({
       request: {
@@ -124,6 +142,7 @@ export const config = {
     '/orders',
     '/my-saddle-stock',
     '/available-saddle-stock',
+    '/saddle-stock',
     '/repairs',
     '/models',
     '/customers',

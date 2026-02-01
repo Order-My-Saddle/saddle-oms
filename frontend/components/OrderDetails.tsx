@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -8,174 +8,286 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { EditOrder } from './EditOrder';
-import { OrderSaddleInfo } from './shared/OrderSaddleInfo';
-import { OrderFitterInfo } from './shared/OrderFitterInfo';
-import { OrderPriceInfo } from './shared/OrderPriceInfo';
-import { OrderOptions } from './shared/OrderOptions';
-import { CommentsList } from './shared/CommentsList';
-import { generateOrderPDF } from '@/lib/generate-pdf';
+import { generateOrderPDF, generateLabelPDF } from '@/lib/generate-pdf';
+import { fetchOrderDetail, type OrderDetailData } from '@/services/enrichedOrders';
 
 interface OrderDetailsProps {
   order: {
-    id: string;
-    orderId: number;
-    status: string;
+    id: string | number;
+    orderId?: number;
+    status?: string;
+    orderStatus?: string;
   };
   onClose: () => void;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+function getToken() {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('auth_token');
+      if (stored && stored !== 'null') return JSON.parse(stored);
+    } catch { /* fallback */ }
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'token') return value;
+    }
+  }
+  return null;
+}
+
+function formatOrderDate(orderTime: string | null): string {
+  if (!orderTime) return '-';
+  try {
+    const date = new Date(orderTime);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  } catch {
+    return orderTime;
+  }
+}
+
+function formatCommentDate(dateStr: string): string {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }) + ' | ' + date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+function formatPrice(value: number | null | undefined): string {
+  if (value == null) return '-';
+  return Number(value).toFixed(2);
+}
+
 export function OrderDetails({ order, onClose }: OrderDetailsProps) {
-  const [orderStatus, setOrderStatus] = useState(order.status);
+  const orderId = Number(order.id) || Number(order.orderId) || 0;
+  const displayOrderId = order.orderId || orderId;
+
+  const [detailData, setDetailData] = useState<OrderDetailData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [orderStatus, setOrderStatus] = useState(order.orderStatus || order.status || '');
+  const [statusChanging, setStatusChanging] = useState(false);
   const [comment, setComment] = useState('');
   const [sendTo, setSendTo] = useState('fitter-factory');
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDuplicateOpen, setIsDuplicateOpen] = useState(false);
   const [formData, setFormData] = useState({});
 
-  // Mock data based on the image
-  const orderData = {
-    saddle: {
-      model: 'Custom Advantage R',
-      leatherType: 'BBL - BUFFALO BLACK - Solid',
-      seatSize: '17.5',
-      flapLength: '16',
-      kneeRoll: 'Custom C1 (Short)',
-      frontGusset: 'FRONT Gusset',
-      rearGusset: 'Normal Rear Guset (STD)',
-      gussetLeather: 'SBL - SMOOTH BLACK',
-      panelMaterial: 'WOOL Flocked Panels',
-      treeSize: 'Med Wide',
-      stirrupBars: 'Normal Dressage Bars (silver Custom w/thumb bit)',
-      billets: 'Normal MATCHING Billets',
-      seatLeather: 'VBBL - VIENNA BUFFALO BLACK',
-      seatOption: 'NORMAL Seat',
-      cantleOption: 'NORMAL Cantle',
-      skirt: 'BBL - BUFFALO BLACK - Solid',
-      kneeRollPadLeather: 'SBL - SMOOTH BLACK',
-      flapLeather: 'BBL - BUFFALO BLACK - Solid',
-      outerReinforcement: 'NO Flap piece (Buffalo/Memal leather)',
-      loops: 'STD - LOOPS',
-      panelLeather: 'SBL - SMOOTH BLACK',
-      facingFront: 'SBL - SMOOTH BLACK',
-      facingBackRear: 'SBL - SMOOTH BLACK',
-      gulletLining: 'SBL - SMOOTH BLACK',
-      stitchColor: 'Black',
-      weltColor: 'Black PATENT'
-    },
-    fitter: {
-      inInventory: 'yes',
-      userName: 'aikenshop123',
-      fullName: 'Aiken Shop',
-      address: '390 Croft Mill Rd',
-      zipcode: '29801',
-      state: 'South Carolina',
-      city: 'Aiken',
-      country: 'United States',
-      phone: '8036492766',
-      cell: '8036463490',
-      currency: 'USD',
-      email: 'aiken@mysaddle.com'
-    },
-    price: {
-      saddlePrice: 5195.00,
-      tradeIn: 0.00,
-      deposit: 0.00,
-      discount: 0.00,
-      fittingEval: 0.00,
-      callFee: 0.00,
-      girth: 0.00,
-      additional: '-',
-      shipping: '-',
-      tax: '-',
-      total: 5195.00
-    },
-    notes: 'finished - AH Training',
-    serialno: 'US5705400070825',
-    orderDate: 'April 17, 2025',
-    history: [
-      {
-        date: 'April 17, 2025 | 10:33AM',
-        user: 'Adam Whitehouse',
-        action: 'Changed the order status to \'In Production P1\''
-      },
-      {
-        date: 'April 17, 2025 | 10:33AM',
-        user: 'Adam Whitehouse',
-        action: 'Changed the order status to \'Ordered\''
-      },
-      {
-        date: 'April 17, 2025 | 10:33AM',
-        user: 'Adam Whitehouse',
-        action: 'Ordered the saddle to be added to fitters inventory'
-      },
-      {
-        date: 'April 17, 2025 | 10:33AM',
-        user: 'Adam Whitehouse',
-        action: 'Created the order.'
+  useEffect(() => {
+    if (!orderId) {
+      setError('No order ID provided');
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadData() {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await fetchOrderDetail(orderId);
+        if (!cancelled) {
+          setDetailData(data);
+          if (data.orderStatus) {
+            setOrderStatus(data.orderStatus);
+          }
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to load order detail:', err);
+          setError(err instanceof Error ? err.message : 'Failed to load order details');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
-    ]
+    }
+
+    loadData();
+    return () => { cancelled = true; };
+  }, [orderId]);
+
+  // Saddle model and leather type from the order's saddle/leather joins
+  const saddleModel = detailData ? `${detailData.brandName || ''} ${detailData.modelName || ''}`.trim() : '';
+  const saddleLeatherType = detailData?.leatherName || '';
+
+  // Saddle specifications from API (orders_info + options + options_items/leather_types)
+  const saddleSpecs = detailData?.saddleSpecs || [];
+
+  const fitterData = {
+    inInventory: 'no',
+    userName: detailData?.fitterUsername || '-',
+    fullName: detailData?.fitterName || '-',
+    address: detailData?.fitterAddress || '-',
+    zipcode: detailData?.fitterZipcode || '-',
+    state: detailData?.fitterState || '-',
+    city: detailData?.fitterCity || '-',
+    country: detailData?.fitterCountry || '-',
+    phone: detailData?.fitterPhone || '-',
+    cell: detailData?.fitterCell || '-',
+    currency: detailData?.fitterCurrency || detailData?.currency || '-',
+    email: detailData?.fitterEmail || '-',
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2
-    }).format(amount);
+  const customerData = {
+    name: detailData?.customerName || detailData?.orderName || '-',
+    address: detailData?.customerAddress || detailData?.orderAddress || '',
+    city: detailData?.customerCity || detailData?.orderCity || '',
+    zipcode: detailData?.customerZipcode || detailData?.orderZipcode || '',
+    country: detailData?.customerCountry || detailData?.orderCountry || '',
+    email: detailData?.customerEmail || detailData?.orderEmail || '-',
+  };
+
+  const priceData = {
+    saddlePrice: Number(detailData?.priceSaddle) || 0,
+    tradeIn: Number(detailData?.priceTradein) || 0,
+    deposit: Number(detailData?.priceDeposit) || 0,
+    discount: Number(detailData?.priceDiscount) || 0,
+    fittingEval: Number(detailData?.priceFittingeval) || 0,
+    callFee: Number(detailData?.priceCallfee) || 0,
+    girth: Number(detailData?.priceGirth) || 0,
+    additional: Number(detailData?.priceAdditional) || 0,
+    shipping: Number(detailData?.priceShipping) || 0,
+    tax: Number(detailData?.priceTax) || 0,
+    total: Number(detailData?.totalPrice) || 0,
+  };
+
+  const serialNumber = detailData?.serialNumber || '';
+  const specialNotes = detailData?.specialNotes || '';
+  const orderDate = formatOrderDate(detailData?.orderTime || null);
+
+  // Merge log entries (legacy production history) and newer comments
+  const logTimelineEntries = (detailData?.logEntries || []).map((entry) => ({
+    date: formatCommentDate(entry.createdAt),
+    user: entry.userName || 'System',
+    action: entry.content || '',
+    timestamp: new Date(entry.createdAt).getTime(),
+  }));
+
+  const commentTimelineEntries = (detailData?.comments || []).map((c) => ({
+    date: formatCommentDate(c.createdAt),
+    user: c.userName || 'System',
+    action: c.content || '',
+    timestamp: new Date(c.createdAt).getTime(),
+  }));
+
+  // Combine both sources and sort by timestamp descending (newest first)
+  const comments = [...logTimelineEntries, ...commentTimelineEntries]
+    .sort((a, b) => b.timestamp - a.timestamp);
+
+  // Handle order status change
+  const handleChangeOrderStatus = async () => {
+    if (!orderStatus || !detailData) return;
+
+    setStatusChanging(true);
+    try {
+      const token = getToken();
+      const response = await fetch(`${API_URL}/api/v1/enriched_orders/update-status/${orderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ status: orderStatus }),
+      });
+
+      if (!response.ok) {
+        // Fallback: update directly via orders endpoint
+        const fallbackResponse = await fetch(`${API_URL}/api/v1/orders/${orderId}/status`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ status: orderStatus }),
+        });
+        if (!fallbackResponse.ok) {
+          throw new Error('Failed to update status');
+        }
+      }
+
+      alert(`Order status changed to "${orderStatus}"`);
+    } catch (err) {
+      console.error('Failed to change order status:', err);
+      alert('Failed to change order status. The backend endpoint may not be implemented yet.');
+    } finally {
+      setStatusChanging(false);
+    }
+  };
+
+  // Build data for PDF generation
+  const saddleDataForPdf: Record<string, string> = { model: saddleModel, leatherType: saddleLeatherType };
+  for (const spec of saddleSpecs) {
+    saddleDataForPdf[spec.optionName] = spec.displayValue || '';
+  }
+  const orderDataForPdf = {
+    orderId: displayOrderId,
+    saddle: saddleDataForPdf,
+    saddleSpecs,
+    fitter: fitterData,
+    customer: customerData,
+    price: priceData,
+    notes: specialNotes,
+    serialno: serialNumber,
+    orderDate: orderDate,
+    orderStatus: orderStatus,
+    currency: detailData?.currency || 'USD',
+    history: comments,
   };
 
   const handlePrintOrder = () => {
-    const doc = generateOrderPDF(orderData);
-    doc.save(`order-${order.orderId}.pdf`);
+    const doc = generateOrderPDF(orderDataForPdf);
+    doc.save(`order-${displayOrderId}.pdf`);
+  };
+
+  const handlePrintLabel = () => {
+    const doc = generateLabelPDF(orderDataForPdf);
+    doc.save(`label-${displayOrderId}.pdf`);
   };
 
   const handleDuplicateOrder = () => {
     const duplicateData = {
-      fitter: orderData.fitter.fullName,
+      fitter: fitterData.fullName,
       isStock: true,
       isDemo: false,
       isUrgent: false,
       isSponsored: false,
       isRepair: false,
       repairNotes: '',
-      brand: 'Custom',
-      model: orderData.saddle.model,
+      brand: detailData?.brandName || '',
+      model: saddleModel,
       preset: '',
-      leatherType: orderData.saddle.leatherType,
-      seatSize: orderData.saddle.seatSize,
-      flapLength: orderData.saddle.flapLength,
-      kneeRoll: orderData.saddle.kneeRoll,
-      frontGusset: orderData.saddle.frontGusset,
-      rearGusset: orderData.saddle.rearGusset,
-      gussetLeather: orderData.saddle.gussetLeather,
-      panelMaterial: orderData.saddle.panelMaterial,
-      treeSize: orderData.saddle.treeSize,
-      stirrupBars: orderData.saddle.stirrupBars,
-      billets: orderData.saddle.billets,
-      seatLeather: orderData.saddle.seatLeather,
-      seatOption: orderData.saddle.seatOption,
-      cantleOption: orderData.saddle.cantleOption,
-      skirt: orderData.saddle.skirt,
-      kneeRollPadLeather: orderData.saddle.kneeRollPadLeather,
-      flapLeather: orderData.saddle.flapLeather,
-      outerReinforcement: orderData.saddle.outerReinforcement,
-      loops: orderData.saddle.loops,
-      panelLeather: orderData.saddle.panelLeather,
-      facingFront: orderData.saddle.facingFront,
-      facingBack: orderData.saddle.facingBackRear,
-      gulletLining: orderData.saddle.gulletLining,
-      stitchColor: orderData.saddle.stitchColor,
-      weltColor: orderData.saddle.weltColor,
+      leatherType: saddleLeatherType,
+      ...Object.fromEntries(saddleSpecs.map(s => [s.optionName, s.displayValue || ''])),
       extras: {
         completeReblock: false,
         overflocking: false,
@@ -187,8 +299,8 @@ export function OrderDetails({ order, onClose }: OrderDetailsProps) {
         contourGirth: false,
         thinlineFleece: false,
       },
-      specialNotes: orderData.notes,
-      price: orderData.price.saddlePrice,
+      specialNotes: specialNotes,
+      price: priceData.saddlePrice,
       tradeIn: 0,
       deposit: 0,
       discount: 0,
@@ -198,23 +310,75 @@ export function OrderDetails({ order, onClose }: OrderDetailsProps) {
       additional: 0,
       shipping: null,
       tax: null,
-      customerEmail: '',
-      customerName: '',
-      customerAddress: '',
-      customerCity: '',
-      customerZipcode: '',
-      customerCountry: '',
+      customerEmail: customerData.email !== '-' ? customerData.email : '',
+      customerName: customerData.name !== '-' ? customerData.name : '',
+      customerAddress: customerData.address,
+      customerCity: customerData.city,
+      customerZipcode: customerData.zipcode,
+      customerCountry: customerData.country,
       customerReference: '',
-      shippingName: '',
-      shippingAddress: '',
-      shippingCity: '',
-      shippingCountry: '',
-      shippingZipcode: '',
+      shippingName: detailData?.shipName || '',
+      shippingAddress: detailData?.shipAddress || '',
+      shippingCity: detailData?.shipCity || '',
+      shippingCountry: detailData?.shipCountry || '',
+      shippingZipcode: detailData?.shipZipcode || '',
     };
 
     setIsDuplicateOpen(true);
     setFormData(duplicateData);
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <DialogContent className="max-w-[1200px] h-[90vh] p-0 flex flex-col">
+        <DialogHeader className="px-4 py-2 border-b bg-[#F5F5F5] flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-sm">
+            <div className="w-5 h-5 rounded-full bg-[#8B0000] text-white flex items-center justify-center text-xs">
+              D
+            </div>
+            <span className="text-base">Order {displayOrderId}</span>
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8B0000] mx-auto mb-3"></div>
+            <p className="text-sm text-gray-500">Loading order details...</p>
+          </div>
+        </div>
+      </DialogContent>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <DialogContent className="max-w-[1200px] h-[90vh] p-0 flex flex-col">
+        <DialogHeader className="px-4 py-2 border-b bg-[#F5F5F5] flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-sm">
+            <div className="w-5 h-5 rounded-full bg-[#8B0000] text-white flex items-center justify-center text-xs">
+              D
+            </div>
+            <span className="text-base">Order {displayOrderId}</span>
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-sm text-red-600 mb-2">Failed to load order details</p>
+            <p className="text-xs text-gray-500">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    );
+  }
 
   return (
     <>
@@ -224,9 +388,9 @@ export function OrderDetails({ order, onClose }: OrderDetailsProps) {
             <div className="w-5 h-5 rounded-full bg-[#8B0000] text-white flex items-center justify-center text-xs">
               D
             </div>
-            <span className="text-base">Order {order.orderId}</span>
+            <span className="text-base">Order {displayOrderId}</span>
             <span className="text-xs font-normal ml-4">
-              Order date: {orderData.orderDate}
+              Order date: {orderDate}
             </span>
             <span className="ml-auto text-xs">
               Status: {orderStatus}
@@ -237,99 +401,41 @@ export function OrderDetails({ order, onClose }: OrderDetailsProps) {
         <div className="flex-1 overflow-auto">
           <div className="p-6 space-y-6">
             <div className="grid grid-cols-3 gap-6">
-              {/* Left Column - Your order reference & Saddle Information */}
+              {/* Left Column - Saddle Information */}
               <div className="space-y-6">
-                {/* Your order reference section */}
-                <div className="border rounded-lg p-4">
-                  <h3 className="font-semibold text-sm mb-4">Your order reference</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Your reference</span>
-                      <span className="text-gray-900">{orderData.notes}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Saddle information section */}
+                {/* Saddle information - Model & Leathertype */}
                 <div className="border rounded-lg p-4">
                   <h3 className="font-semibold text-sm mb-4">Saddle information</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Model:</span>
-                      <span className="text-gray-900">{orderData.saddle.model}</span>
+                      <span className="font-bold text-gray-700">Model:</span>
+                      <span className="text-gray-900 italic">{saddleModel}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Leathertype:</span>
-                      <span className="text-gray-900">{orderData.saddle.leatherType}</span>
+                      <span className="font-bold text-gray-700">Leathertype:</span>
+                      <span className="text-gray-900 italic">{saddleLeatherType}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Options</span>
-                      <span className="text-gray-900"></span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Seat Size</span>
-                      <span className="text-gray-900">{orderData.saddle.seatSize}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Flap Length</span>
-                      <span className="text-gray-900">{orderData.saddle.flapLength}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Knee Roll</span>
-                      <span className="text-gray-900">{orderData.saddle.kneeRoll}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Front Gusset</span>
-                      <span className="text-gray-900">{orderData.saddle.frontGusset}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Rear Gusset</span>
-                      <span className="text-gray-900">{orderData.saddle.rearGusset}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Gusset Leather</span>
-                      <span className="text-gray-900">{orderData.saddle.gussetLeather}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Panel Material</span>
-                      <span className="text-gray-900">{orderData.saddle.panelMaterial}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Tree Size</span>
-                      <span className="text-gray-900">{orderData.saddle.treeSize}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Stirrup Bars</span>
-                      <span className="text-gray-900">{orderData.saddle.stirrupBars}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Billets</span>
-                      <span className="text-gray-900">{orderData.saddle.billets}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Seat Leather</span>
-                      <span className="text-gray-900">{orderData.saddle.seatLeather}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">SEAT Option</span>
-                      <span className="text-gray-900">{orderData.saddle.seatOption}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">CANTLE Option</span>
-                      <span className="text-gray-900">{orderData.saddle.cantleOption}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Skirt</span>
-                      <span className="text-gray-900">{orderData.saddle.skirt}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Knee Roll/ Pad Leather</span>
-                      <span className="text-gray-900">{orderData.saddle.kneeRollPadLeather}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Flap Leather</span>
-                      <span className="text-gray-900">{orderData.saddle.flapLeather}</span>
-                    </div>
+                    {serialNumber && (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span className="font-bold text-gray-700">SerialNumber:</span>
+                          <span className="text-gray-900 italic">{serialNumber}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Options section - separate from saddle info */}
+                <div className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-sm mb-4">Options</h3>
+                  <div className="space-y-3">
+                    {saddleSpecs.map((spec, idx) => (
+                      <div key={idx} className="flex justify-between text-sm gap-2">
+                        <span className="font-bold text-gray-700 shrink-0">{spec.optionName}:</span>
+                        <span className="text-gray-900 italic text-right">{spec.displayValue || ''}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -340,54 +446,25 @@ export function OrderDetails({ order, onClose }: OrderDetailsProps) {
                 <div className="border rounded-lg p-4">
                   <h3 className="font-semibold text-sm mb-4">Fitter information</h3>
                   <div className="space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">In inventory:</span>
-                      <span className="text-gray-900 italic">{orderData.fitter.inInventory}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">User Name:</span>
-                      <span className="text-gray-900 italic">{orderData.fitter.userName}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Full Name:</span>
-                      <span className="text-gray-900 italic">{orderData.fitter.fullName}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Address:</span>
-                      <span className="text-gray-900 italic">{orderData.fitter.address}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Zipcode:</span>
-                      <span className="text-gray-900 italic">{orderData.fitter.zipcode}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">State:</span>
-                      <span className="text-gray-900 italic">-</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">City:</span>
-                      <span className="text-gray-900 italic">{orderData.fitter.city}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Country:</span>
-                      <span className="text-gray-900 italic">{orderData.fitter.country}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Phone:</span>
-                      <span className="text-gray-900 italic">{orderData.fitter.phone}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Cell:</span>
-                      <span className="text-gray-900 italic">-</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Currency:</span>
-                      <span className="text-gray-900 italic">{orderData.fitter.currency}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium text-gray-700">Email address:</span>
-                      <span className="text-gray-900 italic">{orderData.fitter.email}</span>
-                    </div>
+                    {[
+                      ['In inventory:', fitterData.inInventory],
+                      ['User Name:', fitterData.userName],
+                      ['Full Name:', fitterData.fullName],
+                      ['Address:', fitterData.address],
+                      ['Zipcode:', fitterData.zipcode],
+                      ['State:', fitterData.state],
+                      ['City:', fitterData.city],
+                      ['Country:', fitterData.country],
+                      ['Phone:', fitterData.phone],
+                      ['Cell:', fitterData.cell],
+                      ['Currency:', fitterData.currency],
+                      ['Email address:', fitterData.email],
+                    ].map(([label, value], idx) => (
+                      <div key={idx} className="flex justify-between text-sm">
+                        <span className="font-medium text-gray-700">{label}</span>
+                        <span className="text-gray-900 italic">{value}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
@@ -397,16 +474,20 @@ export function OrderDetails({ order, onClose }: OrderDetailsProps) {
                   <div className="space-y-3">
                     <div className="flex justify-between text-sm">
                       <span className="font-medium text-gray-700">Customer:</span>
-                      <span className="text-gray-900">{orderData.fitter.fullName}</span>
+                      <span className="text-gray-900">{customerData.name}</span>
                     </div>
-                    <div className="text-sm text-gray-900">
-                      {orderData.fitter.address}<br/>
-                      {orderData.fitter.city}, {orderData.fitter.zipcode}<br/>
-                      {orderData.fitter.country}
-                    </div>
+                    {(customerData.address || customerData.city || customerData.country) && (
+                      <div className="text-sm text-gray-900">
+                        {customerData.address && <>{customerData.address}<br/></>}
+                        {(customerData.city || customerData.zipcode) && (
+                          <>{customerData.city}{customerData.city && customerData.zipcode ? ', ' : ''}{customerData.zipcode}<br/></>
+                        )}
+                        {customerData.country}
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm">
                       <span className="font-medium text-gray-700">Email address:</span>
-                      <span className="text-gray-900 italic">{orderData.fitter.email}</span>
+                      <span className="text-gray-900 italic">{customerData.email}</span>
                     </div>
                   </div>
                 </div>
@@ -418,18 +499,37 @@ export function OrderDetails({ order, onClose }: OrderDetailsProps) {
                     <div className="flex items-center gap-3">
                       <span className="font-medium text-gray-700 text-sm">Order Status:</span>
                       <Select value={orderStatus} onValueChange={setOrderStatus}>
-                        <SelectTrigger className="w-[140px] h-8 text-xs">
+                        <SelectTrigger className="w-[180px] h-8 text-xs">
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="Unordered">Unordered</SelectItem>
                           <SelectItem value="Ordered">Ordered</SelectItem>
-                          <SelectItem value="In Production P1">In Production P1</SelectItem>
                           <SelectItem value="Approved">Approved</SelectItem>
+                          <SelectItem value="In Production P1">In Production P1</SelectItem>
+                          <SelectItem value="On hold">On hold</SelectItem>
+                          <SelectItem value="Shipped to Fitter">Shipped to Fitter</SelectItem>
+                          <SelectItem value="On trial">On trial</SelectItem>
+                          <SelectItem value="Completed sale">Completed sale</SelectItem>
+                          <SelectItem value="Changed">Changed</SelectItem>
+                          <SelectItem value="In Production P2">In Production P2</SelectItem>
+                          <SelectItem value="In Production P3">In Production P3</SelectItem>
+                          <SelectItem value="Shipped to Customer">Shipped to Customer</SelectItem>
+                          <SelectItem value="Inventory Aiken">Inventory Aiken</SelectItem>
+                          <SelectItem value="Inventory UK">Inventory UK</SelectItem>
+                          <SelectItem value="Inventory HOLLAND">Inventory HOLLAND</SelectItem>
+                          <SelectItem value="Awaiting Client Confirmation">Awaiting Client Confirmation</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button variant="destructive" size="sm" className="bg-[#8B0000] h-8 text-xs">
-                      Change orderstatus
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="bg-[#8B0000] h-8 text-xs"
+                      onClick={handleChangeOrderStatus}
+                      disabled={statusChanging}
+                    >
+                      {statusChanging ? 'Changing...' : 'Change orderstatus'}
                     </Button>
                   </div>
                 </div>
@@ -441,51 +541,51 @@ export function OrderDetails({ order, onClose }: OrderDetailsProps) {
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="font-medium text-gray-700">Saddle price:</span>
-                    <span className="text-gray-900">{orderData.price.saddlePrice.toFixed(2)}</span>
+                    <span className="text-gray-900">{formatPrice(priceData.saddlePrice)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="font-medium text-gray-700">Trade in:</span>
-                    <span className="text-gray-900">- {orderData.price.tradeIn.toFixed(2)}</span>
+                    <span className="text-gray-900">- {formatPrice(priceData.tradeIn)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="font-medium text-gray-700">Deposit:</span>
-                    <span className="text-gray-900">- {orderData.price.deposit.toFixed(2)}</span>
+                    <span className="text-gray-900">- {formatPrice(priceData.deposit)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="font-medium text-gray-700">Discount:</span>
-                    <span className="text-gray-900">- {orderData.price.discount.toFixed(2)}</span>
+                    <span className="text-gray-900">- {formatPrice(priceData.discount)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="font-medium text-gray-700">Fitting/Eval:</span>
-                    <span className="text-gray-900">{orderData.price.fittingEval.toFixed(2)}</span>
+                    <span className="text-gray-900">{formatPrice(priceData.fittingEval)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="font-medium text-gray-700">Call fee:</span>
-                    <span className="text-gray-900">{orderData.price.callFee.toFixed(2)}</span>
+                    <span className="text-gray-900">{formatPrice(priceData.callFee)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="font-medium text-gray-700">Girth:</span>
-                    <span className="text-gray-900">{orderData.price.girth.toFixed(2)}</span>
+                    <span className="text-gray-900">{formatPrice(priceData.girth)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="font-medium text-gray-700">Additional:</span>
-                    <span className="text-gray-900">{typeof orderData.price.additional === 'number' ? orderData.price.additional.toFixed(2) : orderData.price.additional}</span>
+                    <span className="text-gray-900">{formatPrice(priceData.additional)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="font-medium text-gray-700">Shipping:</span>
-                    <span className="text-gray-900">{typeof orderData.price.shipping === 'number' ? orderData.price.shipping.toFixed(2) : orderData.price.shipping}</span>
+                    <span className="text-gray-900">{formatPrice(priceData.shipping)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="font-medium text-gray-700">Tax:</span>
-                    <span className="text-gray-900">{typeof orderData.price.tax === 'number' ? orderData.price.tax.toFixed(2) : orderData.price.tax}</span>
+                    <span className="text-gray-900">{formatPrice(priceData.tax)}</span>
                   </div>
                   <div className="text-xs text-gray-600 py-2">
                     Shippingcosts and Taxes will be determined by Custom Saddlery.
                   </div>
                   <div className="border-t pt-3">
                     <div className="flex justify-between text-base font-semibold">
-                      <span>Total (DE):</span>
-                      <span>{orderData.price.total.toFixed(2)}</span>
+                      <span>Total ({detailData?.currency || 'USD'}):</span>
+                      <span>{formatPrice(priceData.total)}</span>
                     </div>
                     <div className="text-xs text-gray-600 mt-2">
                       Your deposit is non-refundable if your order is canceled.
@@ -498,7 +598,7 @@ export function OrderDetails({ order, onClose }: OrderDetailsProps) {
             {/* Comments Section */}
             <div className="border rounded-lg p-3">
               <div className="flex gap-3 mb-3">
-                <Textarea 
+                <Textarea
                   placeholder="Add your comment here..."
                   className="min-h-[80px] text-xs"
                   value={comment}
@@ -527,13 +627,16 @@ export function OrderDetails({ order, onClose }: OrderDetailsProps) {
 
               {/* Comment History */}
               <div className="relative pl-4 border-l-2 border-gray-200">
-                {orderData.history.map((entry, index) => (
+                {comments.length === 0 && (
+                  <div className="text-xs text-gray-400 py-2">No comments yet.</div>
+                )}
+                {comments.map((entry, index) => (
                   <div key={index} className="mb-2 relative">
                     <div className="absolute -left-[17px] top-2 w-3 h-3 rounded-full bg-gray-200" />
                     <div className="bg-gray-100 rounded-lg p-2">
                       <div className="text-[10px] text-gray-600">{entry.date}</div>
                       <div className="font-medium text-[#8B0000] text-xs">{entry.user}</div>
-                      <div className="text-xs">{entry.action}</div>
+                      {entry.action && <div className="text-xs">{entry.action}</div>}
                     </div>
                   </div>
                 ))}
@@ -545,26 +648,33 @@ export function OrderDetails({ order, onClose }: OrderDetailsProps) {
         {/* Bottom Actions */}
         <div className="border-t p-2 bg-[#F5F5F5] flex-shrink-0">
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="h-8 text-xs"
               onClick={() => setIsEditOpen(true)}
             >
               Edit order
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="h-8 text-xs"
               onClick={handlePrintOrder}
             >
               Print order
             </Button>
-            <Button variant="outline" size="sm" className="h-8 text-xs">Print label</Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={handlePrintLabel}
+            >
+              Print label
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               className="h-8 text-xs"
               onClick={handleDuplicateOrder}
             >
@@ -575,16 +685,15 @@ export function OrderDetails({ order, onClose }: OrderDetailsProps) {
       </DialogContent>
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <EditOrder 
-          order={order}
+        <EditOrder
+          order={{ id: String(orderId), orderId: Number(displayOrderId) }}
           onClose={() => setIsEditOpen(false)}
         />
       </Dialog>
 
       <Dialog open={isDuplicateOpen} onOpenChange={setIsDuplicateOpen}>
-        <EditOrder 
-          order={undefined}
-          initialData={formData}
+        <EditOrder
+          order={{ id: String(orderId), orderId: Number(displayOrderId) }}
           onClose={() => setIsDuplicateOpen(false)}
         />
       </Dialog>

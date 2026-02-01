@@ -25,6 +25,7 @@ import { CreateFactoryDto } from "./dto/create-factory.dto";
 import { UpdateFactoryDto } from "./dto/update-factory.dto";
 import { FactoryDto } from "./dto/factory.dto";
 import { AuthGuard } from "@nestjs/passport";
+import { AuditLog } from "../audit-logging/decorators";
 
 /**
  * Factory REST API Controller
@@ -43,6 +44,7 @@ export class FactoryController {
   constructor(private readonly factoryService: FactoryService) {}
 
   @Post()
+  @AuditLog({ entity: "Factory" })
   @ApiOperation({
     summary: "Create a new factory",
     description: "Creates a new factory with the provided information",
@@ -211,6 +213,7 @@ export class FactoryController {
   }
 
   @Patch(":id")
+  @AuditLog({ entity: "Factory" })
   @ApiOperation({
     summary: "Update factory",
     description: "Update factory information",
@@ -237,6 +240,7 @@ export class FactoryController {
   }
 
   @Delete(":id")
+  @AuditLog({ entity: "Factory" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: "Delete factory",

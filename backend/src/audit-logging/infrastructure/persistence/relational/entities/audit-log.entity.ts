@@ -71,6 +71,18 @@ export class AuditLogEntity {
   orderStatusTo: number | null;
 
   /**
+   * Entity type for general-purpose audit logging (e.g. 'Order', 'Customer', 'Fitter')
+   */
+  @Column({ name: "entity_type", type: "varchar", length: 50, nullable: true })
+  entityType: string | null;
+
+  /**
+   * Entity ID for general-purpose audit logging
+   */
+  @Column({ name: "entity_id", type: "varchar", length: 100, nullable: true })
+  entityId: string | null;
+
+  /**
    * When the action occurred (preserved from legacy system)
    */
   @Column({ name: "timestamp", type: "timestamp" })
@@ -106,6 +118,8 @@ export class AuditLogEntity {
     this.action = "";
     this.orderStatusFrom = null;
     this.orderStatusTo = null;
+    this.entityType = null;
+    this.entityId = null;
     this.timestamp = new Date();
   }
 }

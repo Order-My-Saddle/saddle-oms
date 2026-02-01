@@ -1,7 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 
-import { FindOptionsWhere, Repository, In } from "typeorm";
+import {
+  FindOptionsWhere,
+  Repository,
+  In,
+  ILike,
+  Not,
+  IsNull,
+  SelectQueryBuilder,
+} from "typeorm";
 import { UserEntity } from "../entities/user.entity";
 import { NullableType } from "../../../../../utils/types/nullable.type";
 import { FilterUserDto, SortUserDto } from "../../../../dto/query-user.dto";
@@ -17,6 +25,84 @@ export class UsersRelationalRepository implements UserRepository {
     private readonly usersRepository: Repository<UserEntity>,
   ) {}
 
+  /**
+   * Build a QueryBuilder with shared filter logic for both queries and counts.
+   * Role filter translates to DB columns:
+   *   supervisor  → is_supervisor = 1
+   *   admin       → user_type = 2 AND (is_supervisor IS NULL OR is_supervisor != 1)
+   *   fitter      → user_type = 1
+   *   factory     → user_type = 3
+   *   customsaddler → user_type = 4
+   */
+  private buildFilteredQuery(
+    filterOptions?: FilterUserDto | null,
+  ): SelectQueryBuilder<UserEntity> {
+    const qb = this.usersRepository.createQueryBuilder("user");
+
+    if (filterOptions?.username) {
+      qb.andWhere("user.username ILIKE :username", {
+        username: `%${filterOptions.username}%`,
+      });
+    }
+    if (filterOptions?.email) {
+      qb.andWhere("user.email ILIKE :email", {
+        email: `%${filterOptions.email}%`,
+      });
+    }
+    if (filterOptions?.firstName) {
+      qb.andWhere("user.name ILIKE :name", {
+        name: `%${filterOptions.firstName}%`,
+      });
+    }
+
+    // Multi-field search: matches username, name, or email
+    if (filterOptions?.search) {
+      qb.andWhere(
+        "(user.username ILIKE :search OR user.name ILIKE :search OR user.email ILIKE :search)",
+        { search: `%${filterOptions.search}%` },
+      );
+    }
+
+    if (filterOptions?.role) {
+      const normalizedRole = filterOptions.role
+        .toLowerCase()
+        .replace("role_", "");
+      switch (normalizedRole) {
+        case "supervisor":
+          qb.andWhere("user.is_supervisor = :sv", { sv: 1 });
+          break;
+        case "admin":
+        case "administrator":
+          qb.andWhere("user.user_type = :ut", { ut: 2 });
+          qb.andWhere(
+            "(user.is_supervisor IS NULL OR user.is_supervisor != :sv)",
+            { sv: 1 },
+          );
+          break;
+        case "fitter":
+          qb.andWhere("user.user_type = :ut", { ut: 1 });
+          break;
+        case "factory":
+        case "supplier":
+          qb.andWhere("user.user_type = :ut", { ut: 3 });
+          break;
+        case "customsaddler":
+          qb.andWhere("user.user_type = :ut", { ut: 4 });
+          break;
+        case "user":
+          // Users with no user_type and not in fitters table
+          qb.andWhere("user.user_type IS NULL");
+          qb.andWhere(
+            "(user.is_supervisor IS NULL OR user.is_supervisor != :sv)",
+            { sv: 1 },
+          );
+          break;
+      }
+    }
+
+    return qb;
+  }
+
   async create(data: User): Promise<User> {
     const persistenceModel = UserMapper.toPersistence(data);
     const newEntity = await this.usersRepository.save(
@@ -26,7 +112,7 @@ export class UsersRelationalRepository implements UserRepository {
   }
 
   async findManyWithPagination({
-    filterOptions: _filterOptions,
+    filterOptions,
     sortOptions,
     paginationOptions,
   }: {
@@ -34,24 +120,30 @@ export class UsersRelationalRepository implements UserRepository {
     sortOptions?: SortUserDto[] | null;
     paginationOptions: IPaginationOptions;
   }): Promise<User[]> {
-    void _filterOptions;
-    const where: FindOptionsWhere<UserEntity> = {};
-    // Role filtering removed - not supported in staging schema
+    const qb = this.buildFilteredQuery(filterOptions);
 
-    const entities = await this.usersRepository.find({
-      skip: (paginationOptions.page - 1) * paginationOptions.limit,
-      take: paginationOptions.limit,
-      where: where,
-      order: sortOptions?.reduce(
-        (accumulator, sort) => ({
-          ...accumulator,
-          [sort.orderBy as string]: sort.order,
-        }),
-        {},
-      ),
-    });
+    qb.skip((paginationOptions.page - 1) * paginationOptions.limit);
+    qb.take(paginationOptions.limit);
 
+    if (sortOptions?.length) {
+      for (const sort of sortOptions) {
+        const field = sort.field ?? (sort.orderBy as string);
+        const direction = (
+          sort.direction ??
+          sort.order ??
+          "asc"
+        ).toUpperCase() as "ASC" | "DESC";
+        qb.addOrderBy(`user.${field}`, direction);
+      }
+    }
+
+    const entities = await qb.getMany();
     return entities.map((user) => UserMapper.toDomain(user));
+  }
+
+  async count(filterOptions?: FilterUserDto | null): Promise<number> {
+    const qb = this.buildFilteredQuery(filterOptions);
+    return qb.getCount();
   }
 
   async findById(id: User["id"]): Promise<NullableType<User>> {

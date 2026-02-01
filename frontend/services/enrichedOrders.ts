@@ -202,6 +202,184 @@ export async function getEnrichedOrders(params: GetEnrichedOrdersParams = {}) {
   return response;
 }
 
+// ========== SINGLE ORDER DETAIL ==========
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+function getToken() {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('auth_token');
+      if (stored && stored !== 'null') {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      // Fallback to cookies
+    }
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+      const [name, value] = cookie.trim().split('=');
+      if (name === 'token') {
+        return value;
+      }
+    }
+  }
+  return null;
+}
+
+function authHeaders() {
+  const token = getToken();
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    Accept: 'application/json',
+  };
+}
+
+export interface OrderDetailData {
+  id: number;
+  orderId: number;
+  orderTime: string | null;
+  urgent: boolean;
+  specialNotes: string | null;
+  serialNumber: string | null;
+  customOrder: boolean;
+  repair: boolean;
+  demo: boolean;
+  sponsored: boolean;
+  orderStep: number | null;
+  currency: string | null;
+  fitterReference: string | null;
+  orderData: any;
+
+  // Order address
+  orderName: string | null;
+  horseName: string | null;
+  orderAddress: string | null;
+  orderCity: string | null;
+  orderState: string | null;
+  orderZipcode: string | null;
+  orderCountry: string | null;
+  orderPhone: string | null;
+  orderCell: string | null;
+  orderEmail: string | null;
+
+  // Shipping
+  shipName: string | null;
+  shipAddress: string | null;
+  shipCity: string | null;
+  shipState: string | null;
+  shipZipcode: string | null;
+  shipCountry: string | null;
+
+  // Pricing
+  priceSaddle: number;
+  priceTradein: number;
+  priceDeposit: number;
+  priceDiscount: number;
+  priceFittingeval: number;
+  priceCallfee: number;
+  priceGirth: number;
+  priceShipping: number;
+  priceTax: number;
+  priceAdditional: number;
+  totalPrice: number;
+
+  // Status
+  orderStatus: string | null;
+  statusId: number | null;
+
+  // Customer
+  customerId: number | null;
+  customerName: string | null;
+  customerEmail: string | null;
+  customerAddress: string | null;
+  customerCity: string | null;
+  customerState: string | null;
+  customerZipcode: string | null;
+  customerCountry: string | null;
+  customerPhone: string | null;
+  customerCell: string | null;
+
+  // Fitter
+  fitterId: number | null;
+  fitterName: string | null;
+  fitterUsername: string | null;
+  fitterEmail: string | null;
+  fitterAddress: string | null;
+  fitterCity: string | null;
+  fitterState: string | null;
+  fitterZipcode: string | null;
+  fitterCountry: string | null;
+  fitterPhone: string | null;
+  fitterCell: string | null;
+  fitterCurrency: string | null;
+
+  // Factory
+  factoryId: number | null;
+  factoryName: string | null;
+  factoryUsername: string | null;
+
+  // Saddle
+  saddleId: number | null;
+  brandName: string | null;
+  modelName: string | null;
+  saddleType: string | null;
+
+  // Leather
+  leatherId: number | null;
+  leatherName: string | null;
+
+  // Saddle specifications from orders_info
+  saddleSpecs: Array<{
+    optionId: number;
+    optionName: string;
+    optionItemId: number;
+    itemName: string | null;
+    leatherName: string | null;
+    custom: string;
+    sequence: number;
+    displayValue: string;
+  }>;
+
+  // Related data
+  comments: Array<{
+    id: number;
+    content: string;
+    type: string;
+    isInternal: boolean;
+    createdAt: string;
+    updatedAt: string;
+    userName: string | null;
+  }>;
+  logEntries: Array<{
+    id: number;
+    content: string;
+    createdAt: string;
+    userName: string | null;
+    userType: number;
+    onlyFor: number;
+  }>;
+}
+
+/**
+ * Fetch comprehensive order detail data for the order detail view
+ */
+export async function fetchOrderDetail(orderId: number): Promise<OrderDetailData> {
+  console.log('Fetching order detail for:', orderId);
+
+  const response = await fetch(`${API_URL}/api/v1/enriched_orders/detail/${orderId}`, {
+    headers: authHeaders(),
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch order detail: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  return data as OrderDetailData;
+}
+
 // ========== COMPREHENSIVE SEARCH FUNCTIONS ==========
 
 // Search by specific order ID (numeric)

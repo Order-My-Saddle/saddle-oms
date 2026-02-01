@@ -217,7 +217,7 @@ export function getUserTableColumnsFiltered(headerFilters: UserHeaderFilters, se
           value={headerFilters.role || ''}
           onFilter={value => setHeaderFilters('role', value)}
           type="enum"
-          data={roleOptions.map(r => r.value)}
+          data={roleOptions}
           entityType="user"
         />
       ),

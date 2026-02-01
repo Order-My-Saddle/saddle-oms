@@ -25,6 +25,7 @@ import { CreateFitterDto } from "./dto/create-fitter.dto";
 import { UpdateFitterDto } from "./dto/update-fitter.dto";
 import { FitterDto } from "./dto/fitter.dto";
 import { AuthGuard } from "@nestjs/passport";
+import { AuditLog } from "../audit-logging/decorators";
 
 /**
  * Fitter REST API Controller
@@ -43,6 +44,7 @@ export class FitterController {
   constructor(private readonly fitterService: FitterService) {}
 
   @Post()
+  @AuditLog({ entity: "Fitter" })
   @ApiOperation({
     summary: "Create a new fitter",
     description: "Creates a new fitter with the provided information",
@@ -206,6 +208,7 @@ export class FitterController {
   }
 
   @Patch(":id")
+  @AuditLog({ entity: "Fitter" })
   @ApiOperation({
     summary: "Update fitter",
     description: "Update fitter information",
@@ -232,6 +235,7 @@ export class FitterController {
   }
 
   @Delete(":id")
+  @AuditLog({ entity: "Fitter" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: "Delete fitter",

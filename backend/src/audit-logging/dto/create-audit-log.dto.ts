@@ -77,6 +77,22 @@ export class CreateAuditLogDto {
   @Max(20)
   orderStatusTo?: number;
 
+  @ApiPropertyOptional({
+    description: "Entity type for general-purpose logging (e.g. Order, Customer)",
+    example: "Order",
+  })
+  @IsOptional()
+  @IsString()
+  entityType?: string;
+
+  @ApiPropertyOptional({
+    description: "Entity ID for general-purpose logging",
+    example: "12345",
+  })
+  @IsOptional()
+  @IsString()
+  entityId?: string;
+
   @ApiProperty({
     description: "Timestamp when the action occurred (ISO 8601 format)",
     example: "2024-01-15T14:30:00.000Z",

@@ -1,21 +1,25 @@
 import { test, expect, request } from '@playwright/test';
 
 /**
- * 📦 Product Entities E2E Tests
- * 🎯 Testing all product-related entities (Saddles, Options)
- * 🚀 NestJS backend API validation
+ * Product Entities E2E Tests
+ * Testing all product-related entities (Saddles, Brands, Options, Extras, Leathertypes, Presets)
+ * NestJS backend API validation
  *
- * NOTE: Many product entity modules are currently disabled in the NestJS backend:
- * - BrandsModule (disabled - schema mismatch)
- * - ModelsModule (disabled - models are stored in saddles table)
- * - LeathertypesModule (disabled)
- * - ExtrasModule (disabled)
- * - PresetsModule (disabled)
- * - ProductsModule (disabled)
+ * All product entity modules are now enabled in the NestJS backend:
+ * - BrandModule
+ * - LeathertypeModule
+ * - OptionModule
+ * - ExtraModule
+ * - PresetModule
+ * - SaddleModule
  *
  * Available endpoints:
  * - /api/v1/saddles - Saddle models
- * - /api/v1/options - Options (limited functionality)
+ * - /api/v1/brands - Brands
+ * - /api/v1/options - Options
+ * - /api/v1/extras - Extras
+ * - /api/v1/leathertypes - Leather types
+ * - /api/v1/presets - Presets
  */
 
 test.describe('Product Entities API @products @critical', () => {
@@ -23,7 +27,6 @@ test.describe('Product Entities API @products @critical', () => {
   let authToken: string;
 
   test.beforeAll(async ({ playwright }) => {
-    // Create API request context
     apiContext = await playwright.request.newContext({
       extraHTTPHeaders: {
         'Content-Type': 'application/json',
@@ -35,7 +38,6 @@ test.describe('Product Entities API @products @critical', () => {
   });
 
   test.beforeEach(async ({ playwright }) => {
-    // Authenticate and get token for protected endpoints
     const loginResponse = await apiContext.post('http://localhost:3001/api/v1/auth/email/login', {
       data: {
         email: 'admin@omsaddle.com',
@@ -52,7 +54,6 @@ test.describe('Product Entities API @products @critical', () => {
     const loginData = await loginResponse.json();
     authToken = loginData.token;
 
-    // Set authorization header for subsequent requests
     apiContext = await playwright.request.newContext({
       extraHTTPHeaders: {
         'Content-Type': 'application/json',
@@ -68,15 +69,43 @@ test.describe('Product Entities API @products @critical', () => {
     await apiContext.dispose();
   });
 
-  // SKIPPED: Brands module is disabled due to schema mismatch issues
-  test.skip('should CRUD brands via API @brands @critical', async () => {
-    // Brands module is disabled in app.module.ts
-    // This test is skipped until the module is re-enabled
+  // ==================== Brands ====================
+
+  test('should list brands via API @brands @critical', async () => {
+    const brandsResponse = await apiContext.get('http://localhost:3001/api/v1/brands');
+    expect(brandsResponse.ok()).toBeTruthy();
+
+    const brandsData = await brandsResponse.json();
+
+    if (Array.isArray(brandsData)) {
+      console.log(`Brands returned: ${brandsData.length}`);
+      if (brandsData.length > 0) {
+        expect(brandsData[0]).toHaveProperty('id');
+        expect(brandsData[0]).toHaveProperty('brandName');
+      }
+    } else if (brandsData.data) {
+      console.log(`Brands returned: ${brandsData.data.length}`);
+      expect(Array.isArray(brandsData.data)).toBeTruthy();
+      if (brandsData.data.length > 0) {
+        expect(brandsData.data[0]).toHaveProperty('id');
+        expect(brandsData.data[0]).toHaveProperty('brandName');
+      }
+    }
   });
 
-  // Test saddles API (models are stored in saddles table)
+  test('should get active brands @brands @api', async () => {
+    const activeResponse = await apiContext.get('http://localhost:3001/api/v1/brands/active');
+    expect(activeResponse.ok()).toBeTruthy();
+
+    const activeData = await activeResponse.json();
+    expect(Array.isArray(activeData)).toBeTruthy();
+
+    console.log(`Active brands: ${activeData.length}`);
+  });
+
+  // ==================== Saddles ====================
+
   test('should list saddles (models) via API @saddles @critical', async () => {
-    // LIST: Get all saddles with pagination
     const listResponse = await apiContext.get('http://localhost:3001/api/v1/saddles?page=1&limit=10');
     expect(listResponse.ok()).toBeTruthy();
 
@@ -88,7 +117,6 @@ test.describe('Product Entities API @products @critical', () => {
 
     console.log(`Saddles returned: ${listData.data.length} of ${listData.total} total`);
 
-    // Verify saddle structure if data exists
     if (listData.data.length > 0) {
       const saddle = listData.data[0];
       expect(saddle).toHaveProperty('id');
@@ -100,7 +128,6 @@ test.describe('Product Entities API @products @critical', () => {
   });
 
   test('should get active saddles @saddles @api', async () => {
-    // Get only active saddles
     const activeResponse = await apiContext.get('http://localhost:3001/api/v1/saddles/active');
     expect(activeResponse.ok()).toBeTruthy();
 
@@ -109,7 +136,6 @@ test.describe('Product Entities API @products @critical', () => {
 
     console.log(`Active saddles: ${activeData.length}`);
 
-    // All saddles should be active
     activeData.forEach((saddle: any) => {
       expect(saddle.isActive).toBe(true);
     });
@@ -125,35 +151,91 @@ test.describe('Product Entities API @products @critical', () => {
     console.log(`Unique brands: ${brands.length}`);
   });
 
-  // SKIPPED: Models module is disabled - models are stored in saddles table
-  test.skip('should CRUD models via API @models @critical', async () => {
-    // Models module is disabled in app.module.ts
-    // Models are stored as modelName in the saddles table
-    // Use /api/v1/saddles endpoint instead
+  // ==================== Leathertypes ====================
+
+  test('should list leathertypes via API @leathertypes @critical', async () => {
+    const leathertypesResponse = await apiContext.get('http://localhost:3001/api/v1/leathertypes');
+    expect(leathertypesResponse.ok()).toBeTruthy();
+
+    const leathertypesData = await leathertypesResponse.json();
+
+    if (leathertypesData.data) {
+      expect(Array.isArray(leathertypesData.data)).toBeTruthy();
+      console.log(`Leathertypes returned: ${leathertypesData.data.length}`);
+    } else if (Array.isArray(leathertypesData)) {
+      console.log(`Leathertypes returned: ${leathertypesData.length}`);
+    }
   });
 
-  // SKIPPED: Leathertypes module is disabled
-  test.skip('should CRUD leathertypes via API @leathertypes @critical', async () => {
-    // Leathertypes module is disabled in app.module.ts
+  // ==================== Options ====================
+
+  test('should list options via API @options @critical', async () => {
+    const optionsResponse = await apiContext.get('http://localhost:3001/api/v1/options');
+    expect(optionsResponse.ok()).toBeTruthy();
+
+    const optionsData = await optionsResponse.json();
+
+    if (optionsData.data) {
+      expect(Array.isArray(optionsData.data)).toBeTruthy();
+      console.log(`Options returned: ${optionsData.data.length}`);
+      if (optionsData.data.length > 0) {
+        expect(optionsData.data[0]).toHaveProperty('id');
+        expect(optionsData.data[0]).toHaveProperty('name');
+      }
+    } else if (Array.isArray(optionsData)) {
+      console.log(`Options returned: ${optionsData.length}`);
+    }
   });
 
-  // SKIPPED: Options module has schema issues
-  test.skip('should CRUD options via API @options @critical', async () => {
-    // Options module has schema mismatch issues (legacyId column doesn't exist)
+  // ==================== Extras ====================
+
+  test('should list extras via API @extras @critical', async () => {
+    const extrasResponse = await apiContext.get('http://localhost:3001/api/v1/extras');
+    expect(extrasResponse.ok()).toBeTruthy();
+
+    const extrasData = await extrasResponse.json();
+
+    if (extrasData.data) {
+      expect(Array.isArray(extrasData.data)).toBeTruthy();
+      console.log(`Extras returned: ${extrasData.data.length}`);
+      if (extrasData.data.length > 0) {
+        expect(extrasData.data[0]).toHaveProperty('id');
+        expect(extrasData.data[0]).toHaveProperty('name');
+      }
+    } else if (Array.isArray(extrasData)) {
+      console.log(`Extras returned: ${extrasData.length}`);
+    }
   });
 
-  // SKIPPED: Extras module is disabled
-  test.skip('should CRUD extras via API @extras @critical', async () => {
-    // Extras module is disabled in app.module.ts
+  test('should get active extras @extras @api', async () => {
+    const activeResponse = await apiContext.get('http://localhost:3001/api/v1/extras/active');
+    expect(activeResponse.ok()).toBeTruthy();
+
+    const activeData = await activeResponse.json();
+    expect(Array.isArray(activeData)).toBeTruthy();
+
+    console.log(`Active extras: ${activeData.length}`);
   });
 
-  // SKIPPED: Presets module is disabled
-  test.skip('should CRUD presets via API @presets @critical', async () => {
-    // Presets module is disabled in app.module.ts
+  // ==================== Presets ====================
+
+  test('should list presets via API @presets @critical', async () => {
+    const presetsResponse = await apiContext.get('http://localhost:3001/api/v1/presets');
+    expect(presetsResponse.ok()).toBeTruthy();
+
+    const presetsData = await presetsResponse.json();
+
+    if (presetsData.data) {
+      expect(Array.isArray(presetsData.data)).toBeTruthy();
+      console.log(`Presets returned: ${presetsData.data.length}`);
+    } else if (Array.isArray(presetsData)) {
+      console.log(`Presets returned: ${presetsData.length}`);
+    }
   });
+
+  // ==================== Pagination & Filtering ====================
 
   test('should handle saddles pagination @pagination @api', async () => {
-    // Test saddles pagination
     const saddlesResponse = await apiContext.get('http://localhost:3001/api/v1/saddles?page=1&limit=10');
     expect(saddlesResponse.ok()).toBeTruthy();
 
@@ -168,7 +250,6 @@ test.describe('Product Entities API @products @critical', () => {
   });
 
   test('should handle saddles filtering by brand @filtering @api', async () => {
-    // First get brands to find one to filter by
     const brandsResponse = await apiContext.get('http://localhost:3001/api/v1/saddles/brands');
     const brands = await brandsResponse.json();
 
@@ -193,15 +274,8 @@ test.describe('Product Entities API @products @critical', () => {
     expect(activeData).toHaveProperty('data');
     expect(Array.isArray(activeData.data)).toBeTruthy();
 
-    // All returned saddles should be active
     activeData.data.forEach((saddle: any) => {
       expect(saddle.isActive).toBe(true);
     });
-  });
-
-  // SKIPPED: Products module is disabled
-  test.skip('should validate product entity relationships @relationships @api', async () => {
-    // Products module is disabled in app.module.ts
-    // Brand-Model relationships are stored in saddles table as brand/modelName fields
   });
 });

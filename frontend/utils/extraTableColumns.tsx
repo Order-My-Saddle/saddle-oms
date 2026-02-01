@@ -5,47 +5,23 @@ export type ExtraHeaderFilters = {
   name?: string;
   sequence?: string;
   active?: string;
-  price?: string;
   description?: string;
 };
 
 export type SetExtraHeaderFilters = (key: keyof ExtraHeaderFilters, value: string) => void;
 
+const formatPrice = (v: any, symbol: string) => {
+  const numValue = typeof v === 'number' ? v : parseFloat(v);
+  return !isNaN(numValue) ? `${symbol} ${numValue.toFixed(2)}` : `${symbol} 0.00`;
+};
+
 export function getExtraTableColumns(headerFilters: ExtraHeaderFilters, setHeaderFilters: SetExtraHeaderFilters) {
   return [
-    {
-      key: 'id',
-      title: (
-        <TableHeaderFilter
-          title="ID"
-          value={headerFilters.id || ''}
-          onFilter={value => setHeaderFilters('id', value)}
-          type="text"
-          entityType="extra"
-        />
-      ),
-      render: (v: any) => v ?? '',
-      maxWidth: '100px',
-    },
-    {
-      key: 'sequence',
-      title: (
-        <TableHeaderFilter
-          title="SEQUENCE"
-          value={headerFilters.sequence || ''}
-          onFilter={value => setHeaderFilters('sequence', value)}
-          type="text"
-          entityType="extra"
-        />
-      ),
-      render: (v: any) => v ?? '',
-      maxWidth: '120px',
-    },
     {
       key: 'name',
       title: (
         <TableHeaderFilter
-          title="NAME"
+          title="EXTRA"
           value={headerFilters.name || ''}
           onFilter={value => setHeaderFilters('name', value)}
           type="text"
@@ -56,64 +32,51 @@ export function getExtraTableColumns(headerFilters: ExtraHeaderFilters, setHeade
       maxWidth: '200px',
     },
     {
-      key: 'active',
-      title: (
-        <TableHeaderFilter
-          title="ACTIVE"
-          value={headerFilters.active || ''}
-          onFilter={value => setHeaderFilters('active', value)}
-          type="select"
-          entityType="extra"
-          options={[
-            { value: '', label: 'All' },
-            { value: 'true', label: 'Active' },
-            { value: 'false', label: 'Inactive' }
-          ]}
-        />
-      ),
-      render: (v: any) => v ? 'Yes' : 'No',
+      key: 'price1',
+      title: 'USD',
+      render: (v: any) => formatPrice(v, '$'),
       maxWidth: '100px',
     },
     {
-      key: 'price',
-      title: (
-        <TableHeaderFilter
-          title="PRICE"
-          value={headerFilters.price || ''}
-          onFilter={value => setHeaderFilters('price', value)}
-          type="text"
-          entityType="extra"
-        />
-      ),
-      render: (v: any) => {
-        const numValue = parseFloat(v);
-        return !isNaN(numValue) ? `€${numValue.toFixed(2)}` : (v ?? '');
-      },
-      maxWidth: '120px',
+      key: 'price2',
+      title: 'EUR',
+      render: (v: any) => formatPrice(v, '€'),
+      maxWidth: '100px',
     },
     {
-      key: 'description',
-      title: (
-        <TableHeaderFilter
-          title="DESCRIPTION"
-          value={headerFilters.description || ''}
-          onFilter={value => setHeaderFilters('description', value)}
-          type="text"
-          entityType="extra"
-        />
-      ),
-      render: (v: any) => v ?? '',
-      maxWidth: '300px',
+      key: 'price3',
+      title: 'GBP',
+      render: (v: any) => formatPrice(v, '£'),
+      maxWidth: '100px',
+    },
+    {
+      key: 'price4',
+      title: 'CAD',
+      render: (v: any) => formatPrice(v, 'C$'),
+      maxWidth: '100px',
+    },
+    {
+      key: 'price5',
+      title: 'AUD',
+      render: (v: any) => formatPrice(v, 'A$'),
+      maxWidth: '100px',
+    },
+    {
+      key: 'price6',
+      title: 'NOK',
+      render: (v: any) => formatPrice(v, 'N€'),
+      maxWidth: '100px',
+    },
+    {
+      key: 'price7',
+      title: 'DKK',
+      render: (v: any) => formatPrice(v, 'D€'),
+      maxWidth: '100px',
     },
     {
       key: 'options',
       title: 'OPTIONS',
-      render: () => (
-        <div className="flex space-x-2">
-          <button className="btn-primary-sm">Edit</button>
-          <button className="btn-primary-sm">Delete</button>
-        </div>
-      ),
+      render: () => null,
       maxWidth: '150px',
     }
   ];

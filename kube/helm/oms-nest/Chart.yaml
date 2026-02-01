@@ -1,0 +1,9 @@
+apiVersion: v2
+name: oms-nest
+description: OMS NestJS + Next.js application Helm chart
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+maintainers:
+  - name: OMS Team
+    email: devops@ordermysaddle.com

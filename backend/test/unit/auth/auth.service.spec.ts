@@ -19,6 +19,7 @@ import { RoleEnum } from "../../../src/roles/roles.enum";
 import { StatusEnum } from "../../../src/statuses/statuses.enum";
 import { User } from "../../../src/users/domain/user";
 import { Session } from "../../../src/session/domain/session";
+import { AuditLoggingService } from "../../../src/audit-logging/audit-logging.service";
 
 // Mock bcrypt
 jest.mock("bcryptjs");
@@ -88,6 +89,10 @@ describe("AuthService", () => {
       getOrThrow: jest.fn(),
     };
 
+    const mockAuditLoggingService = {
+      logAction: jest.fn().mockResolvedValue({ id: 1 }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
@@ -96,6 +101,7 @@ describe("AuthService", () => {
         { provide: JwtService, useValue: mockJwtService },
         { provide: MailService, useValue: mockMailService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: AuditLoggingService, useValue: mockAuditLoggingService },
       ],
     }).compile();
 
@@ -537,7 +543,12 @@ describe("AuthService", () => {
       // Assert
       expect(result).toEqual({ ...mockUser, typeName: "supervisor" });
       expect(usersService.findById).toHaveBeenCalledWith(1);
-      expect(usersService.getUserRole).toHaveBeenCalledWith(1, "testuser", 1, 0);
+      expect(usersService.getUserRole).toHaveBeenCalledWith(
+        1,
+        "testuser",
+        1,
+        0,
+      );
     });
 
     it("should return null when user not found", async () => {

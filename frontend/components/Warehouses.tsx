@@ -33,7 +33,7 @@ export default function Warehouses() {
   } = useEntityData<Warehouse>({
     entity: 'warehouses',
     page: pagination.currentPage,
-    orderBy: 'username',
+    orderBy: 'name',
     autoFetch: true
   });
 

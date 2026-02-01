@@ -26,7 +26,7 @@ test.describe('Orders Entity Management', () => {
 
     // Verify API response structure
     const response = await apiHelper.waitForApiResponse('/api/v1/enriched_orders');
-    await apiHelper.validateEntityResponse('orders', { json: () => response });
+    await apiHelper.validateEntityResponse('enrichedOrders', { json: () => response });
   });
 
   test('should display orders in table format', async ({ page }) => {
@@ -300,7 +300,7 @@ test.describe('Orders Entity Management', () => {
     const response = await apiHelper.waitForApiResponse('/api/v1/enriched_orders');
 
     // Validate using our helper
-    await apiHelper.validateEntityResponse('orders', { json: () => response });
+    await apiHelper.validateEntityResponse('enrichedOrders', { json: () => response });
 
     // Additional specific validations for orders
     expect(response).toHaveProperty('hydra:member');

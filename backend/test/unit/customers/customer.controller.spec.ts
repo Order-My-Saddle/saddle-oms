@@ -4,7 +4,6 @@ import { CustomerController } from "../../../src/customers/customer.controller";
 import { CustomerService } from "../../../src/customers/customer.service";
 import { CreateCustomerDto } from "../../../src/customers/dto/create-customer.dto";
 import { UpdateCustomerDto } from "../../../src/customers/dto/update-customer.dto";
-import { QueryCustomerDto } from "../../../src/customers/dto/query-customer.dto";
 import { CustomerDto } from "../../../src/customers/dto/customer.dto";
 import { CustomerStatus } from "../../../src/customers/domain/value-objects/customer-status.value-object";
 
@@ -125,57 +124,81 @@ describe("CustomerController", () => {
   });
 
   describe("findAll", () => {
-    it("should return all customers with query filters", async () => {
+    it("should return paginated customers with query filters", async () => {
       // Arrange
-      const queryDto = new QueryCustomerDto();
-      queryDto.filters = {
-        status: CustomerStatus.ACTIVE,
-        fitterId: 2001,
-        country: "USA",
-        city: "New York",
-        email: "customer@example.com",
-        name: "John",
-        withoutFitter: false,
-      } as any;
-      queryDto.page = 1;
-      queryDto.limit = 10;
-      const customers = [mockCustomerDto];
-      customerService.findAll.mockResolvedValue(customers);
+      const paginatedResponse = {
+        data: [mockCustomerDto],
+        total: 1,
+        pages: 1,
+      };
+      customerService.findAll.mockResolvedValue(paginatedResponse);
 
       // Act
-      const result = await controller.findAll(queryDto);
+      const result = await controller.findAll(
+        1,
+        10,
+        undefined,
+        undefined,
+        "John",
+        "customer@example.com",
+        "New York",
+        "USA",
+        2001,
+      );
 
       // Assert
-      expect(result).toEqual(customers);
-      expect(customerService.findAll).toHaveBeenCalledWith(queryDto);
+      expect(result).toEqual(paginatedResponse);
+      expect(customerService.findAll).toHaveBeenCalledWith(
+        1,
+        10,
+        "John",
+        "customer@example.com",
+        "New York",
+        "USA",
+        2001,
+        undefined,
+        undefined,
+      );
       expect(customerService.findAll).toHaveBeenCalledTimes(1);
     });
 
     it("should return all customers without filters", async () => {
       // Arrange
-      const emptyQuery = {} as QueryCustomerDto;
-      const customers = [mockCustomerDto];
-      customerService.findAll.mockResolvedValue(customers);
+      const paginatedResponse = {
+        data: [mockCustomerDto],
+        total: 1,
+        pages: 1,
+      };
+      customerService.findAll.mockResolvedValue(paginatedResponse);
 
       // Act
-      const result = await controller.findAll(emptyQuery);
+      const result = await controller.findAll();
 
       // Assert
-      expect(result).toEqual(customers);
-      expect(customerService.findAll).toHaveBeenCalledWith(emptyQuery);
+      expect(result).toEqual(paginatedResponse);
+      expect(customerService.findAll).toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      );
     });
 
     it("should handle empty customer list", async () => {
       // Arrange
-      const queryDto = {} as QueryCustomerDto;
-      customerService.findAll.mockResolvedValue([]);
+      const emptyResponse = { data: [], total: 0, pages: 0 };
+      customerService.findAll.mockResolvedValue(emptyResponse);
 
       // Act
-      const result = await controller.findAll(queryDto);
+      const result = await controller.findAll();
 
       // Assert
-      expect(result).toEqual([]);
-      expect(customerService.findAll).toHaveBeenCalledWith(queryDto);
+      expect(result).toEqual(emptyResponse);
     });
   });
 
@@ -457,14 +480,14 @@ describe("CustomerController", () => {
 
     it("should handle null/undefined request parameters gracefully", async () => {
       // Arrange
-      customerService.findAll.mockResolvedValue([]);
+      const emptyResponse = { data: [], total: 0, pages: 0 };
+      customerService.findAll.mockResolvedValue(emptyResponse);
 
       // Act
-      const result = await controller.findAll({} as QueryCustomerDto);
+      const result = await controller.findAll();
 
       // Assert
-      expect(result).toEqual([]);
-      expect(customerService.findAll).toHaveBeenCalledWith({});
+      expect(result).toEqual(emptyResponse);
     });
 
     it("should handle empty update object", async () => {
@@ -524,14 +547,19 @@ describe("CustomerController", () => {
           id: customer.id + index,
           email: `customer${index}@example.com`,
         }));
-      customerService.findAll.mockResolvedValue(largeCustomerList);
+      const paginatedResponse = {
+        data: largeCustomerList,
+        total: 1000,
+        pages: 34,
+      };
+      customerService.findAll.mockResolvedValue(paginatedResponse);
 
       // Act
-      const result = await controller.findAll({} as QueryCustomerDto);
+      const result = await controller.findAll(1, 30);
 
       // Assert
-      expect(result).toHaveLength(1000);
-      expect(customerService.findAll).toHaveBeenCalledWith({});
+      expect(result.data).toHaveLength(1000);
+      expect(result.total).toBe(1000);
     });
   });
 });

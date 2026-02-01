@@ -367,7 +367,9 @@ jobs:
     runs-on: ubuntu-latest
     name: 🐳 Build & Push Secure Images
     needs: [security-scan, dependency-scan, test-backend, test-frontend, test-e2e]
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/develop'
+    outputs:
+      image_tag: ${{ steps.vars.outputs.image_tag }}
 
     permissions:
       contents: read
@@ -376,10 +378,26 @@ jobs:
     strategy:
       matrix:
         service: [backend, frontend]
+        include:
+          - service: backend
+            context: ./backend
+            dockerfile: ./backend/Dockerfile.production
+          - service: frontend
+            context: ./frontend
+            dockerfile: ./frontend/Dockerfile
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set build variables
+        id: vars
+        run: |
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
+          IMAGE_TAG="${BRANCH_NAME}-${SHORT_SHA}"
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "Image tag: ${IMAGE_TAG}"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -397,250 +415,89 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/${{ matrix.service }}
           tags: |
+            type=raw,value=${{ steps.vars.outputs.image_tag }}
             type=ref,event=branch
-            type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.service == 'backend' && './src' || './frontend' }}
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            ${{ matrix.service == 'frontend' && format('NEXT_PUBLIC_API_URL=https://api-nest-{0}.ordermysaddle.com', github.ref == 'refs/heads/main' && 'production' || 'staging') || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Deploy to staging
-  deploy-staging:
+  # Trigger Jenkins for deployment (replaces direct K8s deploy)
+  trigger-jenkins-deploy:
     runs-on: ubuntu-latest
-    name: Deploy to Staging
+    name: 🚀 Trigger Jenkins Deploy
     needs: build-and-push
-    if: github.ref == 'refs/heads/develop'
-    environment: staging
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging' || github.ref == 'refs/heads/develop'
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Configure kubectl
+      - name: Set deployment variables
+        id: deploy-vars
         run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > ~/.kube/config
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
+          IMAGE_TAG="${BRANCH_NAME}-${SHORT_SHA}"
 
-      - name: 🚀 Deploy secure infrastructure to staging
+          if [ "$BRANCH_NAME" = "main" ]; then
+            ENVIRONMENT="production"
+            JENKINS_JOB="oms-nest-deploy-production"
+          else
+            ENVIRONMENT="staging"
+            JENKINS_JOB="oms-nest-deploy-staging"
+          fi
+
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "environment=${ENVIRONMENT}" >> $GITHUB_OUTPUT
+          echo "jenkins_job=${JENKINS_JOB}" >> $GITHUB_OUTPUT
+
+      - name: Trigger Jenkins deployment
         run: |
-          echo "🏗️ Deploying secure Kubernetes infrastructure to staging..."
+          echo "Triggering Jenkins job: ${{ steps.deploy-vars.outputs.jenkins_job }}"
+          echo "  Environment: ${{ steps.deploy-vars.outputs.environment }}"
+          echo "  Image tag:   ${{ steps.deploy-vars.outputs.image_tag }}"
 
-          # Apply namespace and security policies first
-          kubectl apply -f kubernetes/staging/namespace.yaml
-          kubectl apply -f kubernetes/staging/network-policies.yaml || true
+          HTTP_CODE=$(curl -s -o /tmp/jenkins-response.txt -w "%{http_code}" \
+            -X POST \
+            "https://cicd.ordermysaddle.com/job/${{ steps.deploy-vars.outputs.jenkins_job }}/buildWithParameters" \
+            --user "${{ secrets.JENKINS_USER }}:${{ secrets.JENKINS_API_TOKEN }}" \
+            --data-urlencode "BACKEND_IMAGE_TAG=${{ steps.deploy-vars.outputs.image_tag }}" \
+            --data-urlencode "FRONTEND_IMAGE_TAG=${{ steps.deploy-vars.outputs.image_tag }}" \
+            --data-urlencode "ENVIRONMENT=${{ steps.deploy-vars.outputs.environment }}")
 
-          # Create secrets from environment variables (NO hardcoded values)
-          kubectl create secret generic oms-app-secrets \
-            --from-literal=DATABASE_URL="${{ secrets.STAGING_DATABASE_URL }}" \
-            --from-literal=JWT_SECRET="${{ secrets.STAGING_JWT_SECRET }}" \
-            --from-literal=REDIS_URL="${{ secrets.STAGING_REDIS_URL }}" \
-            -n oms-staging \
-            --dry-run=client -o yaml | kubectl apply -f -
+          echo "Jenkins response: ${HTTP_CODE}"
 
-          kubectl create secret generic oms-postgres-secrets \
-            --from-literal=POSTGRES_USER="${{ secrets.STAGING_DB_USER }}" \
-            --from-literal=POSTGRES_PASSWORD="${{ secrets.STAGING_DB_PASSWORD }}" \
-            -n oms-staging \
-            --dry-run=client -o yaml | kubectl apply -f -
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 400 ]; then
+            echo "Failed to trigger Jenkins deployment (HTTP ${HTTP_CODE})"
+            cat /tmp/jenkins-response.txt
+            exit 1
+          fi
 
-          # Apply database infrastructure
-          kubectl apply -f kubernetes/staging/database-deployment.yaml
+          echo "Jenkins deployment triggered successfully"
 
-          # Wait for database to be ready
-          kubectl wait --for=condition=ready pod -l app=oms-postgres -n oms-staging --timeout=300s
-
-          # Apply application deployments with updated images
-          kubectl apply -f kubernetes/staging/backend-deployment.yaml
-          kubectl apply -f kubernetes/staging/frontend-deployment.yaml
-
-          # Update image tags
-          kubectl set image deployment/oms-backend \
-            oms-backend=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/backend:develop-${{ github.sha }} \
-            -n oms-staging
-
-          kubectl set image deployment/oms-frontend \
-            oms-frontend=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/frontend:develop-${{ github.sha }} \
-            -n oms-staging
-
-          # Apply networking
-          kubectl apply -f kubernetes/staging/ingress.yaml
-
-          # Wait for rollout completion
-          echo "⏳ Waiting for deployment rollout..."
-          kubectl rollout status deployment/oms-backend -n oms-staging --timeout=600s
-          kubectl rollout status deployment/oms-frontend -n oms-staging --timeout=600s
-          kubectl rollout status deployment/oms-postgres -n oms-staging --timeout=300s
-          kubectl rollout status deployment/oms-redis -n oms-staging --timeout=300s
-
-      - name: 🔍 Comprehensive staging health checks
-        run: |
-          echo "🔍 Running comprehensive health checks..."
-          sleep 60
-
-          # Test database connectivity
-          kubectl exec deployment/oms-postgres -n oms-staging -- \
-            psql -U ${{ secrets.STAGING_DB_USER }} -d oms_staging -c "SELECT 1;"
-
-          # Test Redis connectivity
-          kubectl exec deployment/oms-redis -n oms-staging -- \
-            redis-cli ping
-
-          # Test backend health and API endpoints
-          kubectl exec deployment/oms-backend -n oms-staging -- \
-            curl -f http://localhost:3001/health
-
-          kubectl exec deployment/oms-backend -n oms-staging -- \
-            curl -f "http://localhost:3001/api/customers?limit=1"
-
-          # Test frontend accessibility
-          kubectl exec deployment/oms-frontend -n oms-staging -- \
-            curl -f http://localhost:3000
-
-          echo "✅ All staging services are healthy!"
-
-      - name: 🎭 Run E2E tests on staging environment
-        run: |
-          echo "🎭 Running E2E tests against staging deployment..."
-
-          # Setup E2E testing environment
-          cd e2e
-          npm ci
-          npx playwright install --with-deps chromium
-
-          # Run staging E2E tests
-          ENVIRONMENT=staging \
-          E2E_BASE_URL=https://staging.ordermysaddle.com \
-          E2E_API_URL=https://api-staging.ordermysaddle.com \
-          RALPH_LOOP_MODE=true \
-          npx playwright test --project=chromium --grep="@smoke|@critical"
-
-          echo "✅ Staging E2E tests completed successfully!"
-
-      - name: 📊 Upload staging E2E results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: staging-e2e-results
-          path: |
-            e2e/test-results/
-            e2e/playwright-report/
-          retention-days: 7
-
-      - name: Notify deployment success
+      - name: Notify trigger success
         if: success()
         uses: 8398a7/action-slack@v3
         with:
           status: success
-          text: '🚀 Staging deployment completed successfully!'
+          text: "Jenkins deploy triggered for ${{ steps.deploy-vars.outputs.environment }} with tag ${{ steps.deploy-vars.outputs.image_tag }}"
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
-  # Deploy to production
-  deploy-production:
-    runs-on: ubuntu-latest
-    name: Deploy to Production
-    needs: build-and-push
-    if: github.ref == 'refs/heads/main'
-    environment: production
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Configure kubectl
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG_PRODUCTION }}" | base64 -d > ~/.kube/config
-
-      - name: Deploy to production
-        run: |
-          # Blue-green deployment strategy
-          kubectl set image deployment/oms-backend \
-            backend=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/backend:main-${{ github.sha }} \
-            -n oms-production
-
-          kubectl set image deployment/oms-frontend \
-            frontend=${{ env.REGISTRY }}/${{ env.IMAGE_BASE }}/frontend:main-${{ github.sha }} \
-            -n oms-production
-
-          # Wait for rollout with longer timeout for production
-          kubectl rollout status deployment/oms-backend -n oms-production --timeout=600s
-          kubectl rollout status deployment/oms-frontend -n oms-production --timeout=600s
-
-      - name: Production health checks
-        run: |
-          sleep 60
-
-          # Comprehensive health checks
-          kubectl exec deployment/oms-backend -n oms-production -- \
-            curl -f http://localhost:3001/health
-
-          kubectl exec deployment/oms-backend -n oms-production -- \
-            curl -f "http://localhost:3001/api/customers?limit=1"
-
-          kubectl exec deployment/oms-frontend -n oms-production -- \
-            curl -f http://localhost:3000
-
-          echo "🎉 Production deployment successful!"
-
-      - name: Performance benchmark
-        run: |
-          echo "Running performance benchmark..."
-          # Add performance testing script here
-          # Example: curl response time validation
-
-      - name: Notify production deployment
-        if: success()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: success
-          text: '🎉 Production deployment completed successfully!'
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-      - name: Notify deployment failure
+      - name: Notify trigger failure
         if: failure()
         uses: 8398a7/action-slack@v3
         with:
           status: failure
-          text: '❌ Production deployment failed! Immediate attention required.'
+          text: "Failed to trigger Jenkins deploy for ${{ steps.deploy-vars.outputs.environment }}"
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
-  # Performance monitoring
-  performance-monitoring:
-    runs-on: ubuntu-latest
-    name: Performance Monitoring
-    if: github.ref == 'refs/heads/main'
-    needs: deploy-production
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run performance tests
-        run: |
-          echo "📊 Running performance validation..."
-
-          # Example performance checks
-          # Response time validation
-          RESPONSE_TIME=$(curl -w "%{time_total}" -s -o /dev/null https://production.ordermysaddle.com/health)
-          echo "Health endpoint response time: ${RESPONSE_TIME}s"
-
-          # Validate response time is under 1 second
-          if (( $(echo "$RESPONSE_TIME > 1.0" | bc -l) )); then
-            echo "⚠️ Warning: Health check response time exceeded 1 second"
-          fi
-
-      - name: Update performance dashboard
-        run: |
-          echo "📈 Updating performance metrics dashboard..."
-          # Add integration with monitoring tools here

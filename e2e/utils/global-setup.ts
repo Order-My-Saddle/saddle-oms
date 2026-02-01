@@ -170,25 +170,18 @@ async function createTestData(apiURL: string): Promise<void> {
 async function createTestUsers(apiURL: string): Promise<void> {
   const testUsers = [
     {
-      email: 'admin@example.com',
-      password: 'secret',
+      email: 'admin@omsaddle.com',
+      password: 'AdminPass123!',
       role: 'admin',
       firstName: 'Admin',
       lastName: 'User'
     },
     {
-      email: 'fitter@example.com',
-      password: 'secret',
+      email: 'sarah.thompson@fitters.com',
+      password: 'FitterPass123!',
       role: 'fitter',
-      firstName: 'Test',
-      lastName: 'Fitter'
-    },
-    {
-      email: 'user@example.com',
-      password: 'secret',
-      role: 'user',
-      firstName: 'Test',
-      lastName: 'User'
+      firstName: 'Sarah',
+      lastName: 'Thompson'
     }
   ];
 

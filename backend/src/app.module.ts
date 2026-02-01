@@ -38,7 +38,7 @@ import { OptionItemModule } from "./options-items/option-item.module";
 import { SaddleModule } from "./saddles/saddle.module";
 import { SaddleLeatherModule } from "./saddle-leathers/saddle-leather.module";
 import { SaddleOptionsItemModule } from "./saddle-options-items/saddle-options-item.module";
-// import { ExtraModule } from "./extras/extra.module";
+import { ExtraModule } from "./extras/extra.module";
 import { PresetModule } from "./presets/preset.module";
 // import { ProductModule } from "./products/product.module";
 import { CommentsModule } from "./comments/comments.module";
@@ -46,6 +46,9 @@ import { AccessFilterGroupModule } from "./access-filter-groups/access-filter-gr
 import { OrderProductSaddleModule } from "./order-product-saddles/order-product-saddle.module";
 import { CountryManagerModule } from "./country-managers/country-manager.module";
 import { WarehouseModule } from "./warehouses/warehouse.module";
+import { SaddleStockModule } from "./saddle-stock/saddle-stock.module";
+import { APP_INTERCEPTOR } from "@nestjs/core";
+import { AuditLogInterceptor } from "./audit-logging/interceptors/audit-log.interceptor";
 
 const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
   useClass: TypeOrmConfigService,
@@ -103,9 +106,16 @@ const infrastructureDatabaseModule = TypeOrmModule.forRootAsync({
     SaddleModule, // Master saddle/product entity ✅ - enabled
     SaddleLeatherModule, // Saddle-leather associations ✅ - enabled
     SaddleOptionsItemModule, // Saddle-option-item configurations ✅ - enabled
-    // ExtraModule, // Needs implementation
+    ExtraModule, // Extras with 7-tier pricing ✅ - enabled
     PresetModule, // Legacy entity ✅ - enabled
     // ProductModule, // Needs implementation
+    SaddleStockModule, // Saddle stock (fitter inventory) ✅ - enabled
+  ],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditLogInterceptor,
+    },
   ],
 })
 export class AppModule {}

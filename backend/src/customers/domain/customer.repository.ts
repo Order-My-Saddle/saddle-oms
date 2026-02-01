@@ -31,6 +31,18 @@ export abstract class ICustomerRepository {
   abstract findActiveCustomersWithoutFitter(): Promise<Customer[]>;
   abstract existsByEmail(email: Email, fitterId?: number): Promise<boolean>;
 
+  abstract findAllPaginated(options: {
+    page: number;
+    limit: number;
+    fitterId?: number;
+    name?: string;
+    email?: string;
+    country?: string;
+    city?: string;
+    search?: string;
+    id?: number;
+  }): Promise<{ customers: Customer[]; total: number }>;
+
   // Bulk operations for migration support
   abstract bulkCreate(customers: Customer[]): Promise<Customer[]>;
 }
