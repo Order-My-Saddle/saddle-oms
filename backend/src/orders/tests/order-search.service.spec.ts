@@ -13,13 +13,13 @@ import { OrderPriority } from "../domain/value-objects/order-priority.value-obje
 
 describe("OrderSearchService", () => {
   let service: OrderSearchService;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let _repository: Repository<OrderEntity>;
-  void _repository; // Reserved for direct repository testing
   let queryBuilder: jest.Mocked<SelectQueryBuilder<OrderEntity>>;
 
   const mockOrderEntity: OrderEntity = {
-    id: "123e4567-e89b-12d3-a456-426614174000",
-    customerId: "123e4567-e89b-12d3-a456-426614174000",
+    id: 12345,
+    customerId: 67890,
     orderNumber: "ORD-2023-001",
     status: "pending",
     priority: "normal",
@@ -48,7 +48,7 @@ describe("OrderSearchService", () => {
     orderTime: null,
     seatSizes: null,
     customerName: "John Smith",
-    saddleId: "saddle-123",
+    saddleId: 123,
     createdAt: new Date("2023-01-01"),
     updatedAt: new Date("2023-01-01"),
     deletedAt: null,
