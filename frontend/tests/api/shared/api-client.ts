@@ -88,7 +88,7 @@ export class ApiClient {
    */
   private safeLog(level: 'log' | 'warn' | 'error', message: string) {
     // Only log during active test execution, not during cleanup
-    if (this.isTestEnvironment && typeof jest !== 'undefined' && jest.isTornDown) {
+    if (this.isTestEnvironment && typeof jest !== 'undefined' && (jest as any).isTornDown) {
       return; // Jest is shutting down, don't log
     }
 

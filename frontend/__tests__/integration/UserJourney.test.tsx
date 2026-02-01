@@ -93,13 +93,13 @@ const MockApplication = ({ role }: { role: UserRole | null }) => {
       'USER_PERMISSIONS_VIEW': [UserRole.SUPERVISOR]
     };
 
-    const allowedRoles = permissionMap[permission] || [];
-    
+    const allowedRoles: UserRole[] = (permissionMap as any)[permission] || [];
+
     // Handle supervisor inheritance
     if (userRole === UserRole.SUPERVISOR) {
       return allowedRoles.includes(UserRole.SUPERVISOR) || allowedRoles.includes(UserRole.ADMIN);
     }
-    
+
     return allowedRoles.includes(userRole);
   });
 

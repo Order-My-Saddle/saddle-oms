@@ -15,8 +15,8 @@ const mockOrders: Order[] = [
     supplier: { id: 1, name: 'Acme Supplier' },
     status: 'pending',
     urgent: false,
-    createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-01-15T10:00:00Z',
+    createdAt: '2024-01-15T10:00:00Z' as any,
+    updatedAt: '2024-01-15T10:00:00Z' as any,
     seatSize: 'M',
     reference: 'REF-001',
   },
@@ -28,12 +28,12 @@ const mockOrders: Order[] = [
     supplier: { id: 2, name: 'Beta Supplier' },
     status: 'approved',
     urgent: true,
-    createdAt: '2024-01-16T11:00:00Z',
-    updatedAt: '2024-01-16T11:00:00Z',
+    createdAt: '2024-01-16T11:00:00Z' as any,
+    updatedAt: '2024-01-16T11:00:00Z' as any,
     seatSize: 'L',
     reference: 'REF-002',
   },
-];
+] as any;
 
 const mockColumns: OrdersTableColumn[] = [
   { key: 'orderNumber', title: 'Order Number' },
@@ -53,10 +53,7 @@ const mockPagination = {
 
 const mockSeatSizes = ['S', 'M', 'L', 'XL'];
 const mockStatuses = ['pending', 'approved', 'completed', 'cancelled'];
-const mockFitters = [
-  { id: 1, name: 'Jane Fitter' },
-  { id: 2, name: 'Bob Fitter' },
-];
+const mockFitters = ['Jane Fitter', 'Bob Fitter'];
 
 const defaultProps = {
   orders: mockOrders,
@@ -73,11 +70,11 @@ const defaultProps = {
   seatSizes: mockSeatSizes,
   statuses: mockStatuses,
   fitters: mockFitters,
-  dateFrom: null,
+  dateFrom: undefined as any,
   setDateFrom: jest.fn(),
-  dateTo: null,
+  dateTo: undefined as any,
   setDateTo: jest.fn(),
-};
+} as any;
 
 const renderWithAuth = (ui: React.ReactElement, userRole = 'admin') => {
   return render(
@@ -149,9 +146,9 @@ describe('OrdersTable', () => {
   describe('Header Filters', () => {
     it('renders header filters for filterable columns', () => {
       const columnsWithFilters: OrdersTableColumn[] = [
-        { key: 'status', title: 'Status', filter: true },
-        { key: 'urgent', title: 'Urgent', filter: true },
-        { key: 'seatSize', title: 'Seat Size', filter: true },
+        { key: 'status', title: 'Status', filter: { type: 'list' } },
+        { key: 'urgent', title: 'Urgent', filter: { type: 'boolean' } },
+        { key: 'seatSize', title: 'Seat Size', filter: { type: 'list' } },
       ];
 
       renderWithAuth(
@@ -167,7 +164,7 @@ describe('OrdersTable', () => {
       const user = userEvent.setup();
       const onFilterChangeMock = jest.fn();
       const columnsWithFilters: OrdersTableColumn[] = [
-        { key: 'status', title: 'Status', filter: true },
+        { key: 'status', title: 'Status', filter: { type: 'list' } },
       ];
 
       renderWithAuth(
@@ -379,14 +376,14 @@ describe('OrdersTable', () => {
 
   describe('Loading and Error States', () => {
     it('shows loading state', () => {
-      renderWithAuth(<OrdersTable {...defaultProps} loading={true} />);
+      renderWithAuth(<OrdersTable {...defaultProps} {...{ loading: true } as any} />);
 
       expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
 
     it('shows error state', () => {
       const errorMessage = 'Failed to load orders';
-      renderWithAuth(<OrdersTable {...defaultProps} error={errorMessage} />);
+      renderWithAuth(<OrdersTable {...defaultProps} {...{ error: errorMessage } as any} />);
 
       expect(screen.getByText(errorMessage)).toBeInTheDocument();
     });
@@ -420,12 +417,12 @@ describe('OrdersTable', () => {
       const ordersWithMissingData = [
         {
           ...mockOrders[0],
-          customer: null,
+          customer: null as any,
         },
       ];
 
       renderWithAuth(
-        <OrdersTable {...defaultProps} orders={ordersWithMissingData} />
+        <OrdersTable {...defaultProps} orders={ordersWithMissingData as any} />
       );
 
       // Should not crash and should handle null customer gracefully
@@ -453,10 +450,7 @@ describe('OrdersTable', () => {
     });
 
     it('uses provided fitters for filtering', () => {
-      const customFitters = [
-        { id: 3, name: 'Charlie Fitter' },
-        { id: 4, name: 'Diana Fitter' },
-      ];
+      const customFitters = ['Charlie Fitter', 'Diana Fitter'];
       renderWithAuth(
         <OrdersTable {...defaultProps} fitters={customFitters} />
       );

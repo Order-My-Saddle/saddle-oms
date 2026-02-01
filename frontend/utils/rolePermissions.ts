@@ -71,7 +71,7 @@ export const SCREEN_PERMISSIONS = {
   WAREHOUSE_EDIT: [UserRole.ADMIN, UserRole.SUPERVISOR],
   WAREHOUSE_DELETE: [UserRole.ADMIN, UserRole.SUPERVISOR],
   WAREHOUSE_VIEW: [UserRole.ADMIN, UserRole.SUPERVISOR],
-} as const;
+} as const satisfies Record<string, readonly UserRole[]>;
 
 /**
  * Screen constants for easier referencing in tests and components
@@ -120,7 +120,7 @@ export function hasScreenPermission(
 ): boolean {
   if (!userRole || !screen) return false;
 
-  const allowedRoles = SCREEN_PERMISSIONS[screen];
+  const allowedRoles = SCREEN_PERMISSIONS[screen] as readonly UserRole[];
   if (!allowedRoles) return false;
 
   // Handle role hierarchy - SUPERVISOR inherits ADMIN permissions

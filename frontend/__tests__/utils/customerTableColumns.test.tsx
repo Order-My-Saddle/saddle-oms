@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { getCustomerTableColumns, type CustomerHeaderFilters, type SetCustomerHeaderFilters } from '@/utils/customerTableColumns';
 import type { Customer } from '@/types/Customer';
 
-const mockCustomer: Customer = {
+const mockCustomer: any = {
   id: 1,
   name: 'John Customer',
   email: 'john@example.com',
@@ -84,7 +84,7 @@ describe('Customer Table Columns', () => {
       expect(nameCol?.render).toBeDefined();
 
       const TestComponent = () => {
-        const renderedValue = nameCol?.render?.(mockCustomer.name, mockCustomer);
+        const renderedValue = (nameCol?.render as any)?.(mockCustomer.name, mockCustomer);
         return <div data-testid="customer-name">{renderedValue}</div>;
       };
 
@@ -99,7 +99,7 @@ describe('Customer Table Columns', () => {
       expect(emailCol?.render).toBeDefined();
 
       const TestComponent = () => {
-        const renderedValue = emailCol?.render?.(mockCustomer.email, mockCustomer);
+        const renderedValue = (emailCol?.render as any)?.(mockCustomer.email, mockCustomer);
         return <div data-testid="customer-email">{renderedValue}</div>;
       };
 
@@ -114,7 +114,7 @@ describe('Customer Table Columns', () => {
       expect(countryCol?.render).toBeDefined();
 
       const TestComponent = () => {
-        const renderedValue = countryCol?.render?.(mockCustomer.country, mockCustomer);
+        const renderedValue = (countryCol?.render as any)?.(mockCustomer.country, mockCustomer);
         return <div data-testid="customer-country">{renderedValue}</div>;
       };
 
@@ -129,10 +129,10 @@ describe('Customer Table Columns', () => {
       const idCol = columns.find(col => col.key === 'id');
 
       expect(idCol?.render).toBeDefined();
-      expect(idCol?.maxWidth).toBe('200px');
+      expect((idCol as any)?.maxWidth).toBe('200px');
 
       const TestComponent = () => {
-        const renderedValue = idCol?.render?.(mockCustomer.id, mockCustomer);
+        const renderedValue = (idCol?.render as any)?.(mockCustomer.id, mockCustomer);
         return <div data-testid="customer-id">{renderedValue}</div>;
       };
 
@@ -147,7 +147,7 @@ describe('Customer Table Columns', () => {
       const fitterCol = columns.find(col => col.key === 'fitter');
 
       const TestComponent = () => {
-        const renderedValue = fitterCol?.render?.(mockCustomer.fitter, mockCustomer);
+        const renderedValue = (fitterCol?.render as any)?.(mockCustomer.fitter, mockCustomer);
         return <div data-testid="fitter-name">{renderedValue}</div>;
       };
 
@@ -161,7 +161,7 @@ describe('Customer Table Columns', () => {
       const fitterCol = columns.find(col => col.key === 'fitter');
 
       const TestComponent = () => {
-        const renderedValue = fitterCol?.render?.(null, customerWithoutFitter);
+        const renderedValue = (fitterCol?.render as any)?.(customerWithoutFitter.fitter, customerWithoutFitter);
         return <div data-testid="fitter-name">{renderedValue || 'No fitter'}</div>;
       };
 
@@ -175,7 +175,7 @@ describe('Customer Table Columns', () => {
       const fitterCol = columns.find(col => col.key === 'fitter');
 
       const TestComponent = () => {
-        const renderedValue = fitterCol?.render?.(customerWithEmptyFitter.fitter, customerWithEmptyFitter);
+        const renderedValue = (fitterCol?.render as any)?.(customerWithEmptyFitter.fitter, customerWithEmptyFitter);
         return <div data-testid="fitter-name">{renderedValue || 'No name'}</div>;
       };
 
@@ -189,23 +189,23 @@ describe('Customer Table Columns', () => {
       const columns = getCustomerTableColumns(mockHeaderFilters, mockSetHeaderFilters);
 
       const idCol = columns.find(col => col.key === 'id');
-      expect(idCol?.maxWidth).toBe('200px');
+      expect((idCol as any)?.maxWidth).toBe('200px');
 
       const nameCol = columns.find(col => col.key === 'name');
-      expect(nameCol?.maxWidth).toBe('200px');
+      expect((nameCol as any)?.maxWidth).toBe('200px');
 
       const fitterCol = columns.find(col => col.key === 'fitter');
-      expect(fitterCol?.maxWidth).toBe('180px');
+      expect((fitterCol as any)?.maxWidth).toBe('180px');
 
       // Columns without explicit maxWidth should not have one
       const emailCol = columns.find(col => col.key === 'email');
-      expect(emailCol?.maxWidth).toBeUndefined();
+      expect((emailCol as any)?.maxWidth).toBeUndefined();
 
       const countryCol = columns.find(col => col.key === 'country');
-      expect(countryCol?.maxWidth).toBeUndefined();
+      expect((countryCol as any)?.maxWidth).toBeUndefined();
 
       const cityCol = columns.find(col => col.key === 'city');
-      expect(cityCol?.maxWidth).toBeUndefined();
+      expect((cityCol as any)?.maxWidth).toBeUndefined();
     });
   });
 
@@ -215,7 +215,7 @@ describe('Customer Table Columns', () => {
       const nameCol = columns.find(col => col.key === 'name');
 
       const TestComponent = () => {
-        const renderedValue = nameCol?.render?.(null, null);
+        const renderedValue = (nameCol?.render as any)?.(null, null);
         return <div data-testid="customer-name">{renderedValue || 'No name'}</div>;
       };
 
@@ -228,7 +228,7 @@ describe('Customer Table Columns', () => {
       const emailCol = columns.find(col => col.key === 'email');
 
       const TestComponent = () => {
-        const renderedValue = emailCol?.render?.(null, mockCustomer);
+        const renderedValue = (emailCol?.render as any)?.(mockCustomer.email, mockCustomer);
         return <div data-testid="customer-email">{renderedValue || 'No email'}</div>;
       };
 
@@ -244,7 +244,7 @@ describe('Customer Table Columns', () => {
       const nameCol = columns.find(col => col.key === 'name');
 
       const TestComponent = () => {
-        const renderedValue = nameCol?.render?.(customerWithSpecialChars.name, customerWithSpecialChars);
+        const renderedValue = (nameCol?.render as any)?.(customerWithSpecialChars.name, customerWithSpecialChars);
         return <div data-testid="customer-name">{renderedValue}</div>;
       };
 
@@ -258,7 +258,7 @@ describe('Customer Table Columns', () => {
       const emailCol = columns.find(col => col.key === 'email');
 
       const TestComponent = () => {
-        const renderedValue = emailCol?.render?.(customerWithSpecialEmail.email, customerWithSpecialEmail);
+        const renderedValue = (emailCol?.render as any)?.(customerWithSpecialEmail.email, customerWithSpecialEmail);
         return <div data-testid="customer-email">{renderedValue}</div>;
       };
 

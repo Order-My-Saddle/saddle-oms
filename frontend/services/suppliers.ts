@@ -159,8 +159,8 @@ export async function createSupplier(supplierData: Partial<Supplier>): Promise<S
 
   // Remove undefined fields to keep payload clean
   Object.keys(entity).forEach(key => {
-    if (key !== 'entityAspect' && entity[key] === undefined) {
-      delete entity[key];
+    if (key !== 'entityAspect' && (entity as any)[key] === undefined) {
+      delete (entity as any)[key];
     }
   });
 
@@ -253,8 +253,8 @@ export async function updateSupplier(id: number | string, supplierData: Partial<
 
   // Remove undefined fields to keep payload clean
   Object.keys(entity).forEach(key => {
-    if (key !== 'entityAspect' && entity[key] === undefined) {
-      delete entity[key];
+    if (key !== 'entityAspect' && (entity as any)[key] === undefined) {
+      delete (entity as any)[key];
     }
   });
 

@@ -164,9 +164,9 @@ export default function Customers() {
 
     // Apply optimistic update immediately
     const optimisticData = {
-      id: selectedCustomer.id,
       ...selectedCustomer,
-      ...updatedCustomer
+      ...updatedCustomer,
+      id: selectedCustomer.id
     };
     updateCustomerOptimistically(optimisticData);
 

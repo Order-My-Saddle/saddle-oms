@@ -237,7 +237,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         logger.log('🔍 AuthContext: mappedRole result:', mappedRole);
         
         // Map backend name to firstName/lastName for frontend
-        const nameParts = (member.name || '').split(' ').filter(part => part.length > 0);
+        const nameParts = (member.name || '').split(' ').filter((part: string) => part.length > 0);
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
 
@@ -316,7 +316,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           logger.log('🔄 AuthContext: Decoded token for fallback:', decoded);
 
           // Map name to firstName/lastName if available
-          const fallbackNameParts = (result.user?.name || decoded?.name || '').split(' ').filter(part => part.length > 0);
+          const fallbackNameParts = (result.user?.name || decoded?.name || '').split(' ').filter((part: string) => part.length > 0);
           const fallbackFirstName = fallbackNameParts[0] || result.user?.firstName || '';
           const fallbackLastName = fallbackNameParts.slice(1).join(' ') || result.user?.lastName || '';
 

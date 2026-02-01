@@ -4,7 +4,7 @@ import type { Supplier } from '@/types/Supplier';
 import type { Fitter } from '@/types/Fitter';
 
 // Order mock data generators
-export const createMockOrder = (overrides: Partial<Order> = {}): Order => ({
+export const createMockOrder = (overrides: any = {}): any => ({
   id: 1,
   orderNumber: 'ORD-001',
   customer: { id: 1, name: 'John Customer' },
@@ -25,7 +25,7 @@ export const createMockOrder = (overrides: Partial<Order> = {}): Order => ({
   ...overrides,
 });
 
-export const createMockOrders = (count: number, baseOverrides: Partial<Order> = {}): Order[] => {
+export const createMockOrders = (count: number, baseOverrides: any = {}): any[] => {
   return Array.from({ length: count }, (_, index) =>
     createMockOrder({
       id: index + 1,
@@ -33,19 +33,19 @@ export const createMockOrders = (count: number, baseOverrides: Partial<Order> = 
       reference: `REF-SEAT-${['S', 'M', 'L', 'XL'][index % 4]}-${String(index + 1).padStart(3, '0')}`,
       status: ['pending', 'approved', 'completed', 'cancelled'][index % 4] as any,
       urgent: index % 3 === 0,
-      createdAt: new Date(2024, 0, 15 + index).toISOString(),
+      createdAt: new Date(2024, 0, 15 + index).toISOString() as any,
       ...baseOverrides,
     })
   );
 };
 
 // Customer mock data generators
-export const createMockCustomer = (overrides: Partial<Customer> = {}): Customer => ({
+export const createMockCustomer = (overrides: any = {}): any => ({
   id: 1,
   name: 'John Customer',
   email: 'john.customer@example.com',
   phone: '+1234567890',
-  address: '123 Main St, City, State 12345',
+  address: '123 Main St, City, State 12345' as any,
   fitter: { id: 1, name: 'Jane Fitter' },
   notes: 'Regular customer',
   createdAt: '2024-01-10T09:00:00Z',
@@ -54,34 +54,34 @@ export const createMockCustomer = (overrides: Partial<Customer> = {}): Customer 
   ...overrides,
 });
 
-export const createMockCustomers = (count: number, baseOverrides: Partial<Customer> = {}): Customer[] => {
+export const createMockCustomers = (count: number, baseOverrides: any = {}): any[] => {
   const firstNames = ['John', 'Jane', 'Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank'];
   const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis'];
-  
+
   return Array.from({ length: count }, (_, index) => {
     const firstName = firstNames[index % firstNames.length];
     const lastName = lastNames[index % lastNames.length];
-    
+
     return createMockCustomer({
       id: index + 1,
       name: `${firstName} ${lastName}`,
       email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@example.com`,
       phone: `+123456${String(index).padStart(4, '0')}`,
-      address: `${100 + index} ${['Main', 'Oak', 'Pine', 'Elm'][index % 4]} St, City, State`,
+      address: `${100 + index} ${['Main', 'Oak', 'Pine', 'Elm'][index % 4]} St, City, State` as any,
       active: index % 5 !== 0, // 80% active
-      createdAt: new Date(2024, 0, 1 + index).toISOString(),
+      createdAt: new Date(2024, 0, 1 + index).toISOString() as any,
       ...baseOverrides,
     });
   });
 };
 
 // Supplier mock data generators
-export const createMockSupplier = (overrides: Partial<Supplier> = {}): Supplier => ({
+export const createMockSupplier = (overrides: any = {}): any => ({
   id: 1,
   name: 'Acme Saddle Supply',
   email: 'contact@acmesaddle.com',
   phone: '+1234567890',
-  address: '456 Industrial Blvd, Manufacturing City, State 54321',
+  address: '456 Industrial Blvd, Manufacturing City, State 54321' as any,
   contactPerson: 'Sarah Johnson',
   notes: 'Primary supplier for premium leather goods',
   active: true,
@@ -90,37 +90,37 @@ export const createMockSupplier = (overrides: Partial<Supplier> = {}): Supplier 
   ...overrides,
 });
 
-export const createMockSuppliers = (count: number, baseOverrides: Partial<Supplier> = {}): Supplier[] => {
+export const createMockSuppliers = (count: number, baseOverrides: any = {}): any[] => {
   const companyPrefixes = ['Acme', 'Premium', 'Elite', 'Professional', 'Master', 'Quality', 'Superior', 'Expert'];
   const companyTypes = ['Leather', 'Saddle', 'Equestrian', 'Horse', 'Riding', 'Tack', 'Equipment'];
   const contactNames = ['Sarah Johnson', 'Mike Wilson', 'Lisa Brown', 'David Smith', 'Emma Davis', 'Chris Miller'];
-  
+
   return Array.from({ length: count }, (_, index) => {
     const prefix = companyPrefixes[index % companyPrefixes.length];
     const type = companyTypes[index % companyTypes.length];
     const contact = contactNames[index % contactNames.length];
-    
+
     return createMockSupplier({
       id: index + 1,
       name: `${prefix} ${type} Supply`,
       email: `contact@${prefix.toLowerCase()}${type.toLowerCase()}.com`,
       phone: `+123456${String(7000 + index).slice(-4)}`,
-      address: `${200 + index * 10} Industrial ${['Blvd', 'Ave', 'St', 'Way'][index % 4]}, Manufacturing City`,
+      address: `${200 + index * 10} Industrial ${['Blvd', 'Ave', 'St', 'Way'][index % 4]}, Manufacturing City` as any,
       contactPerson: contact,
       active: index % 6 !== 0, // ~83% active
-      createdAt: new Date(2023, 11, 1 + index).toISOString(),
+      createdAt: new Date(2023, 11, 1 + index).toISOString() as any,
       ...baseOverrides,
     });
   });
 };
 
 // Fitter mock data generators
-export const createMockFitter = (overrides: Partial<Fitter> = {}): Fitter => ({
+export const createMockFitter = (overrides: any = {}): any => ({
   id: 1,
   name: 'Jane Professional Fitter',
   email: 'jane@profittings.com',
   phone: '+1234567890',
-  address: '789 Equestrian Lane, Horse Town, State 98765',
+  address: '789 Equestrian Lane, Horse Town, State 98765' as any,
   notes: 'Specialist in competition saddles',
   active: true,
   region: 'Northeast',
@@ -130,28 +130,28 @@ export const createMockFitter = (overrides: Partial<Fitter> = {}): Fitter => ({
   ...overrides,
 });
 
-export const createMockFitters = (count: number, baseOverrides: Partial<Fitter> = {}): Fitter[] => {
+export const createMockFitters = (count: number, baseOverrides: any = {}): any[] => {
   const firstNames = ['Jane', 'Mike', 'Sarah', 'David', 'Emma', 'Chris', 'Lisa', 'Tom'];
   const lastNames = ['Professional', 'Expert', 'Master', 'Certified', 'Senior', 'Specialist', 'Elite', 'Premier'];
   const regions = ['Northeast', 'Southeast', 'Midwest', 'Southwest', 'West', 'Northwest', 'Central', 'International'];
   const certifications = ['Apprentice', 'Certified', 'Senior', 'Master', 'Expert'];
-  
+
   return Array.from({ length: count }, (_, index) => {
     const firstName = firstNames[index % firstNames.length];
     const lastName = lastNames[index % lastNames.length];
     const region = regions[index % regions.length];
     const certification = certifications[index % certifications.length];
-    
+
     return createMockFitter({
       id: index + 1,
       name: `${firstName} ${lastName} Fitter`,
       email: `${firstName.toLowerCase()}@${lastName.toLowerCase()}fittings.com`,
       phone: `+123456${String(8000 + index).slice(-4)}`,
-      address: `${300 + index * 5} Equestrian ${['Lane', 'Ave', 'Blvd', 'Way'][index % 4]}, ${region} City`,
+      address: `${300 + index * 5} Equestrian ${['Lane', 'Ave', 'Blvd', 'Way'][index % 4]}, ${region} City` as any,
       region,
       certificationLevel: certification,
       active: index % 7 !== 0, // ~86% active
-      createdAt: new Date(2023, 10, 1 + index).toISOString(),
+      createdAt: new Date(2023, 10, 1 + index).toISOString() as any,
       ...baseOverrides,
     });
   });
@@ -177,28 +177,28 @@ export const createMockFilterData = () => ({
 });
 
 // Complex order scenarios
-export const createUrgentOrders = (count: number): Order[] => {
+export const createUrgentOrders = (count: number): any[] => {
   return createMockOrders(count, { urgent: true, status: 'pending' });
 };
 
-export const createCompletedOrders = (count: number): Order[] => {
-  return createMockOrders(count, { 
+export const createCompletedOrders = (count: number): any[] => {
+  return createMockOrders(count, {
     status: 'completed',
-    completedAt: new Date().toISOString(),
+    completedAt: new Date().toISOString() as any,
   });
 };
 
-export const createOrdersWithVariousStatuses = (): Order[] => {
+export const createOrdersWithVariousStatuses = (): any[] => {
   return [
     createMockOrder({ id: 1, status: 'pending', urgent: true }),
     createMockOrder({ id: 2, status: 'approved', urgent: false }),
-    createMockOrder({ id: 3, status: 'completed', urgent: false, completedAt: '2024-01-20T15:00:00Z' }),
+    createMockOrder({ id: 3, status: 'completed', urgent: false, completedAt: '2024-01-20T15:00:00Z' as any }),
     createMockOrder({ id: 4, status: 'cancelled', urgent: false }),
     createMockOrder({ id: 5, status: 'on-hold', urgent: true }),
   ];
 };
 
-export const createOrdersWithVariousSeatSizes = (): Order[] => {
+export const createOrdersWithVariousSeatSizes = (): any[] => {
   const seatSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
   return seatSizes.map((size, index) =>
     createMockOrder({

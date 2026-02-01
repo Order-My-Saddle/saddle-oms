@@ -440,9 +440,6 @@ export const createIntegrationTestSuite = () => {
   };
 };
 
-// Export main helper class
-export { TableTestHelper };
-
 // Add a basic test to satisfy Jest's requirement
 if (typeof test !== 'undefined') {
   test('tableTestHelpers should provide table testing utilities', () => {

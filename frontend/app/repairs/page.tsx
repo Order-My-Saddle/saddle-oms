@@ -157,14 +157,14 @@ export default function RepairsPage() {
 
       <EntityTable
         entities={repairs}
-        columns={getRepairColumns()}
+        columns={getRepairColumns() as any}
         searchTerm={searchTerm}
         onSearch={setSearchTerm}
         headerFilters={filters}
         onFilterChange={handleFilterChange}
-        pagination={pagination}
+        pagination={pagination ?? undefined}
         loading={loading}
-        error={error}
+        error={error ?? undefined}
         entityType="order"
         onView={handleViewRepair}
         onEdit={handleEditRepair}

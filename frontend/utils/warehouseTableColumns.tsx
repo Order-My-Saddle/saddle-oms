@@ -118,7 +118,7 @@ export function getWarehouseTableColumns({
       title: 'Actions',
       render: (_, warehouse) => (
         <div className="flex items-center gap-2">
-          {onView && (
+          {onView && warehouse && (
             <Button
               variant="ghost"
               size="sm"
@@ -128,7 +128,7 @@ export function getWarehouseTableColumns({
               <Eye className="h-4 w-4" />
             </Button>
           )}
-          {onEdit && canEdit && (
+          {onEdit && canEdit && warehouse && (
             <Button
               variant="ghost"
               size="sm"
@@ -138,7 +138,7 @@ export function getWarehouseTableColumns({
               <Edit className="h-4 w-4" />
             </Button>
           )}
-          {onDelete && canDelete && (
+          {onDelete && canDelete && warehouse && (
             <Button
               variant="ghost"
               size="sm"

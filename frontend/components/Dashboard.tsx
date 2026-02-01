@@ -254,7 +254,7 @@ export default function Dashboard() {
               // Extract seat sizes from reference, seat_sizes or seatSizes array if not already present
               seatSize: (order.seat_sizes || order.seatSizes) ?
                 (Array.isArray(order.seat_sizes || order.seatSizes) ? (order.seat_sizes || order.seatSizes).join(', ') : (order.seat_sizes || order.seatSizes)) :
-                extractSeatSizes(order),
+                extractDynamicSeatSizes([order]).join(', '),
               // Only add computed names if the direct fields aren't available
               ...(order.customerName ? {} : { customer: getCustomerName(order) || '' }),
               ...(order.fitterName ? {} : { fitter: getFitterName(order) || '' }),
@@ -449,7 +449,6 @@ export default function Dashboard() {
         ) : (
           <EditOrder
             order={selectedOrder}
-            initialData={selectedOrder}
             isLoading={isLoadingOrderData}
             error={orderDataError}
             onClose={() => {

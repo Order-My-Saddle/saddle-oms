@@ -106,9 +106,9 @@ export default function Suppliers() {
 
     // Apply optimistic update immediately
     const optimisticData = {
-      id: selectedSupplier.id,
       ...selectedSupplier,
-      ...updatedSupplier
+      ...updatedSupplier,
+      id: selectedSupplier.id
     };
     updateEntityOptimistically(optimisticData);
 

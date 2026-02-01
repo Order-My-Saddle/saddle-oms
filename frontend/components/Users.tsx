@@ -101,7 +101,7 @@ export default function Users() {
     const timeoutId = setTimeout(() => {
       // Reset to first page when search/filters change
       if (pagination.currentPage !== 1) {
-        pagination.setCurrentPage(1);
+        pagination.onPageChange(1);
       } else {
         // If already on page 1, just refetch
         refetch();
@@ -144,10 +144,10 @@ export default function Users() {
     if (!selectedUser) return;
 
     // Apply optimistic removal immediately
-    removeEntityOptimistically(selectedUser.id);
+    removeEntityOptimistically(String(selectedUser.id));
 
     try {
-      await deleteUser(selectedUser.id);
+      await deleteUser(String(selectedUser.id));
       setIsDeleteOpen(false);
       setSelectedUser(null);
 
@@ -177,18 +177,18 @@ export default function Users() {
 
     // Apply optimistic update immediately
     const optimisticData = {
-      id: selectedUser.id,
       ...selectedUser,
-      ...updatedUser
+      ...updatedUser,
+      id: String(selectedUser.id)
     };
-    updateEntityOptimistically(optimisticData);
+    updateEntityOptimistically(optimisticData as any);
 
     try {
-      const result = await updateUser(selectedUser.id, updatedUser);
+      const result = await updateUser(String(selectedUser.id), updatedUser);
 
       // Update with actual response data if available
       if (result && result.id) {
-        updateEntityOptimistically(result);
+        updateEntityOptimistically(result as any);
       }
 
       // Close modal on success

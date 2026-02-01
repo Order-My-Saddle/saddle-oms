@@ -60,7 +60,7 @@ export function getLeathertypeTableColumns(headerFilters: LeathertypeHeaderFilte
           onFilter={value => setHeaderFilters('active', value)}
           type="select"
           entityType="leathertype"
-          options={[
+          data={[
             { value: '', label: 'All' },
             { value: 'true', label: 'Active' },
             { value: 'false', label: 'Inactive' }

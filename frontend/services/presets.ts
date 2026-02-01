@@ -140,8 +140,8 @@ export async function createPreset(presetData: Partial<Preset>): Promise<Preset>
 
   // Remove undefined fields
   Object.keys(entity).forEach(key => {
-    if (key !== 'entityAspect' && entity[key] === undefined) {
-      delete entity[key];
+    if (key !== 'entityAspect' && (entity as any)[key] === undefined) {
+      delete (entity as any)[key];
     }
   });
 
@@ -203,8 +203,8 @@ export async function updatePreset(id: string, presetData: Partial<Preset>): Pro
 
   // Remove undefined fields
   Object.keys(entity).forEach(key => {
-    if (key !== 'entityAspect' && entity[key] === undefined) {
-      delete entity[key];
+    if (key !== 'entityAspect' && (entity as any)[key] === undefined) {
+      delete (entity as any)[key];
     }
   });
 

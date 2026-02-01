@@ -40,15 +40,15 @@ const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>;
 
 // Test component to access auth context
 const TestComponent = () => {
-  const { user, isAuthenticated, isLoading } = useAuth();
-  
+  const { user, isAuthenticated, isLoaded } = useAuth();
+
   return (
     <div>
       <div data-testid="user-id">{user?.id || 'no-user'}</div>
       <div data-testid="user-role">{user?.role || 'no-role'}</div>
       <div data-testid="user-username">{user?.username || 'no-username'}</div>
       <div data-testid="is-authenticated">{isAuthenticated ? 'true' : 'false'}</div>
-      <div data-testid="is-loading">{isLoading ? 'true' : 'false'}</div>
+      <div data-testid="is-loading">{isLoaded ? 'false' : 'true'}</div>
     </div>
   );
 };
@@ -101,7 +101,7 @@ describe('AuthContext - Multi-Role Support', () => {
     jest.spyOn(console, 'error').mockImplementation();
 
     // Setup Jotai mock to return different atom hooks based on which atom is being used
-    mockUseAtom.mockImplementation((atom: any) => {
+    mockUseAtom.mockImplementation((atom: any): any => {
       if (atom?.key === 'auth_token') {
         return [mockToken, jest.fn((newValue: any) => {
           mockToken = newValue;
@@ -178,7 +178,7 @@ describe('AuthContext - Multi-Role Support', () => {
       };
 
       // Override the mock specifically for this test
-      mockUseAtom.mockImplementation((atom: any) => {
+      mockUseAtom.mockImplementation((atom: any): any => {
         if (atom?.key === 'auth_token') {
           return [mockToken, jest.fn()];
         } else if (atom?.init === null && !atom?.key) {
@@ -225,7 +225,7 @@ describe('AuthContext - Multi-Role Support', () => {
       };
 
       // Override the mock specifically for this test
-      mockUseAtom.mockImplementation((atom: any) => {
+      mockUseAtom.mockImplementation((atom: any): any => {
         if (atom?.key === 'auth_token') {
           return [mockToken, jest.fn()];
         } else if (atom?.init === null && !atom?.key) {

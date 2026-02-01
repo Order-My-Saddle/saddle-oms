@@ -89,7 +89,7 @@ describe('Customers API', () => {
       };
 
       // Validate our test data matches expected structure
-      const testCustomer = generateTestData('customer');
+      const testCustomer = generateTestData('customer') as any;
       expect(testCustomer).toHaveProperty('name');
       expect(testCustomer).toHaveProperty('email');
       expect(testCustomer.email).toMatch(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
@@ -99,18 +99,18 @@ describe('Customers API', () => {
   describe('Data Validation (Structure Tests)', () => {
     it('should validate required fields for customer creation', async () => {
       const requiredFields = config.requiredFields || [];
-      const testData = generateTestData('customer');
+      const testData = generateTestData('customer') as any;
 
       // Ensure our test data includes required fields
-      requiredFields.forEach(field => {
+      requiredFields.forEach((field: string) => {
         expect(testData).toHaveProperty(field);
-        expect(testData[field]).toBeDefined();
-        expect(testData[field]).not.toBe('');
+        expect((testData as any)[field]).toBeDefined();
+        expect((testData as any)[field]).not.toBe('');
       });
     }, TEST_TIMEOUTS.FAST);
 
     it('should generate valid email format for customers', async () => {
-      const testData = generateTestData('customer');
+      const testData = generateTestData('customer') as any;
 
       expect(testData.email).toMatch(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
       expect(testData.email).toContain('test-api.example.com'); // Our test domain
@@ -239,7 +239,7 @@ describe('Customers API', () => {
 
     it('should include proper headers in POST responses', async () => {
       // Test that POST requests are properly formatted
-      const testData = generateTestData('customer');
+      const testData = generateTestData('customer') as any;
 
       try {
         await apiClient.post('/v1/customers', testData);

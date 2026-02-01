@@ -6,7 +6,7 @@ import { DateRangeFilter } from './filters/DateRangeFilter';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Filter as FilterIcon } from 'lucide-react';
 
-export type FilterType = 'text' | 'number' | 'date-range' | 'boolean' | 'enum' | 'urgent';
+export type FilterType = 'text' | 'number' | 'date-range' | 'boolean' | 'enum' | 'urgent' | 'select';
 
 export interface FilterOption {
   label: string;
@@ -19,7 +19,7 @@ export interface TableHeaderFilterProps {
   value?: string;
   onFilter: (value: string) => void;
   data?: FilterOption[] | string[];
-  entityType?: 'order' | 'customer' | 'product' | 'fitter' | 'supplier' | 'factory' | 'access-filter-group' | 'country-manager';
+  entityType?: 'order' | 'customer' | 'product' | 'fitter' | 'supplier' | 'factory' | 'access-filter-group' | 'country-manager' | 'user' | 'warehouse' | 'saddle' | 'brand' | 'option' | 'preset' | 'leathertype' | 'extra';
 }
 
 export function TableHeaderFilter({

@@ -126,7 +126,7 @@ export function OrderDetailModal({ order, isOpen, onClose }: OrderDetailModalPro
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="font-medium text-gray-700">Order Date:</span>
-                  <span className="text-gray-900">{formatDate(order.orderTime || order.createdAt || order.date || '')}</span>
+                  <span className="text-gray-900">{formatDate(String(order.orderTime || order.createdAt || order.date || ''))}</span>
                 </div>
               </div>
             </div>

@@ -2,6 +2,9 @@ import { fetchEntities } from './api';
 import type { CountryManager, CountryManagersResponse } from '@/types/CountryManager';
 import { logger } from '@/utils/logger';
 
+// Re-export types for component usage
+export type { CountryManager, CountryManagersResponse };
+
 function getToken() {
   if (typeof window !== 'undefined') {
     // Try to get token from auth_token first (Jotai store)
@@ -115,8 +118,8 @@ export async function createCountryManager(countryManagerData: Partial<CountryMa
 
   // Remove undefined fields to keep payload clean
   Object.keys(entity).forEach(key => {
-    if (key !== 'entityAspect' && entity[key] === undefined) {
-      delete entity[key];
+    if (key !== 'entityAspect' && (entity as any)[key] === undefined) {
+      delete (entity as any)[key];
     }
   });
 
@@ -202,8 +205,8 @@ export async function updateCountryManager(id: string, countryManagerData: Parti
 
   // Remove undefined fields to keep payload clean
   Object.keys(entity).forEach(key => {
-    if (key !== 'entityAspect' && entity[key] === undefined) {
-      delete entity[key];
+    if (key !== 'entityAspect' && (entity as any)[key] === undefined) {
+      delete (entity as any)[key];
     }
   });
 

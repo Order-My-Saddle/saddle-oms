@@ -134,7 +134,7 @@ describe('Fitter Filtering Integration Tests', () => {
       mockGetCurrentUser.mockReturnValue({
         id: 1,
         username: 'jane.fitter',
-        role: 'ROLE_FITTER',
+        role: 'ROLE_FITTER' as any,
       });
 
       // Mock API response with filtered orders
@@ -184,7 +184,7 @@ describe('Fitter Filtering Integration Tests', () => {
       mockGetCurrentUser.mockReturnValue({
         id: 1,
         username: 'admin.user',
-        role: 'ROLE_ADMIN',
+        role: 'ROLE_ADMIN' as any,
       });
 
       // Mock API response with all orders
@@ -222,7 +222,7 @@ describe('Fitter Filtering Integration Tests', () => {
       mockGetCurrentUser.mockReturnValue({
         id: 1,
         username: 'supervisor.user',
-        role: 'ROLE_SUPERVISOR',
+        role: 'ROLE_SUPERVISOR' as any,
       });
 
       mockGetEnrichedOrders.mockResolvedValue({
@@ -255,7 +255,7 @@ describe('Fitter Filtering Integration Tests', () => {
       mockGetCurrentUser.mockReturnValue({
         id: 2,
         username: 'bob.fitter',
-        role: 'ROLE_FITTER',
+        role: 'ROLE_FITTER' as any,
       });
 
       const bobFitterOrders = allOrders.filter(order => order.fitter.username === 'bob.fitter');
@@ -288,7 +288,7 @@ describe('Fitter Filtering Integration Tests', () => {
       mockGetCurrentUser.mockReturnValue({
         id: 1,
         username: 'admin.user',
-        role: 'ROLE_ADMIN',
+        role: 'ROLE_ADMIN' as any,
       });
 
       mockGetEnrichedOrders.mockResolvedValue({
@@ -321,7 +321,7 @@ describe('Fitter Filtering Integration Tests', () => {
       mockGetCurrentUser.mockReturnValue({
         id: 1,
         username: 'admin.fitter', // Username suggests they were a fitter
-        role: 'ROLE_ADMIN', // But primary role is ADMIN after mapping
+        role: 'ROLE_ADMIN' as any, // But primary role is ADMIN after mapping
       });
 
       mockGetEnrichedOrders.mockResolvedValue({
@@ -359,7 +359,7 @@ describe('Fitter Filtering Integration Tests', () => {
       mockGetCurrentUser.mockReturnValue({
         id: 1,
         username: 'supervisor.fitter',
-        role: 'ROLE_SUPERVISOR', // Primary role after mapping
+        role: 'ROLE_SUPERVISOR' as any, // Primary role after mapping
       });
 
       mockGetEnrichedOrders.mockResolvedValue({
@@ -392,7 +392,7 @@ describe('Fitter Filtering Integration Tests', () => {
       mockGetCurrentUser.mockReturnValue({
         id: 1,
         username: 'jane.fitter',
-        role: 'ROLE_FITTER',
+        role: 'ROLE_FITTER' as any,
       });
 
       const janeFitterOrders = allOrders.filter(order => order.fitter.username === 'jane.fitter');
@@ -452,7 +452,7 @@ describe('Fitter Filtering Integration Tests', () => {
       mockGetCurrentUser.mockReturnValue({
         id: 1,
         username: 'jane.fitter',
-        role: 'ROLE_FITTER',
+        role: 'ROLE_FITTER' as any,
       });
 
       const janeFitterOrders = allOrders.filter(order => order.fitter.username === 'jane.fitter');
@@ -482,7 +482,7 @@ describe('Fitter Filtering Integration Tests', () => {
       mockGetCurrentUser.mockReturnValue({
         id: 1,
         username: 'jane.fitter',
-        role: 'ROLE_USER', // Role changed
+        role: 'ROLE_USER' as any, // Role changed
       });
 
       // USER role shouldn't get automatic fitter filtering
@@ -513,7 +513,7 @@ describe('Fitter Filtering Integration Tests', () => {
       mockGetCurrentUser.mockReturnValue({
         id: 1,
         username: 'jane.fitter',
-        role: 'ROLE_FITTER',
+        role: 'ROLE_FITTER' as any,
       });
 
       mockGetEnrichedOrders.mockRejectedValue(new Error('Service unavailable'));
@@ -567,7 +567,7 @@ describe('Fitter Filtering Integration Tests', () => {
       mockGetCurrentUser.mockReturnValue({
         id: 1,
         username: 'jane.fitter',
-        role: 'ROLE_FITTER',
+        role: 'ROLE_FITTER' as any,
       });
 
       const janeFitterOrders = allOrders.filter(order => order.fitter.username === 'jane.fitter');

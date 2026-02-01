@@ -184,14 +184,14 @@ export default function AvailableSaddleStockPage() {
 
       <EntityTable
         entities={saddleStock}
-        columns={getSaddleStockColumns()}
+        columns={getSaddleStockColumns() as any}
         searchTerm={searchTerm}
         onSearch={setSearchTerm}
         headerFilters={filters}
         onFilterChange={handleFilterChange}
-        pagination={pagination}
+        pagination={pagination ?? undefined}
         loading={loading}
-        error={error}
+        error={error ?? undefined}
         entityType="product"
         onView={handleViewSaddle}
         onEdit={handleEditSaddle}

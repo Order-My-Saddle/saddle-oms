@@ -447,12 +447,12 @@ describe('TableHeaderFilter Component', () => {
   describe('Entity Type Integration', () => {
     test('handles orders entity type', () => {
       render(
-        <TableHeaderFilter 
-          title="Status" 
-          type="enum" 
-          value="" 
-          onFilter={mockOnFilter} 
-          entityType="orders"
+        <TableHeaderFilter
+          title="Status"
+          type="enum"
+          value=""
+          onFilter={mockOnFilter}
+          entityType="order"
           data={[
             { value: 'pending', label: 'Pending' },
             { value: 'approved', label: 'Approved' },
@@ -465,43 +465,43 @@ describe('TableHeaderFilter Component', () => {
 
     test('handles customers entity type', () => {
       render(
-        <TableHeaderFilter 
-          title="Name" 
-          type="text" 
-          value="" 
-          onFilter={mockOnFilter} 
-          entityType="customers"
+        <TableHeaderFilter
+          title="Name"
+          type="text"
+          value=""
+          onFilter={mockOnFilter}
+          entityType="customer"
         />
       );
-      
+
       expect(screen.getByText('Name')).toBeInTheDocument();
     });
 
     test('handles suppliers entity type', () => {
       render(
-        <TableHeaderFilter 
-          title="Company" 
-          type="text" 
-          value="" 
-          onFilter={mockOnFilter} 
-          entityType="suppliers"
+        <TableHeaderFilter
+          title="Company"
+          type="text"
+          value=""
+          onFilter={mockOnFilter}
+          entityType="supplier"
         />
       );
-      
+
       expect(screen.getByText('Company')).toBeInTheDocument();
     });
 
     test('handles fitters entity type', () => {
       render(
-        <TableHeaderFilter 
-          title="Name" 
-          type="text" 
-          value="" 
-          onFilter={mockOnFilter} 
-          entityType="fitters"
+        <TableHeaderFilter
+          title="Name"
+          type="text"
+          value=""
+          onFilter={mockOnFilter}
+          entityType="fitter"
         />
       );
-      
+
       expect(screen.getByText('Name')).toBeInTheDocument();
     });
   });
@@ -546,15 +546,15 @@ describe('TableHeaderFilter Component', () => {
   describe('Error Handling', () => {
     test('handles invalid filter data gracefully', () => {
       render(
-        <TableHeaderFilter 
-          title="Status" 
-          type="enum" 
-          value="" 
-          onFilter={mockOnFilter} 
-          data={null}
+        <TableHeaderFilter
+          title="Status"
+          type="enum"
+          value=""
+          onFilter={mockOnFilter}
+          data={null as any}
         />
       );
-      
+
       expect(screen.getByText('Status')).toBeInTheDocument();
     });
 

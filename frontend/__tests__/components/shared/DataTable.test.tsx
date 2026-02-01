@@ -2,7 +2,15 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DataTable } from '@/components/shared/DataTable';
-import type { TableColumn, PaginationProps } from '@/components/shared/DataTable';
+import type { Column } from '@/components/shared/DataTable';
+
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  totalItems: number;
+  itemsPerPage: number;
+}
 
 interface MockData {
   id: number;
@@ -20,14 +28,14 @@ const mockData: MockData[] = [
   { id: 5, name: 'Charlie Wilson', email: 'charlie@example.com', status: 'active', count: 8 },
 ];
 
-const mockColumns: TableColumn<MockData>[] = [
+const mockColumns: Column<MockData>[] = [
   { key: 'id', title: 'ID' },
   { key: 'name', title: 'Name', maxWidth: '200px' },
   { key: 'email', title: 'Email' },
-  { 
-    key: 'status', 
+  {
+    key: 'status',
     title: 'Status',
-    render: (value) => (
+    render: (value: any) => (
       <span className={`status-badge ${value}`}>
         {value?.toUpperCase()}
       </span>
@@ -77,10 +85,10 @@ describe('DataTable', () => {
       );
 
       const statusElements = screen.getAllByText('ACTIVE');
-      expect(statusElements[0]).toHaveClass('status-badge', 'active');
-      
+      expect(statusElements[0]).toHaveClass('status-badge active');
+
       const inactiveElements = screen.getAllByText('INACTIVE');
-      expect(inactiveElements[0]).toHaveClass('status-badge', 'inactive');
+      expect(inactiveElements[0]).toHaveClass('status-badge inactive');
     });
 
     it('applies maxWidth styles to columns', () => {
@@ -462,7 +470,7 @@ describe('DataTable', () => {
       );
 
       const header = screen.getByRole('table').querySelector('thead');
-      expect(header).toHaveClass('sticky', 'top-0');
+      expect(header).toHaveClass('sticky top-0');
     });
 
     it('applies row striping', () => {

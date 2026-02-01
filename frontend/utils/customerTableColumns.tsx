@@ -3,6 +3,7 @@ import { TableHeaderFilter } from '../components/shared/TableHeaderFilter';
 
 export type CustomerHeaderFilters = Record<string, string>;
 export type SetCustomerHeaderFilters = (key: string, value: string) => void;
+export type CustomerFilterChangeHandler = (key: string, value: string) => void;
 
 export function getCustomerTableColumns(headerFilters: CustomerHeaderFilters, setHeaderFilters: SetCustomerHeaderFilters) {
   return [

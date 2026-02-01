@@ -98,7 +98,7 @@ export function getModelTableColumns(
     columns.push({
       key: '_actions',
       title: (<span className="text-xs font-medium text-gray-500">ACTIONS</span>) as any,
-      render: (v: any, row: any) => {
+      render: (_v: any, row?: any) => {
         if (!row) return null;
         return (
           <div className="flex gap-1 flex-wrap">

@@ -57,6 +57,8 @@ export interface Model {
 export interface Brand {
   id: number;
   name: string;
+  sequence?: number;
+  active?: boolean;
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;

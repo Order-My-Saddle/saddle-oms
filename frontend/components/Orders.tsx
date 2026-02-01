@@ -340,10 +340,10 @@ className="btn-primary"
         <EntityTable
           entities={processedOrders}
           columns={getOrderTableColumns(headerFilters, handleFilterChange, dynamicFactories, dynamicSeatSizes)}
-          onView={handleViewDetails}
-          onEdit={handleEditOrder}
-          onDelete={handleDeleteOrder}
-          onApprove={handleApproveOrder}
+          onView={handleViewDetails as any}
+          onEdit={handleEditOrder as any}
+          onDelete={handleDeleteOrder as any}
+          onApprove={handleApproveOrder as any}
           entityType="order"
           searchTerm={searchTerm}
           onSearch={handleSearch}
@@ -385,7 +385,7 @@ className="btn-primary"
           useComprehensiveEdit ? (
             <ComprehensiveEditOrder
               order={{
-                id: selectedOrder.id,
+                id: String(selectedOrder.id),
                 orderId: Number(selectedOrder.orderId || selectedOrder.id)
               }}
               onClose={() => {
@@ -399,7 +399,6 @@ className="btn-primary"
             <EditOrder
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               order={selectedOrder as any}
-              initialData={selectedOrder}
               isLoading={isLoadingOrderData}
               error={orderDataError}
               onClose={() => {
@@ -412,9 +411,8 @@ className="btn-primary"
           )
         ) : (
           // Creation mode - no order selected
-          <EditOrder 
+          <EditOrder
             order={undefined}
-            initialData={undefined}
             isLoading={false}
             error={null}
             onClose={() => {

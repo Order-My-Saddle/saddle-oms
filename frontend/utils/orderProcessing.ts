@@ -80,7 +80,7 @@ export function buildOrderFilters(headerFilters: HeaderFilters): Record<string, 
   const filters: Record<string, any> = {};
   
   Object.keys(validFilters).forEach(key => {
-    const value = validFilters[key];
+    const value = (validFilters as any)[key];
     if (value && value !== '') {
       // Map frontend filter keys to API keys if needed
       if (key === 'id') {

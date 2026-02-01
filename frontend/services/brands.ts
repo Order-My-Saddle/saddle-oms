@@ -3,8 +3,12 @@ import { logger } from '@/utils/logger';
 export interface Brand {
   id: string;
   name: string;
+  sequence?: number;
+  active?: boolean;
   isActive?: boolean;
   displayName?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface BrandsResponse {

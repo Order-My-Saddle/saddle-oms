@@ -65,7 +65,7 @@ describe('Screen Access Control', () => {
         'PRESETS': [UserRole.USER, UserRole.ADMIN, UserRole.SUPERVISOR]
       };
       
-      const allowedRoles = permissionMap[permission] || [];
+      const allowedRoles = permissionMap[permission as keyof typeof permissionMap] || [];
       
       // Handle supervisor inheritance
       if (role === UserRole.SUPERVISOR) {
@@ -144,8 +144,8 @@ describe('Screen Access Control', () => {
         test(`${testCase.roleName} can access allowed screens`, () => {
           render(<TestApp userRole={role} />);
 
-          testCase.expectedAccess.screens.forEach(screen => {
-            const testId = getTestIdFromScreen(screen);
+          testCase.expectedAccess.screens.forEach(screenName => {
+            const testId = getTestIdFromScreen(screenName);
             if (testId) {
               expect(screen.getByTestId(testId)).toBeInTheDocument();
             }
@@ -155,8 +155,8 @@ describe('Screen Access Control', () => {
         test(`${testCase.roleName} cannot access denied screens`, () => {
           render(<TestApp userRole={role} />);
 
-          testCase.expectedAccess.deniedScreens.forEach(screen => {
-            const testId = getTestIdFromScreen(screen);
+          testCase.expectedAccess.deniedScreens.forEach(screenName => {
+            const testId = getTestIdFromScreen(screenName);
             if (testId) {
               expect(screen.queryByTestId(testId)).not.toBeInTheDocument();
             }

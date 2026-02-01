@@ -102,7 +102,7 @@ export function getUserTableColumns({
       title: 'Actions',
       render: (_, user) => (
         <div className="flex items-center gap-2">
-          {onView && (
+          {onView && user && (
             <Button
               variant="ghost"
               size="sm"
@@ -112,7 +112,7 @@ export function getUserTableColumns({
               <Eye className="h-4 w-4" />
             </Button>
           )}
-          {onEdit && canEdit && (
+          {onEdit && canEdit && user && (
             <Button
               variant="ghost"
               size="sm"
@@ -122,7 +122,7 @@ export function getUserTableColumns({
               <Edit className="h-4 w-4" />
             </Button>
           )}
-          {onDelete && canDelete && (
+          {onDelete && canDelete && user && (
             <Button
               variant="ghost"
               size="sm"

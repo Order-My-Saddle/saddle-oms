@@ -100,7 +100,7 @@ export default function OrdersTableDemoPage() {
 
   const table = useReactTable({
     data: processedOrders,
-    columns,
+    columns: columns as any,
     getCoreRowModel: getCoreRowModel(),
   });
 

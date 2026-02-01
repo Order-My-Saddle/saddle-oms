@@ -508,7 +508,7 @@ export async function searchByDateRange(fromDate: Date, toDate: Date): Promise<a
 export async function searchByUrgentStatus(urgent: boolean): Promise<any> {
   logger.log('Searching by Urgent Status:', urgent);
   return getEnrichedOrders({
-    filters: { urgent: urgent },
+    filters: { urgent: urgent ? 'true' : 'false' },
     orderBy: 'orderId',
     order: 'desc'
   });
@@ -608,7 +608,7 @@ export async function advancedSearch(filters: SearchFilters): Promise<any> {
   if (filters.customerName) searchFilters.customerName = filters.customerName;
   if (filters.fitterName) searchFilters.fitterName = filters.fitterName;
   if (filters.supplierName) searchFilters.supplierName = filters.supplierName;
-  if (filters.urgent !== undefined) searchFilters.urgent = filters.urgent;
+  if (filters.urgent !== undefined) searchFilters.urgent = String(filters.urgent);
   if (filters.saddleFilter) {
     // Saddle filter could include seat sizes, brands, models, etc.
     searchFilters.seatSizes = filters.saddleFilter;

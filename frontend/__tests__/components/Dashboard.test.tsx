@@ -244,7 +244,7 @@ describe('Dashboard Component', () => {
     });
 
     // Set up useDebounce mock to return the value immediately for testing
-    mockUseDebounce.mockImplementation((value) => value);
+    mockUseDebounce.mockImplementation((value: any) => value);
   });
 
   describe('Initial Rendering', () => {

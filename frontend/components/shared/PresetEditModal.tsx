@@ -54,7 +54,7 @@ export function PresetEditModal({ preset, isOpen, onClose, onSave }: PresetEditM
         page: 1,
         orderBy: 'name',
         order: 'asc',
-        extraParams: { active: true }
+        filters: { active: 'true' }
       });
       setModels(data['hydra:member'] || []);
     } catch (error) {

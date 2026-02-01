@@ -83,7 +83,7 @@ describe('Navigation Access Control', () => {
         'PRESETS': [UserRole.USER, UserRole.ADMIN, UserRole.SUPERVISOR]
       };
       
-      const allowedRoles = permissionMap[permission] || [];
+      const allowedRoles = permissionMap[permission as keyof typeof permissionMap] || [];
       
       // Handle supervisor inheritance
       if (role === UserRole.SUPERVISOR) {

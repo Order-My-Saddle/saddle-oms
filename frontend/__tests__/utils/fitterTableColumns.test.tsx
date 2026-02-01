@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { getFitterTableColumns, type FitterHeaderFilters, type SetFitterHeaderFilters } from '@/utils/fitterTableColumns';
 import type { Fitter } from '@/types/Fitter';
 
-const mockFitter: Fitter = {
+const mockFitter: any = {
   id: 1,
   name: 'Jane Fitter',
   username: 'janefitter',
@@ -81,7 +81,7 @@ describe('Fitter Table Columns', () => {
       expect(nameCol?.render).toBeDefined();
 
       const TestComponent = () => {
-        const renderedValue = nameCol?.render?.(mockFitter.name, mockFitter);
+        const renderedValue = (nameCol?.render as any)?.(mockFitter.name, mockFitter);
         return <div data-testid="fitter-name">{renderedValue}</div>;
       };
 
@@ -96,7 +96,7 @@ describe('Fitter Table Columns', () => {
       expect(usernameCol?.render).toBeDefined();
 
       const TestComponent = () => {
-        const renderedValue = usernameCol?.render?.(mockFitter.username, mockFitter);
+        const renderedValue = (usernameCol?.render as any)?.(mockFitter.username, mockFitter);
         return <div data-testid="fitter-username">{renderedValue}</div>;
       };
 
@@ -111,7 +111,7 @@ describe('Fitter Table Columns', () => {
       expect(cityCol?.render).toBeDefined();
 
       const TestComponent = () => {
-        const renderedValue = cityCol?.render?.(mockFitter.city, mockFitter);
+        const renderedValue = (cityCol?.render as any)?.(mockFitter.city, mockFitter);
         return <div data-testid="fitter-city">{renderedValue}</div>;
       };
 
@@ -126,7 +126,7 @@ describe('Fitter Table Columns', () => {
       expect(countryCol?.render).toBeDefined();
 
       const TestComponent = () => {
-        const renderedValue = countryCol?.render?.(mockFitter.country, mockFitter);
+        const renderedValue = (countryCol?.render as any)?.(mockFitter.country, mockFitter);
         return <div data-testid="fitter-country">{renderedValue}</div>;
       };
 
@@ -143,7 +143,7 @@ describe('Fitter Table Columns', () => {
       expect(enabledCol?.render).toBeDefined();
 
       const TestComponent = () => {
-        const renderedValue = enabledCol?.render?.(true, mockFitter);
+        const renderedValue = (enabledCol?.render as any)?.(true, mockFitter);
         return <div data-testid="fitter-status">{renderedValue}</div>;
       };
 
@@ -157,7 +157,7 @@ describe('Fitter Table Columns', () => {
       const enabledCol = columns.find(col => col.key === 'enabled');
 
       const TestComponent = () => {
-        const renderedValue = enabledCol?.render?.(false, inactiveFitter);
+        const renderedValue = (enabledCol?.render as any)?.(false, inactiveFitter);
         return <div data-testid="fitter-status">{renderedValue}</div>;
       };
 
@@ -174,7 +174,7 @@ describe('Fitter Table Columns', () => {
       expect(lastLoginCol?.render).toBeDefined();
 
       const TestComponent = () => {
-        const renderedValue = lastLoginCol?.render?.(mockFitter.lastLogin, mockFitter);
+        const renderedValue = (lastLoginCol?.render as any)?.(mockFitter.lastLogin, mockFitter);
         return <div data-testid="last-login">{renderedValue}</div>;
       };
 
@@ -188,7 +188,7 @@ describe('Fitter Table Columns', () => {
       const lastLoginCol = columns.find(col => col.key === 'lastLogin');
 
       const TestComponent = () => {
-        const renderedValue = lastLoginCol?.render?.(null, fitterWithoutDate);
+        const renderedValue = (lastLoginCol?.render as any)?.(null, fitterWithoutDate);
         return <div data-testid="last-login">{renderedValue}</div>;
       };
 
@@ -203,7 +203,7 @@ describe('Fitter Table Columns', () => {
       const nameCol = columns.find(col => col.key === 'name');
 
       const TestComponent = () => {
-        const renderedValue = nameCol?.render?.(null, null);
+        const renderedValue = (nameCol?.render as any)?.(null, null);
         return <div data-testid="fitter-name">{renderedValue || 'No name'}</div>;
       };
 
@@ -216,7 +216,7 @@ describe('Fitter Table Columns', () => {
       const usernameCol = columns.find(col => col.key === 'username');
 
       const TestComponent = () => {
-        const renderedValue = usernameCol?.render?.(null, mockFitter);
+        const renderedValue = (usernameCol?.render as any)?.(null, mockFitter);
         return <div data-testid="fitter-username">{renderedValue || 'No username'}</div>;
       };
 
@@ -229,7 +229,7 @@ describe('Fitter Table Columns', () => {
       const cityCol = columns.find(col => col.key === 'city');
 
       const TestComponent = () => {
-        const renderedValue = cityCol?.render?.(null, mockFitter);
+        const renderedValue = (cityCol?.render as any)?.(null, mockFitter);
         return <div data-testid="fitter-city">{renderedValue || 'No city'}</div>;
       };
 
@@ -242,7 +242,7 @@ describe('Fitter Table Columns', () => {
       const countryCol = columns.find(col => col.key === 'country');
 
       const TestComponent = () => {
-        const renderedValue = countryCol?.render?.(null, mockFitter);
+        const renderedValue = (countryCol?.render as any)?.(null, mockFitter);
         return <div data-testid="fitter-country">{renderedValue || 'No country'}</div>;
       };
 
@@ -258,7 +258,7 @@ describe('Fitter Table Columns', () => {
       const nameCol = columns.find(col => col.key === 'name');
 
       const TestComponent = () => {
-        const renderedValue = nameCol?.render?.(fitterWithSpecialChars.name, fitterWithSpecialChars);
+        const renderedValue = (nameCol?.render as any)?.(fitterWithSpecialChars.name, fitterWithSpecialChars);
         return <div data-testid="fitter-name">{renderedValue}</div>;
       };
 
@@ -272,7 +272,7 @@ describe('Fitter Table Columns', () => {
       const cityCol = columns.find(col => col.key === 'city');
 
       const TestComponent = () => {
-        const renderedValue = cityCol?.render?.(fitterWithInternationalCity.city, fitterWithInternationalCity);
+        const renderedValue = (cityCol?.render as any)?.(fitterWithInternationalCity.city, fitterWithInternationalCity);
         return <div data-testid="fitter-city">{renderedValue}</div>;
       };
 

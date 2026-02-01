@@ -111,7 +111,7 @@ export default function ProfilePage() {
         }
       });
 
-      await updateUser(user.id, updateData);
+      await updateUser(String(user.id), updateData);
       await refreshUser();
       setIsEditing(false);
       toast.success("Profile updated successfully");

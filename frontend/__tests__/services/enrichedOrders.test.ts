@@ -463,18 +463,18 @@ describe('Enriched Orders Service - Fitter Filtering', () => {
 
         await getEnrichedOrders({
           page: 1,
-          ...testCase,
-        });
+          ...testCase as any,
+        } as any);
 
         // All calls should include fitter filter
         expect(mockFetchEntities).toHaveBeenCalledWith({
-          entity: 'enriched-orders',
+          entity: 'enriched_orders',
           page: 1,
           partial: undefined,
           extraParams: expect.objectContaining({
             fitterUsername: 'jane.fitter',
           }),
-          searchTerm: testCase.searchTerm,
+          searchTerm: (testCase as any).searchTerm,
         });
       }
     });

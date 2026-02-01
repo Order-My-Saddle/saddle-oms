@@ -322,8 +322,8 @@ export async function createUser(userData: CreateUserData): Promise<User> {
 
   // Remove undefined fields to keep payload clean
   Object.keys(entity).forEach(key => {
-    if (key !== 'entityAspect' && entity[key] === undefined) {
-      delete entity[key];
+    if (key !== 'entityAspect' && (entity as any)[key] === undefined) {
+      delete (entity as any)[key];
     }
   });
 
@@ -372,7 +372,7 @@ export async function createUser(userData: CreateUserData): Promise<User> {
     logger.log('🔍 Mapping backend user:', backendUser);
 
     // Split name into firstName and lastName
-    const nameParts = (backendUser.name || '').split(' ').filter(part => part.length > 0);
+    const nameParts = (backendUser.name || '').split(' ').filter((part: string) => part.length > 0);
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
@@ -475,8 +475,8 @@ export async function updateUser(id: string, userData: UpdateUserData): Promise<
 
   // Remove undefined fields to keep payload clean
   Object.keys(entity).forEach(key => {
-    if (key !== 'entityAspect' && entity[key] === undefined) {
-      delete entity[key];
+    if (key !== 'entityAspect' && (entity as any)[key] === undefined) {
+      delete (entity as any)[key];
     }
   });
 
@@ -525,7 +525,7 @@ export async function updateUser(id: string, userData: UpdateUserData): Promise<
     logger.log('🔍 Mapping backend user (update):', backendUser);
 
     // Split name into firstName and lastName
-    const nameParts = (backendUser.name || '').split(' ').filter(part => part.length > 0);
+    const nameParts = (backendUser.name || '').split(' ').filter((part: string) => part.length > 0);
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 

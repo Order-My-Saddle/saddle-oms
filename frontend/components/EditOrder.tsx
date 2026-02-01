@@ -113,14 +113,14 @@ export function EditOrder({ order, isLoading = false, error, onClose, onBack }: 
       // Try to fetch comprehensive data, but fallback gracefully
       let data;
       try {
-        const orderEditData = await fetchOrderEditData(order.id);
-        
+        const orderEditData = await fetchOrderEditData(Number(order.id));
+
         // Transform to match the expected structure
         data = {
           order: {
             id: orderEditData.id,
-            orderId: orderEditData.orderId,
-            status: orderEditData.orderStatus,
+            orderId: Number(orderEditData.id),
+            status: orderEditData.orderStatus as any,
             customer: {
               id: orderEditData.customerId,
               name: orderEditData.customerName,
@@ -199,8 +199,8 @@ export function EditOrder({ order, isLoading = false, error, onClose, onBack }: 
           productSaddles: []
         };
       }
-      
-      setComprehensiveData(data);
+
+      setComprehensiveData(data as any);
       
       // Initialize form data from comprehensive order data
       setFormData({
@@ -213,22 +213,22 @@ export function EditOrder({ order, isLoading = false, error, onClose, onBack }: 
           total: 0,
           currency: 'USD'
         },
-        customer: data.order.customer,
-        customerAddress: data.order.customerAddress,
-        fitter: data.order.fitter,
-        fitterAddress: data.order.fitterAddress,
-        shippingAddress: data.order.shippingAddress,
-        shippingMethod: data.order.shippingMethod,
-        reference: data.order.reference,
-        status: data.order.status,
-        isUrgent: data.order.isUrgent || false,
-        isStock: data.order.isStock || false,
-        isDemo: data.order.isDemo || false,
-        isSponsored: data.order.isSponsored || false,
-        isRepair: data.order.isRepair || false,
-        notes: data.order.notes,
-        internalNotes: data.order.internalNotes,
-        requestedDeliveryDate: data.order.requestedDeliveryDate
+        customer: (data.order as any).customer,
+        customerAddress: (data.order as any).customerAddress,
+        fitter: (data.order as any).fitter,
+        fitterAddress: (data.order as any).fitterAddress,
+        shippingAddress: (data.order as any).shippingAddress,
+        shippingMethod: (data.order as any).shippingMethod,
+        reference: (data.order as any).reference,
+        status: ((data.order as any).status || 'DRAFT') as OrderStatus,
+        isUrgent: (data.order as any).isUrgent || false,
+        isStock: (data.order as any).isStock || false,
+        isDemo: (data.order as any).isDemo || false,
+        isSponsored: (data.order as any).isSponsored || false,
+        isRepair: (data.order as any).isRepair || false,
+        notes: (data.order as any).notes,
+        internalNotes: (data.order as any).internalNotes,
+        requestedDeliveryDate: (data.order as any).requestedDeliveryDate
       });
       
     } catch (err) {
@@ -345,7 +345,7 @@ export function EditOrder({ order, isLoading = false, error, onClose, onBack }: 
           id: order?.id
         };
         
-        await saveOrderEditData(order?.id || '', orderToSave);
+        await saveOrderEditData(Number(order?.id || 0), orderToSave as any);
         logger.log('Order saved successfully');
         onClose();
       } catch (error) {

@@ -35,7 +35,7 @@ export const loginActionAtom = atom(
     set(userAtom, user);
     // Store minimal user info for service access
     set(userBasicInfoAtom, {
-      id: user.id,
+      id: Number(user.id),
       username: user.username,
       role: user.role,
       firstName: user.firstName,

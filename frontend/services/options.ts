@@ -136,8 +136,8 @@ export async function createOption(optionData: Partial<Option>): Promise<Option>
 
   // Remove undefined fields
   Object.keys(entity).forEach(key => {
-    if (key !== 'entityAspect' && entity[key] === undefined) {
-      delete entity[key];
+    if (key !== 'entityAspect' && (entity as any)[key] === undefined) {
+      delete (entity as any)[key];
     }
   });
 
@@ -199,8 +199,8 @@ export async function updateOption(id: string, optionData: Partial<Option>): Pro
 
   // Remove undefined fields
   Object.keys(entity).forEach(key => {
-    if (key !== 'entityAspect' && entity[key] === undefined) {
-      delete entity[key];
+    if (key !== 'entityAspect' && (entity as any)[key] === undefined) {
+      delete (entity as any)[key];
     }
   });
 

@@ -252,10 +252,11 @@ export default function Reports() {
     const matchesFitter = !headerFilters.fitter || getFitterName(order).toLowerCase().includes(headerFilters.fitter.toLowerCase());
     const matchesUrgent = !headerFilters.urgent || ((orderUrgent => {
       const val = getUrgent(orderUrgent);
+      const strVal = String(val);
       if (val === null || val === undefined || val === '') return 'false';
-      if (val === true || val === 'true' || val === 'Yes') return 'true';
-      if (val === false || val === 'false' || val === 'No') return 'false';
-      return String(val);
+      if (strVal === 'true' || strVal === 'Yes' || strVal === '1') return 'true';
+      if (strVal === 'false' || strVal === 'No' || strVal === '0') return 'false';
+      return strVal;
     })(order) === headerFilters.urgent);
     const matchesCustomer = !headerFilters.customer || getCustomerName(order).toLowerCase().includes(headerFilters.customer.toLowerCase());
     const matchesSupplier = !headerFilters.supplier || (order.supplier || '').toLowerCase().includes(headerFilters.supplier.toLowerCase());
@@ -675,43 +676,45 @@ export default function Reports() {
       ) : (
         <div className="border rounded-lg">
           <OrdersTable
-            orders={filteredOrders}
-            columns={columns}
-            searchTerm={searchTerm}
-            onSearch={setSearchTerm}
-            headerFilters={headerFilters}
-            onFilterChange={(key: string, value: string) => setHeaderFilters(prev => ({ ...prev, [key]: value }))}
-            onViewOrder={(order) => logger.log('View order:', order)}
-            onEditOrder={async (order) => {
-              logger.log('Edit order:', order);
-              try {
-                // Fetch complete order data from API
-                const completeOrderData = await fetchCompleteOrderData(order);
-                logger.log('Complete order data fetched for Reports:', completeOrderData);
-                // For now, just log the data. In a real implementation, 
-                // you'd open an EditOrder modal here similar to Dashboard/Orders
-              } catch (error) {
-                logger.error('Failed to fetch order data for editing:', error);
+            {...{
+              orders: filteredOrders,
+              columns,
+              searchTerm,
+              onSearch: setSearchTerm,
+              headerFilters,
+              onFilterChange: (key: string, value: string) => setHeaderFilters(prev => ({ ...prev, [key]: value })),
+              onViewOrder: (order: any) => logger.log('View order:', order),
+              onEditOrder: async (order: any) => {
+                logger.log('Edit order:', order);
+                try {
+                  // Fetch complete order data from API
+                  const completeOrderData = await fetchCompleteOrderData(order);
+                  logger.log('Complete order data fetched for Reports:', completeOrderData);
+                  // For now, just log the data. In a real implementation,
+                  // you'd open an EditOrder modal here similar to Dashboard/Orders
+                } catch (error) {
+                  logger.error('Failed to fetch order data for editing:', error);
+                }
+              },
+              onApproveOrder: (order: any) => logger.log('Approve order:', order),
+              onDeleteOrder: (order: any) => logger.log('Delete order:', order),
+              seatSizes,
+              statuses,
+              fitters: fittersList.map(f => f.label),
+              dateFrom: date.from,
+              setDateFrom: (from: Date | undefined) => setDate(d => ({ ...d, from })),
+              dateTo: date.to,
+              setDateTo: (to: Date | undefined) => setDate(d => ({ ...d, to })),
+              loading,
+              error: error ?? undefined,
+              pagination: {
+                currentPage: page,
+                totalPages: totalPages,
+                onPageChange: setPage,
+                totalItems: filteredOrders.length,
+                itemsPerPage: 10,
               }
-            }}
-            onApproveOrder={(order) => logger.log('Approve order:', order)}
-            onDeleteOrder={(order) => logger.log('Delete order:', order)}
-            seatSizes={seatSizes}
-            statuses={statuses}
-            fitters={fittersList}
-            dateFrom={date.from}
-            setDateFrom={from => setDate(d => ({ ...d, from }))}
-            dateTo={date.to}
-            setDateTo={to => setDate(d => ({ ...d, to }))}
-            loading={loading}
-            error={error}
-            pagination={{
-              currentPage: page,
-              totalPages: totalPages,
-              onPageChange: setPage,
-              totalItems: filteredOrders.length,
-              itemsPerPage: 10,
-            }}
+            } as any}
           />
         </div>
       )}

@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { getSupplierTableColumns, type SupplierHeaderFilters, type SetSupplierHeaderFilters } from '@/utils/supplierTableColumns';
 import type { Supplier } from '@/types/Supplier';
 
-const mockSupplier: Supplier = {
+const mockSupplier: any = {
   id: 1,
   name: 'Premium Saddle Co.',
   username: 'premiumsaddle',
@@ -80,7 +80,7 @@ describe('Supplier Table Columns', () => {
       expect(nameCol?.render).toBeDefined();
 
       const TestComponent = () => {
-        const renderedValue = nameCol?.render?.(mockSupplier.name, mockSupplier);
+        const renderedValue = (nameCol?.render as any)?.(mockSupplier.name, mockSupplier);
         return <div data-testid="supplier-name">{renderedValue}</div>;
       };
 
@@ -95,7 +95,7 @@ describe('Supplier Table Columns', () => {
       expect(usernameCol?.render).toBeDefined();
 
       const TestComponent = () => {
-        const renderedValue = usernameCol?.render?.(mockSupplier.username, mockSupplier);
+        const renderedValue = (usernameCol?.render as any)?.(mockSupplier.username, mockSupplier);
         return <div data-testid="supplier-username">{renderedValue}</div>;
       };
 
@@ -110,7 +110,7 @@ describe('Supplier Table Columns', () => {
       expect(cityCol?.render).toBeDefined();
 
       const TestComponent = () => {
-        const renderedValue = cityCol?.render?.(mockSupplier.city, mockSupplier);
+        const renderedValue = (cityCol?.render as any)?.(mockSupplier.city, mockSupplier);
         return <div data-testid="supplier-city">{renderedValue}</div>;
       };
 
@@ -125,7 +125,7 @@ describe('Supplier Table Columns', () => {
       expect(countryCol?.render).toBeDefined();
 
       const TestComponent = () => {
-        const renderedValue = countryCol?.render?.(mockSupplier.country, mockSupplier);
+        const renderedValue = (countryCol?.render as any)?.(mockSupplier.country, mockSupplier);
         return <div data-testid="supplier-country">{renderedValue}</div>;
       };
 
@@ -142,7 +142,7 @@ describe('Supplier Table Columns', () => {
       expect(enabledCol?.render).toBeDefined();
 
       const TestComponent = () => {
-        const renderedValue = enabledCol?.render?.(true, mockSupplier);
+        const renderedValue = (enabledCol?.render as any)?.(true, mockSupplier);
         return <div data-testid="supplier-status">{renderedValue}</div>;
       };
 
@@ -156,7 +156,7 @@ describe('Supplier Table Columns', () => {
       const enabledCol = columns.find(col => col.key === 'enabled');
 
       const TestComponent = () => {
-        const renderedValue = enabledCol?.render?.(false, inactiveSupplier);
+        const renderedValue = (enabledCol?.render as any)?.(false, inactiveSupplier);
         return <div data-testid="supplier-status">{renderedValue}</div>;
       };
 
@@ -173,7 +173,7 @@ describe('Supplier Table Columns', () => {
       expect(lastLoginCol?.render).toBeDefined();
 
       const TestComponent = () => {
-        const renderedValue = lastLoginCol?.render?.(mockSupplier.lastLogin, mockSupplier);
+        const renderedValue = (lastLoginCol?.render as any)?.(mockSupplier.lastLogin, mockSupplier);
         return <div data-testid="last-login">{renderedValue}</div>;
       };
 
@@ -187,7 +187,7 @@ describe('Supplier Table Columns', () => {
       const lastLoginCol = columns.find(col => col.key === 'lastLogin');
 
       const TestComponent = () => {
-        const renderedValue = lastLoginCol?.render?.(null, supplierWithoutDate);
+        const renderedValue = (lastLoginCol?.render as any)?.(null, supplierWithoutDate);
         return <div data-testid="last-login">{renderedValue}</div>;
       };
 
@@ -202,7 +202,7 @@ describe('Supplier Table Columns', () => {
       const nameCol = columns.find(col => col.key === 'name');
 
       const TestComponent = () => {
-        const renderedValue = nameCol?.render?.(null, null);
+        const renderedValue = (nameCol?.render as any)?.(null, null);
         return <div data-testid="supplier-name">{renderedValue || 'No name'}</div>;
       };
 
@@ -215,7 +215,7 @@ describe('Supplier Table Columns', () => {
       const usernameCol = columns.find(col => col.key === 'username');
 
       const TestComponent = () => {
-        const renderedValue = usernameCol?.render?.(null, mockSupplier);
+        const renderedValue = (usernameCol?.render as any)?.(null, mockSupplier);
         return <div data-testid="supplier-username">{renderedValue || 'No username'}</div>;
       };
 
@@ -228,7 +228,7 @@ describe('Supplier Table Columns', () => {
       const cityCol = columns.find(col => col.key === 'city');
 
       const TestComponent = () => {
-        const renderedValue = cityCol?.render?.(null, mockSupplier);
+        const renderedValue = (cityCol?.render as any)?.(null, mockSupplier);
         return <div data-testid="supplier-city">{renderedValue || 'No city'}</div>;
       };
 
@@ -241,7 +241,7 @@ describe('Supplier Table Columns', () => {
       const countryCol = columns.find(col => col.key === 'country');
 
       const TestComponent = () => {
-        const renderedValue = countryCol?.render?.(null, mockSupplier);
+        const renderedValue = (countryCol?.render as any)?.(null, mockSupplier);
         return <div data-testid="supplier-country">{renderedValue || 'No country'}</div>;
       };
 
@@ -257,7 +257,7 @@ describe('Supplier Table Columns', () => {
       const nameCol = columns.find(col => col.key === 'name');
 
       const TestComponent = () => {
-        const renderedValue = nameCol?.render?.(supplierWithSpecialChars.name, supplierWithSpecialChars);
+        const renderedValue = (nameCol?.render as any)?.(supplierWithSpecialChars.name, supplierWithSpecialChars);
         return <div data-testid="supplier-name">{renderedValue}</div>;
       };
 
@@ -271,7 +271,7 @@ describe('Supplier Table Columns', () => {
       const cityCol = columns.find(col => col.key === 'city');
 
       const TestComponent = () => {
-        const renderedValue = cityCol?.render?.(supplierWithInternationalCity.city, supplierWithInternationalCity);
+        const renderedValue = (cityCol?.render as any)?.(supplierWithInternationalCity.city, supplierWithInternationalCity);
         return <div data-testid="supplier-city">{renderedValue}</div>;
       };
 

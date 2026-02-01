@@ -71,7 +71,7 @@ export function OrderEditModal({ order, isOpen, onClose, onSave }: OrderEditModa
       const updatedOrder = {
         ...editedOrder,
         // Convert seat sizes string back to array
-        seatSizes: editedOrder.seatSizesString ? editedOrder.seatSizesString.split(',').map((s: string) => s.trim()) : [],
+        seatSizes: editedOrder.seatSizesString ? String(editedOrder.seatSizesString).split(',').map((s: string) => s.trim()) : [],
         // Convert urgent to boolean
         urgent: editedOrder.urgent === true || editedOrder.urgent === 'true' || editedOrder.urgent === 'Yes'
       };
@@ -108,25 +108,25 @@ export function OrderEditModal({ order, isOpen, onClose, onSave }: OrderEditModa
             <div>
               <label className="block font-semibold text-sm text-gray-600 mb-1">Order ID</label>
               <Input
-                value={editedOrder.orderId || ''}
+                value={String(editedOrder.orderId || '')}
                 onChange={(e) => handleChange('orderId', e.target.value)}
                 placeholder="Order ID"
               />
             </div>
-            
+
             <div>
               <label className="block font-semibold text-sm text-gray-600 mb-1">Reference/Saddle</label>
               <Input
-                value={editedOrder.reference || ''}
+                value={String(editedOrder.reference || '')}
                 onChange={(e) => handleChange('reference', e.target.value)}
                 placeholder="Reference/Saddle"
               />
             </div>
-            
+
             <div>
               <label className="block font-semibold text-sm text-gray-600 mb-1">Status</label>
               <Select
-                value={editedOrder.orderStatus || editedOrder.status || ''}
+                value={String(editedOrder.orderStatus || editedOrder.status || '')}
                 onValueChange={(value) => handleChange('orderStatus', value)}
               >
                 <SelectTrigger>
@@ -161,55 +161,55 @@ export function OrderEditModal({ order, isOpen, onClose, onSave }: OrderEditModa
             <div>
               <label className="block font-semibold text-sm text-gray-600 mb-1">Seat Sizes (comma separated)</label>
               <Input
-                value={editedOrder.seatSizesString || ''}
+                value={String(editedOrder.seatSizesString || '')}
                 onChange={(e) => handleChange('seatSizesString', e.target.value)}
                 placeholder="17, 17.5, 18"
               />
             </div>
           </div>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block font-semibold text-sm text-gray-600 mb-1">Customer Name</label>
               <Input
-                value={editedOrder.customerName || ''}
+                value={String(editedOrder.customerName || '')}
                 onChange={(e) => handleChange('customerName', e.target.value)}
                 placeholder="Customer Name"
               />
             </div>
-            
+
             <div>
               <label className="block font-semibold text-sm text-gray-600 mb-1">Fitter Name</label>
               <Input
-                value={editedOrder.fitterName || ''}
+                value={String(editedOrder.fitterName || '')}
                 onChange={(e) => handleChange('fitterName', e.target.value)}
                 placeholder="Fitter Name"
               />
             </div>
-            
+
             <div>
               <label className="block font-semibold text-sm text-gray-600 mb-1">Supplier Name</label>
               <Input
-                value={editedOrder.supplierName || ''}
+                value={String(editedOrder.supplierName || '')}
                 onChange={(e) => handleChange('supplierName', e.target.value)}
                 placeholder="Supplier Name"
               />
             </div>
-            
+
             <div>
               <label className="block font-semibold text-sm text-gray-600 mb-1">Notes</label>
               <Textarea
-                value={editedOrder.notes || ''}
+                value={String(editedOrder.notes || '')}
                 onChange={(e) => handleChange('notes', e.target.value)}
                 placeholder="Order notes..."
                 rows={3}
               />
             </div>
-            
+
             <div>
               <label className="block font-semibold text-sm text-gray-600 mb-1">Special Instructions</label>
               <Textarea
-                value={editedOrder.specialInstructions || ''}
+                value={String(editedOrder.specialInstructions || '')}
                 onChange={(e) => handleChange('specialInstructions', e.target.value)}
                 placeholder="Special instructions..."
                 rows={3}

@@ -101,6 +101,6 @@ export function withPageRequiredAuth<P>(Component: React.ComponentType<P>, optio
     }
 
     logger.log('🔒 withPageRequiredAuth: rendering component');
-    return <Component {...props} />;
+    return <Component {...(props as any)} />;
   };
 }

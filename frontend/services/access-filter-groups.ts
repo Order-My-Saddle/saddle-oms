@@ -2,6 +2,9 @@ import { fetchEntities } from './api';
 import type { AccessFilterGroup, AccessFilterGroupsResponse } from '@/types/AccessFilterGroup';
 import { logger } from '@/utils/logger';
 
+// Re-export types for component usage
+export type { AccessFilterGroup, AccessFilterGroupsResponse };
+
 function getToken() {
   if (typeof window !== 'undefined') {
     // Try to get token from auth_token first (Jotai store)
@@ -112,8 +115,8 @@ export async function createAccessFilterGroup(accessFilterGroupData: Partial<Acc
 
   // Remove undefined fields to keep payload clean
   Object.keys(entity).forEach(key => {
-    if (key !== 'entityAspect' && entity[key] === undefined) {
-      delete entity[key];
+    if (key !== 'entityAspect' && (entity as any)[key] === undefined) {
+      delete (entity as any)[key];
     }
   });
 
@@ -196,8 +199,8 @@ export async function updateAccessFilterGroup(id: string, accessFilterGroupData:
 
   // Remove undefined fields to keep payload clean
   Object.keys(entity).forEach(key => {
-    if (key !== 'entityAspect' && entity[key] === undefined) {
-      delete entity[key];
+    if (key !== 'entityAspect' && (entity as any)[key] === undefined) {
+      delete (entity as any)[key];
     }
   });
 

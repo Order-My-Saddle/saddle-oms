@@ -487,7 +487,7 @@ describe('RoleProtectedComponent', () => {
             [UserRole.SUPERVISOR]: ['DASHBOARD', 'ORDERS', 'CUSTOMERS', 'FITTERS', 'REPORTS']
           };
           
-          return rolePermissions[userRole]?.includes(permission) || false;
+          return (rolePermissions as any)[userRole]?.includes(permission) || false;
         });
 
         render(

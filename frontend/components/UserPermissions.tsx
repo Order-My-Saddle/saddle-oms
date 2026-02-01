@@ -111,13 +111,13 @@ function getScreenDisplayName(screen: string): string {
  * Check if a role has access to a specific screen
  */
 function hasRolePermission(role: UserRole, screen: keyof typeof SCREEN_PERMISSIONS): boolean {
-  const allowedRoles = SCREEN_PERMISSIONS[screen];
-  
+  const allowedRoles = SCREEN_PERMISSIONS[screen] as unknown as UserRole[];
+
   // Handle role hierarchy - SUPERVISOR inherits ADMIN permissions
   if (role === UserRole.SUPERVISOR) {
     return allowedRoles.includes(UserRole.SUPERVISOR) || allowedRoles.includes(UserRole.ADMIN);
   }
-  
+
   return allowedRoles.includes(role);
 }
 
