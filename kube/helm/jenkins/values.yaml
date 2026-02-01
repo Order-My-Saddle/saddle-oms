@@ -1,0 +1,73 @@
+# Jenkins Helm Chart Values
+# Chart: jenkins/jenkins
+# Repo: https://charts.jenkins.io
+#
+# Deploy/upgrade:
+#   helm repo add jenkins https://charts.jenkins.io
+#   helm repo update
+#   helm upgrade jenkins jenkins/jenkins \
+#     -n oms-cicd \
+#     -f kube/helm/jenkins/values.yaml
+
+agent:
+  enabled: false
+
+controller:
+  additionalPlugins:
+  - blueocean
+  - clover
+  - pipeline-utility-steps
+  image:
+    pullPolicy: IfNotPresent
+    repository: jenkins/jenkins
+    tag: 2.541.1-lts-jdk21
+  installPlugins:
+  - kubernetes
+  - workflow-aggregator
+  - git
+  - configuration-as-code
+  jenkinsAdminMail: ordermysaddle@outlook.com
+  jenkinsUrl: https://cicd.ordermysaddle.com
+  nodeSelector:
+    servertype: build
+  numExecutors: 1
+  overwritePlugins: true
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 2048Mi
+    requests:
+      cpu: 50m
+      memory: 512Mi
+  sidecars:
+    configAutoReload:
+      enabled: true
+      resources:
+        limits:
+          cpu: 100m
+          memory: 256Mi
+        requests:
+          cpu: 50m
+          memory: 128Mi
+  additionalExistingSecrets:
+  - name: github-credentials
+    keyName: username
+  - name: github-credentials
+    keyName: password
+  JCasC:
+    configScripts:
+      credentials: |
+        credentials:
+          system:
+            domainCredentials:
+              - credentials:
+                  - usernamePassword:
+                      scope: GLOBAL
+                      id: "github-credentials"
+                      username: "${github-credentials-username}"
+                      password: "${github-credentials-password}"
+                      description: "GitHub access for saddle-oms repo"
+
+persistence:
+  enabled: true
+  size: 4Gi
