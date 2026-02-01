@@ -2,7 +2,7 @@ import { Module, Global, Logger } from "@nestjs/common";
 import { CacheModule as NestCacheModule } from "@nestjs/cache-manager";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
-import { BullModule } from "@nestjs/bull";
+import { BullModule } from "@nestjs/bullmq";
 import { redisStore } from "cache-manager-redis-yet";
 import { Redis } from "ioredis";
 import { AllConfigType } from "../config/config.type";
@@ -15,6 +15,7 @@ import {
   SearchCacheInterceptor,
   ReferenceCacheInterceptor,
 } from "./interceptors/cache.interceptor";
+import { CacheInvalidationProcessor } from "./processors/cache-invalidation.processor";
 
 @Global()
 @Module({
@@ -138,6 +139,7 @@ import {
     CacheWarmingService,
     CacheMetricsService,
     CacheInvalidationService,
+    CacheInvalidationProcessor,
 
     // Cache interceptors
     CacheInterceptor,

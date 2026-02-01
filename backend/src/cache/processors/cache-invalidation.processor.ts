@@ -1,24 +1,38 @@
-import { Processor, Process } from "@nestjs/bull";
+import { Processor, WorkerHost } from "@nestjs/bullmq";
 import { Logger, Inject } from "@nestjs/common";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Cache } from "cache-manager";
-import { Job } from "bull";
+import { Job } from "bullmq";
 import { DataSource } from "typeorm";
 
 @Processor("cache-invalidation")
-export class CacheInvalidationProcessor {
+export class CacheInvalidationProcessor extends WorkerHost {
   private readonly logger = new Logger(CacheInvalidationProcessor.name);
 
   constructor(
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     private readonly dataSource: DataSource,
-  ) {}
+  ) {
+    super();
+  }
+
+  async process(job: Job): Promise<void> {
+    switch (job.name) {
+      case "invalidate-pattern":
+        return this.handlePatternInvalidation(job);
+      case "refresh-materialized-view":
+        return this.handleMaterializedViewRefresh(job);
+      case "bulk-invalidate":
+        return this.handleBulkInvalidation(job);
+      default:
+        this.logger.warn(`Unknown job name: ${job.name}`);
+    }
+  }
 
   /**
    * Process cache pattern invalidation jobs
    */
-  @Process("invalidate-pattern")
-  async handlePatternInvalidation(
+  private async handlePatternInvalidation(
     job: Job<{ pattern: string; context: any }>,
   ): Promise<void> {
     const { pattern } = job.data;
@@ -42,8 +56,7 @@ export class CacheInvalidationProcessor {
   /**
    * Process materialized view refresh jobs
    */
-  @Process("refresh-materialized-view")
-  async handleMaterializedViewRefresh(
+  private async handleMaterializedViewRefresh(
     job: Job<{
       entityType: string;
       operation?: string;
@@ -82,8 +95,7 @@ export class CacheInvalidationProcessor {
   /**
    * Process bulk cache invalidation jobs
    */
-  @Process("bulk-invalidate")
-  async handleBulkInvalidation(
+  private async handleBulkInvalidation(
     job: Job<{
       patterns: string[];
       entityTypes: string[];

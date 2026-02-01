@@ -1,8 +1,8 @@
 import { Injectable, Logger, Inject } from "@nestjs/common";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Cache } from "cache-manager";
-import { InjectQueue } from "@nestjs/bull";
-import { Queue } from "bull";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
 
 export interface CacheInvalidationContext {
   entityType: string;
