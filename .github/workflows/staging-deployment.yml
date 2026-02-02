@@ -3,8 +3,7 @@ name: Deploy to Staging V2
 on:
   push:
     branches:
-      - main
-      - develop
+      - staging
   pull_request:
     types: [opened, synchronize, reopened, labeled]
     labels:
