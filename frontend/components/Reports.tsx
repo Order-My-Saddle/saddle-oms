@@ -22,13 +22,16 @@ const formatDate = (date: Date): string => {
     day: 'numeric'
   });
 };
-import { getFitterName, getCustomerName, getSupplierName, getSeatSize, getStatus, getUrgent, getDate } from '../utils/orderHydration';
+import { Dialog } from '@/components/ui/dialog';
+import { OrderDetails } from './OrderDetails';
+import { ComprehensiveEditOrder } from './ComprehensiveEditOrder';
+import { getFitterName, getCustomerName, getSupplierName, getStatus, getUrgent, getDate } from '../utils/orderHydration';
 import { getOrderTableColumns } from '../utils/orderTableColumns';
 import { seatSizes, statuses, orderStatuses } from '../utils/orderConstants';
 import { logger } from '@/utils/logger';
-import { getEnrichedOrders, searchByOrderId } from '../services/enrichedOrders';
-import { useFitters } from '../hooks/useEntities';
-import { extractDynamicFactories, extractDynamicSeatSizes } from '../utils/orderProcessing';
+import { getEnrichedOrders } from '../services/enrichedOrders';
+import { extractDynamicFactories, extractDynamicSeatSizes, extractSeatSizes, normalizeSeatSize } from '../utils/orderProcessing';
+import { exportToXlsx } from '../utils/exportXlsx';
 
 export default function Reports() {
   const [page, setPage] = useState(1);
@@ -38,19 +41,27 @@ export default function Reports() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [headerFilters, setHeaderFilters] = useState<Record<string, string>>({});
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   
   // Extract unique factory names from orders for filter dropdown
   const suppliers = React.useMemo(() => {
     return extractDynamicFactories(orders);
   }, [orders]);
   
-  // Fetch fitters for dropdown
-  const { data: fittersData } = useFitters({ partial: true });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const fittersList = fittersData.map((fitter: any) => ({
-    label: fitter.name || fitter.username || 'Unknown Fitter',
-    value: fitter.name || fitter.username || fitter.id
-  }));
+  // Extract unique fitter names from orders for filter dropdown
+  const fittersList = React.useMemo(() => {
+    const fitters = new Set<string>();
+    orders.forEach(order => {
+      const name = order.fitter_name || order.fitterName || getFitterName(order);
+      if (name && typeof name === 'string' && name.trim() && !name.startsWith('Unknown')) {
+        fitters.add(name.trim());
+      }
+    });
+    return Array.from(fitters).sort().map(name => ({ label: name, value: name }));
+  }, [orders]);
   
   // Extract unique saddle names (brand + model) from orders
   const modelsList = React.useMemo(() => {
@@ -159,10 +170,6 @@ export default function Reports() {
   const [selectedSeatSize, setSelectedSeatSize] = useState('all-sizes');
   const [selectedUrgent, setSelectedUrgent] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [isLoadingOrderData, setIsLoadingOrderData] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [orderDataError, setOrderDataError] = useState<string | null>(null);
 
   const [date, setDate] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
   const [orderedDate, setOrderedDate] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
@@ -183,45 +190,6 @@ export default function Reports() {
     dynamicSeatSizes
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const fetchCompleteOrderData = async (order: any): Promise<any> => {
-    setIsLoadingOrderData(true);
-    setOrderDataError(null);
-
-    try {
-      const orderId = order.orderId || order.id;
-      logger.log('Fetching complete order data for:', orderId);
-
-      let result;
-
-      // Fetch by order ID (now all IDs are integers)
-      if (orderId) {
-        try {
-          result = await searchByOrderId(orderId);
-          if (result['hydra:member'] && result['hydra:member'].length > 0) {
-            logger.log('Successfully fetched order by ID:', orderId);
-            return result['hydra:member'][0];
-          }
-        } catch (error) {
-          logger.warn('Failed to fetch by Order ID:', error);
-        }
-      }
-
-      // If fetch fails, throw an error
-      throw new Error(`Order not found with ID: ${orderId}`);
-
-    } catch (error) {
-      logger.error('Error fetching complete order data:', error);
-      setOrderDataError(error instanceof Error ? error.message : 'Failed to load order data');
-
-      // Return the original order data as fallback
-      logger.log('Falling back to table row data');
-      return order;
-    } finally {
-      setIsLoadingOrderData(false);
-    }
-  };
-
   // Data normaliseren net als in Dashboard/Orders
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const processedOrders = (orders || []).map((order: any) => ({
@@ -229,8 +197,8 @@ export default function Reports() {
     id: order.id || order.orderId || '',
     orderId: order.orderId || order.id || '',
     reference: order.reference || '',
-    seatSize: getSeatSize(order),
-    seatSizes: order.seatSizes || [],
+    seatSize: extractSeatSizes(order),
+    seatSizes: order.seat_sizes || order.seatSizes || [],
     name: order.name || '',
     orderStatus: order.orderStatus || '',
     orderTime: order.orderTime || order.createdAt || '',
@@ -247,7 +215,14 @@ export default function Reports() {
   const filteredOrders = processedOrders.filter(order => {
     const matchesOrderId = !headerFilters.orderId || (order.orderId || '').toLowerCase().includes(headerFilters.orderId.toLowerCase());
     const matchesReference = !headerFilters.reference || (order.reference || '').toLowerCase().includes(headerFilters.reference.toLowerCase());
-    const matchesSeatSize = !headerFilters.seatSize || getSeatSize(order) === headerFilters.seatSize;
+    const matchesSeatSize = !headerFilters.seatSize || (() => {
+      const sizes = order.seat_sizes || order.seatSizes || [];
+      if (Array.isArray(sizes) && sizes.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return sizes.some((s: any) => normalizeSeatSize(String(s)) === headerFilters.seatSize);
+      }
+      return order.seatSize === headerFilters.seatSize;
+    })();
     const matchesOrderStatus = !headerFilters.orderStatus || getStatus(order) === headerFilters.orderStatus;
     const matchesFitter = !headerFilters.fitter || getFitterName(order).toLowerCase().includes(headerFilters.fitter.toLowerCase());
     const matchesUrgent = !headerFilters.urgent || ((orderUrgent => {
@@ -626,7 +601,7 @@ export default function Reports() {
               <Button variant="destructive" className="bg-[#8B0000]">
                 Generate report
               </Button>
-              <Button variant="destructive" className="bg-[#8B0000]">
+              <Button variant="destructive" className="bg-[#8B0000]" onClick={() => exportToXlsx(filteredOrders)}>
                 Export report
               </Button>
               
@@ -684,19 +659,14 @@ export default function Reports() {
               headerFilters,
               onFilterChange: (key: string, value: string) => setHeaderFilters(prev => ({ ...prev, [key]: value })),
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onViewOrder: (order: any) => logger.log('View order:', order),
+              onViewOrder: (order: any) => {
+                setSelectedOrder(order);
+                setIsDetailsOpen(true);
+              },
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onEditOrder: async (order: any) => {
-                logger.log('Edit order:', order);
-                try {
-                  // Fetch complete order data from API
-                  const completeOrderData = await fetchCompleteOrderData(order);
-                  logger.log('Complete order data fetched for Reports:', completeOrderData);
-                  // For now, just log the data. In a real implementation,
-                  // you'd open an EditOrder modal here similar to Dashboard/Orders
-                } catch (error) {
-                  logger.error('Failed to fetch order data for editing:', error);
-                }
+              onEditOrder: (order: any) => {
+                setSelectedOrder(order);
+                setIsEditOpen(true);
               },
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onApproveOrder: (order: any) => logger.log('Approve order:', order),
@@ -723,8 +693,32 @@ export default function Reports() {
           />
         </div>
       )}
+
+      {/* Order details dialog */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        {selectedOrder && (
+          <OrderDetails
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            order={selectedOrder as any}
+            onClose={() => setIsDetailsOpen(false)}
+          />
+        )}
+      </Dialog>
+
+      {/* Edit order dialog */}
+      <Dialog open={isEditOpen} onOpenChange={() => setIsEditOpen(false)}>
+        {selectedOrder && (
+          <ComprehensiveEditOrder
+            order={{
+              id: String(selectedOrder.id),
+              orderId: Number(selectedOrder.orderId || selectedOrder.id)
+            }}
+            onClose={() => {
+              setIsEditOpen(false);
+            }}
+          />
+        )}
+      </Dialog>
     </div>
   );
 }
-
-// TODO: Replace static import with API fetch when backend is ready

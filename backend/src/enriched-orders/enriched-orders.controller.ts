@@ -215,6 +215,8 @@ export class EnrichedOrdersController {
       customerCountry: query.customerCountry
         ? String(query.customerCountry).trim()
         : undefined,
+      // Repair filter
+      repair: query.repair !== undefined ? String(query.repair).trim() : undefined,
     };
   }
 

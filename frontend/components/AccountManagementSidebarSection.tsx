@@ -7,9 +7,9 @@ import { hasScreenPermission, SCREEN_PERMISSIONS } from '@/utils/rolePermissions
 
 const accountManagementItems = [
   { id: 'users', label: 'Users', route: '/users', permission: 'USER_MANAGEMENT' as keyof typeof SCREEN_PERMISSIONS },
-  { id: 'warehouses', label: 'Warehouses', route: '/warehouses', permission: 'WAREHOUSES' as keyof typeof SCREEN_PERMISSIONS },
-  { id: 'access-filter-groups', label: 'Access Filter Groups', route: '/access-filter-groups', permission: 'ACCESS_FILTER_GROUPS' as keyof typeof SCREEN_PERMISSIONS },
-  { id: 'country-managers', label: 'Country Managers', route: '/country-managers', permission: 'COUNTRY_MANAGERS' as keyof typeof SCREEN_PERMISSIONS },
+  // { id: 'warehouses', label: 'Warehouses', route: '/warehouses', permission: 'WAREHOUSES' as keyof typeof SCREEN_PERMISSIONS },
+  // { id: 'access-filter-groups', label: 'Access Filter Groups', route: '/access-filter-groups', permission: 'ACCESS_FILTER_GROUPS' as keyof typeof SCREEN_PERMISSIONS },
+  // { id: 'country-managers', label: 'Country Managers', route: '/country-managers', permission: 'COUNTRY_MANAGERS' as keyof typeof SCREEN_PERMISSIONS },
   { id: 'user-permissions', label: 'User Permissions', route: '/user-permissions', permission: 'USER_PERMISSIONS_VIEW' as keyof typeof SCREEN_PERMISSIONS },
 ];
 

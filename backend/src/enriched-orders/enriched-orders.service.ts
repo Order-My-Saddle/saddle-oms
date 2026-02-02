@@ -43,6 +43,8 @@ export interface EnrichedOrdersQueryDto {
   seatSize?: string;
   // Filter by customer country
   customerCountry?: string;
+  // Filter by repair flag (0/1 or true/false)
+  repair?: string | boolean;
 }
 
 export interface PaginationMetadata {
@@ -170,7 +172,8 @@ export class EnrichedOrdersService {
         o.factory_id,
         o.order_data,
         o.seat_sizes,
-        c.country as customer_country
+        c.country as customer_country,
+        o.repair
       FROM orders o
       LEFT JOIN customers c ON o.customer_id = c.id
       LEFT JOIN fitters f ON o.fitter_id = f.id
@@ -395,6 +398,32 @@ export class EnrichedOrdersService {
       paramIndex++;
     }
 
+    // Filter by repair flag
+    if (
+      query.repair !== undefined &&
+      query.repair !== null &&
+      query.repair !== ""
+    ) {
+      const isRepair =
+        query.repair === "true" ||
+        query.repair === true ||
+        query.repair === "1";
+      const isNotRepair =
+        query.repair === "false" ||
+        query.repair === false ||
+        query.repair === "0";
+
+      if (isRepair) {
+        conditions.push(`o.repair = $${paramIndex}`);
+        params.push(1);
+        paramIndex++;
+      } else if (isNotRepair) {
+        conditions.push(`o.repair = $${paramIndex}`);
+        params.push(0);
+        paramIndex++;
+      }
+    }
+
     // Filter by customer country
     if (query.customerCountry) {
       conditions.push(`c.country ILIKE $${paramIndex}`);
@@ -519,6 +548,9 @@ export class EnrichedOrdersService {
     // Customer country filter
     if (query.customerCountry)
       keyParts.push(`customerCountry:${query.customerCountry}`);
+    // Repair filter
+    if (query.repair !== undefined && query.repair !== null && query.repair !== "")
+      keyParts.push(`repair:${query.repair}`);
 
     return keyParts.join(":");
   }

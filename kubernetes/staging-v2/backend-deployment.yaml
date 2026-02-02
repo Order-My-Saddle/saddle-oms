@@ -66,7 +66,7 @@ spec:
         # Security context
         securityContext:
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
+          readOnlyRootFilesystem: false
           runAsNonRoot: true
           runAsUser: 1000
           capabilities:
@@ -76,7 +76,7 @@ spec:
         # Health checks
         livenessProbe:
           httpGet:
-            path: /health
+            path: /health/live
             port: 3001
           initialDelaySeconds: 30
           periodSeconds: 10
@@ -87,20 +87,20 @@ spec:
           httpGet:
             path: /health/ready
             port: 3001
-          initialDelaySeconds: 5
+          initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 3
-          failureThreshold: 2
+          failureThreshold: 3
 
         # Startup probe for slower initial startup
         startupProbe:
           httpGet:
-            path: /health
+            path: /health/live
             port: 3001
-          initialDelaySeconds: 10
+          initialDelaySeconds: 15
           periodSeconds: 10
           timeoutSeconds: 5
-          failureThreshold: 10
+          failureThreshold: 18
 
         # Temporary filesystem mounts
         volumeMounts:

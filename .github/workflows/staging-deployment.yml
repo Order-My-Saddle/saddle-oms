@@ -245,8 +245,6 @@ jobs:
         check_secret "DB_NAME" "${{ secrets.DB_NAME }}"
         check_secret "DB_HOST" "${{ secrets.DB_HOST }}"
         check_secret "JWT_SECRET_KEY" "${{ secrets.JWT_SECRET_KEY }}"
-        check_secret "REDIS_HOST" "${{ secrets.REDIS_HOST }}"
-        check_secret "REDIS_PASSWORD" "${{ secrets.REDIS_PASSWORD }}"
         check_secret "ENCRYPTION_SECRET" "${{ secrets.ENCRYPTION_SECRET }}"
 
         if [ -n "$MISSING" ]; then
@@ -260,30 +258,16 @@ jobs:
       run: |
         set +x  # Disable command echoing to prevent secret leakage in logs
 
-        # Create database secrets
-        kubectl create secret generic oms-postgres-secrets \
-          --namespace=${{ env.K8S_NAMESPACE }} \
-          --from-literal=POSTGRES_USER="${{ secrets.DB_USERNAME }}" \
-          --from-literal=POSTGRES_PASSWORD="${{ secrets.DB_PASSWORD }}" \
-          --from-literal=POSTGRES_DB="${{ secrets.DB_NAME }}" \
-          --dry-run=client -o yaml | kubectl apply -f -
-
-        # Create application secrets
+        # Create application secrets (DB is external DigitalOcean managed database, Redis is in-cluster)
         kubectl create secret generic oms-app-secrets \
           --namespace=${{ env.K8S_NAMESPACE }} \
           --from-literal=DATABASE_URL="postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}:5432/${{ secrets.DB_NAME }}?sslmode=require" \
           --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET_KEY }}" \
           --from-literal=JWT_EXPIRES_IN="24h" \
-          --from-literal=REDIS_URL="redis://:${{ secrets.REDIS_PASSWORD }}@${{ secrets.REDIS_HOST }}:6379" \
+          --from-literal=REDIS_URL="redis://oms-redis-service:6379" \
           --from-literal=ENCRYPTION_SECRET="${{ secrets.ENCRYPTION_SECRET }}" \
           --from-literal=API_PORT="3001" \
           --from-literal=NODE_ENV="staging" \
-          --dry-run=client -o yaml | kubectl apply -f -
-
-        # Create Redis secrets
-        kubectl create secret generic oms-redis-secrets \
-          --namespace=${{ env.K8S_NAMESPACE }} \
-          --from-literal=REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}" \
           --dry-run=client -o yaml | kubectl apply -f -
 
         # Create registry credentials
@@ -297,7 +281,7 @@ jobs:
     - name: Verify secrets were created
       run: |
         echo "Verifying Kubernetes secrets exist..."
-        for secret in oms-postgres-secrets oms-app-secrets oms-redis-secrets registry-credentials; do
+        for secret in oms-app-secrets registry-credentials; do
           if kubectl get secret "$secret" -n ${{ env.K8S_NAMESPACE }} > /dev/null 2>&1; then
             echo "  $secret [OK]"
           else
@@ -316,14 +300,14 @@ jobs:
         # Update frontend image tag
         sed -i "s|ghcr.io/YOUR_ORG/oms-frontend:latest|${{ env.REGISTRY }}/${{ env.IMAGE_NAME_FRONTEND }}:staging-v2-latest|g" frontend-deployment.yaml
 
-    - name: Deploy database and cache services
+    - name: Deploy Redis cache
       run: kubectl apply -f kubernetes/staging-v2/database-deployment.yaml
 
-    - name: Wait for database to be ready
+    - name: Wait for Redis to be ready
       run: |
         kubectl wait --namespace=${{ env.K8S_NAMESPACE }} \
           --for=condition=ready pod \
-          --selector=app=oms-postgres \
+          --selector=app=oms-redis \
           --timeout=300s
 
     - name: Deploy backend application

@@ -1,5 +1,6 @@
 import { fetchEntities } from './api';
 import { OrderProductSaddle } from '@/types/OrderProductSaddle';
+import { EnrichedOrder } from '@/types/EnrichedOrder';
 
 export interface OrderProductSaddleSearchResult {
   '@context': string;
@@ -9,23 +10,30 @@ export interface OrderProductSaddleSearchResult {
   'hydra:totalItems': number;
 }
 
+export interface RepairsSearchResult {
+  '@context': string;
+  '@id': string;
+  '@type': string;
+  'hydra:member': EnrichedOrder[];
+  'hydra:totalItems': number;
+}
+
 export async function fetchRepairs({
   page = 1,
   partial = false,
-  orderBy = 'orderId',
+  orderBy = 'id',
   order = 'desc'
-} = {}): Promise<OrderProductSaddleSearchResult> {
-  const filter = 'legacyRepair eq true';
-
+} = {}): Promise<RepairsSearchResult> {
   return await fetchEntities({
-    entity: 'order_product_saddles',
+    entity: 'enriched_orders',
     extraParams: {
-      '$filter': filter,
-      '$orderby': `${orderBy} ${order}`
+      repair: 'true',
     },
+    orderBy,
+    order,
     page,
     partial
-  }) as OrderProductSaddleSearchResult;
+  }) as RepairsSearchResult;
 }
 
 export async function getOrderProductSaddleById(id: string): Promise<OrderProductSaddle> {
