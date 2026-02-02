@@ -24,6 +24,23 @@ import { CacheInvalidationProcessor } from "./processors/cache-invalidation.proc
     // Import ScheduleModule for cache warming cron jobs
     ScheduleModule.forRoot(),
 
+    // Configure BullMQ with Redis connection
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService<AllConfigType>) => {
+        const redisConfig = configService.get("redis", { infer: true });
+        return {
+          connection: {
+            host: redisConfig?.host || "localhost",
+            port: redisConfig?.port || 6379,
+            password: redisConfig?.password,
+            db: redisConfig?.database || 0,
+          },
+        };
+      },
+      inject: [ConfigService],
+    }),
+
     // Import BullModule for cache invalidation queue
     BullModule.registerQueue({
       name: "cache-invalidation",
