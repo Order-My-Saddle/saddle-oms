@@ -31,7 +31,8 @@ import { CacheInvalidationProcessor } from "./processors/cache-invalidation.proc
 
     NestCacheModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService<AllConfigType>) => {
+      // eslint-disable-next-line @typescript-eslint/require-await
+      useFactory: async (configService: ConfigService<AllConfigType>) => {
         const logger = new Logger("CacheModule");
         const cacheConfig = configService.get("cache", { infer: true });
         const redisConfig = configService.get("redis", { infer: true });
