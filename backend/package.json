@@ -57,6 +57,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "3.864.0",
     "@aws-sdk/s3-request-presigner": "3.864.0",
+    "@keyv/redis": "^4.2.0",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/bullmq": "^11.0.3",
     "@nestjs/cache-manager": "^3.1.0",
@@ -75,7 +76,6 @@
     "axios": "^1.13.2",
     "bcryptjs": "3.0.2",
     "bullmq": "^5.34.8",
-    "@keyv/redis": "^4.2.0",
     "cache-manager": "^6.4.0",
     "class-transformer": "0.5.1",
     "class-validator": "0.14.2",
@@ -96,7 +96,6 @@
     "rimraf": "6.0.1",
     "rxjs": "7.8.2",
     "source-map-support": "0.5.21",
-    "sqlite3": "^5.1.7",
     "swagger-ui-express": "5.0.1",
     "typeorm": "0.3.27"
   },
@@ -164,6 +163,11 @@
     ],
     "coverageDirectory": "./coverage",
     "testEnvironment": "node"
+  },
+  "overrides": {
+    "tar": ">=7.5.7",
+    "fast-xml-parser": ">=5.3.4",
+    "lodash": ">=4.17.23"
   },
   "engines": {
     "node": ">=16.0.0",
