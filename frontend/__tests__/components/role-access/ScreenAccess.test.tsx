@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import { UserRole } from '@/types/Role';
 import { RoleProtectedComponent } from '@/components/shared/RoleProtectedComponent';
 import { getAllRoles, roleTestCases, hasScreenAccess, shouldDenyScreenAccess } from '../../utils/roleTestHelpers';
@@ -200,8 +200,9 @@ describe('Screen Access Control', () => {
   describe('Universal Access Screens', () => {
     test('Dashboard is accessible to all authenticated users', () => {
       getAllRoles().forEach(role => {
-        render(<TestApp userRole={role} />);
+        const { unmount } = render(<TestApp userRole={role} />);
         expect(screen.getByTestId('dashboard-screen')).toBeInTheDocument();
+        unmount();
       });
     });
   });
@@ -218,14 +219,16 @@ describe('Screen Access Control', () => {
 
         // Test admin access
         adminRoles.forEach(role => {
-          render(<TestApp userRole={role} />);
+          const { unmount } = render(<TestApp userRole={role} />);
           expect(screen.getByTestId(testId)).toBeInTheDocument();
+          unmount();
         });
 
         // Test non-admin denial
         nonAdminRoles.forEach(role => {
-          render(<TestApp userRole={role} />);
+          const { unmount } = render(<TestApp userRole={role} />);
           expect(screen.queryByTestId(testId)).not.toBeInTheDocument();
+          unmount();
         });
       });
     });

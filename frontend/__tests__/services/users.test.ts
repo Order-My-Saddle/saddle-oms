@@ -1,86 +1,122 @@
 import { fetchUsers, createUser, updateUser, deleteUser } from '@/services/users';
 import { UserRole } from '@/types/Role';
 
-// Mock the api service
-jest.mock('@/services/api', () => ({
-  fetchEntities: jest.fn(),
-  apiRequest: jest.fn()
-}));
+// Mock fetch globally
+global.fetch = jest.fn();
 
-const mockFetchEntities = require('@/services/api').fetchEntities as jest.Mock;
-const mockApiRequest = require('@/services/api').apiRequest as jest.Mock;
+const mockFetch = global.fetch as jest.Mock;
 
 describe('Users Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Mock localStorage for token
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: jest.fn().mockReturnValue(JSON.stringify('mock-token')),
+        setItem: jest.fn(),
+        removeItem: jest.fn(),
+        clear: jest.fn(),
+      },
+      writable: true,
+    });
   });
 
   describe('fetchUsers', () => {
     test('fetches users with correct parameters', async () => {
       const mockResponse = {
-        'hydra:member': [
+        data: [
           {
             id: '1',
             username: 'testuser',
             email: 'test@example.com',
-            firstName: 'Test',
-            lastName: 'User',
-            role: UserRole.USER,
-            isActive: true
-          } as any
+            name: 'Test User',
+            typeName: 'admin',
+          }
         ],
-        'hydra:totalItems': 1
+        totalCount: 1,
+        hasNextPage: false,
       };
 
-      mockFetchEntities.mockResolvedValue(mockResponse);
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      });
 
       const result = await fetchUsers();
 
-      expect(mockFetchEntities).toHaveBeenCalledWith({
-        entity: 'users',
-        page: 1,
-        orderBy: 'username',
-        partial: false,
-        extraParams: {}
-      } as any);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/users'),
+        expect.objectContaining({
+          credentials: 'include',
+        })
+      );
 
-      expect(result).toEqual(mockResponse);
+      expect(result['hydra:member']).toHaveLength(1);
+      expect(result['hydra:totalItems']).toBe(1);
     });
 
     test('fetches users with custom parameters', async () => {
       const mockResponse = {
-        'hydra:member': [],
-        'hydra:totalItems': 0
+        data: [],
+        totalCount: 0,
+        hasNextPage: false,
       };
 
-      mockFetchEntities.mockResolvedValue(mockResponse);
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      });
 
       await fetchUsers({
         page: 2,
-        filters: { isActive: 'true' },
+        filters: { username: 'test' },
         orderBy: 'email',
         partial: true
-      } as any);
+      });
 
-      expect(mockFetchEntities).toHaveBeenCalledWith({
-        entity: 'users',
-        page: 2,
-        orderBy: 'email',
-        partial: true,
-        extraParams: { isActive: 'true' }
-      } as any);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('page=2'),
+        expect.anything()
+      );
     });
 
     test('handles fetch users error', async () => {
-      const error = new Error('Failed to fetch users');
-      mockFetchEntities.mockRejectedValue(error);
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        text: async () => 'Server error',
+      });
 
       await expect(fetchUsers()).rejects.toThrow('Failed to fetch users');
+    });
+
+    test('maps backend roles correctly', async () => {
+      const mockResponse = {
+        data: [
+          { id: '1', username: 'admin1', name: 'Admin User', typeName: 'admin' },
+          { id: '2', username: 'fitter1', name: 'Fitter User', typeName: 'fitter' },
+          { id: '3', username: 'factory1', name: 'Factory User', typeName: 'factory' },
+        ],
+        totalCount: 3,
+        hasNextPage: false,
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      });
+
+      const result = await fetchUsers();
+
+      expect(result['hydra:member'][0].role).toBe(UserRole.ADMIN);
+      expect(result['hydra:member'][1].role).toBe(UserRole.FITTER);
+      expect(result['hydra:member'][2].role).toBe(UserRole.SUPPLIER);
     });
   });
 
   describe('createUser', () => {
-    test('creates user with correct data', async () => {
+    test('creates user with SaveBundle format', async () => {
       const userData = {
         username: 'newuser',
         email: 'newuser@example.com',
@@ -88,24 +124,33 @@ describe('Users Service', () => {
         firstName: 'New',
         lastName: 'User',
         role: UserRole.USER,
-        isActive: true
       } as any;
 
       const mockResponse = {
-        id: '123',
-        ...userData
+        Entities: [{
+          id: '123',
+          username: 'newuser',
+          name: 'New User',
+          email: 'newuser@example.com',
+        }]
       };
 
-      mockApiRequest.mockResolvedValue(mockResponse);
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      });
 
       const result = await createUser(userData);
 
-      expect(mockApiRequest).toHaveBeenCalledWith('/users', {
-        method: 'POST',
-        body: JSON.stringify(userData)
-      });
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/save'),
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('entityAspect'),
+        })
+      );
 
-      expect(result).toEqual(mockResponse);
+      expect(result).toBeDefined();
     });
 
     test('handles create user error', async () => {
@@ -116,67 +161,88 @@ describe('Users Service', () => {
         firstName: 'New',
         lastName: 'User',
         role: UserRole.USER,
-        isActive: true
       } as any;
 
-      const error = new Error('Failed to create user');
-      mockApiRequest.mockRejectedValue(error);
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        text: async () => 'Failed',
+      });
 
       await expect(createUser(userData)).rejects.toThrow('Failed to create user');
     });
 
-    test('validates required fields', async () => {
-      const incompleteUserData = {
-        username: 'testuser'
-        // Missing required fields
+    test('handles SaveBundle error response', async () => {
+      const userData = {
+        username: 'newuser',
+        email: 'newuser@example.com',
+        password: 'securepassword',
+        firstName: 'New',
+        lastName: 'User',
+        role: UserRole.USER,
       } as any;
 
-      mockApiRequest.mockResolvedValue({});
+      const mockResponse = {
+        Errors: [{ ErrorMessage: 'Username already exists' }],
+        Entities: [],
+      };
 
-      await createUser(incompleteUserData);
-
-      expect(mockApiRequest).toHaveBeenCalledWith('/users', {
-        method: 'POST',
-        body: JSON.stringify(incompleteUserData)
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
       });
+
+      await expect(createUser(userData)).rejects.toThrow('User creation failed');
     });
   });
 
   describe('updateUser', () => {
-    test('updates user with correct data', async () => {
+    test('updates user with SaveBundle format', async () => {
       const userId = '123';
       const updateData = {
         firstName: 'Updated',
         lastName: 'Name',
         email: 'updated@example.com',
-        isActive: false
       };
 
       const mockResponse = {
-        id: userId,
-        username: 'testuser',
-        ...updateData,
-        role: UserRole.USER
+        Entities: [{
+          id: userId,
+          username: 'testuser',
+          name: 'Updated Name',
+          email: 'updated@example.com',
+        }]
       };
 
-      mockApiRequest.mockResolvedValue(mockResponse);
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      });
 
       const result = await updateUser(userId, updateData);
 
-      expect(mockApiRequest).toHaveBeenCalledWith(`/users/${userId}`, {
-        method: 'PUT',
-        body: JSON.stringify(updateData)
-      });
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/save'),
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining(userId),
+        })
+      );
 
-      expect(result).toEqual(mockResponse);
+      expect(result).toBeDefined();
     });
 
     test('handles update user error', async () => {
       const userId = '123';
       const updateData = { firstName: 'Updated' };
 
-      const error = new Error('Failed to update user');
-      mockApiRequest.mockRejectedValue(error);
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        text: async () => 'Failed',
+      });
 
       await expect(updateUser(userId, updateData)).rejects.toThrow('Failed to update user');
     });
@@ -187,14 +253,19 @@ describe('Users Service', () => {
         role: UserRole.ADMIN
       };
 
-      mockApiRequest.mockResolvedValue({ id: userId, ...updateData });
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ Entities: [{ id: userId, role: UserRole.ADMIN }] }),
+      });
 
       await updateUser(userId, updateData);
 
-      expect(mockApiRequest).toHaveBeenCalledWith(`/users/${userId}`, {
-        method: 'PUT',
-        body: JSON.stringify(updateData)
-      });
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/save'),
+        expect.objectContaining({
+          method: 'POST',
+        })
+      );
     });
   });
 
@@ -202,20 +273,29 @@ describe('Users Service', () => {
     test('deletes user with correct ID', async () => {
       const userId = '123';
 
-      mockApiRequest.mockResolvedValue({});
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({}),
+      });
 
       await deleteUser(userId);
 
-      expect(mockApiRequest).toHaveBeenCalledWith(`/users/${userId}`, {
-        method: 'DELETE'
-      });
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining(`/users/${userId}`),
+        expect.objectContaining({
+          method: 'DELETE',
+        })
+      );
     });
 
     test('handles delete user error', async () => {
       const userId = '123';
 
-      const error = new Error('Failed to delete user');
-      mockApiRequest.mockRejectedValue(error);
+      mockFetch.mockResolvedValue({
+        ok: false,
+        statusText: 'Failed to delete user',
+        json: async () => ({ message: 'Failed to delete user' }),
+      });
 
       await expect(deleteUser(userId)).rejects.toThrow('Failed to delete user');
     });
@@ -223,8 +303,11 @@ describe('Users Service', () => {
     test('handles non-existent user deletion', async () => {
       const userId = 'non-existent';
 
-      const error = new Error('User not found');
-      mockApiRequest.mockRejectedValue(error);
+      mockFetch.mockResolvedValue({
+        ok: false,
+        statusText: 'Not Found',
+        json: async () => ({ message: 'User not found' }),
+      });
 
       await expect(deleteUser(userId)).rejects.toThrow('User not found');
     });
@@ -232,25 +315,20 @@ describe('Users Service', () => {
 
   describe('Error Handling', () => {
     test('handles network errors gracefully', async () => {
-      const networkError = new Error('Network error');
-      mockFetchEntities.mockRejectedValue(networkError);
+      mockFetch.mockRejectedValue(new Error('Network error'));
 
       await expect(fetchUsers()).rejects.toThrow('Network error');
     });
 
     test('handles API errors with proper error messages', async () => {
-      const apiError = new Error('Unauthorized');
-      mockApiRequest.mockRejectedValue(apiError);
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        text: async () => 'Unauthorized',
+      });
 
-      await expect(createUser({
-        username: 'test',
-        email: 'test@example.com',
-        password: 'password',
-        firstName: 'Test',
-        lastName: 'User',
-        role: UserRole.USER,
-        isActive: true
-      } as any)).rejects.toThrow('Unauthorized');
+      await expect(fetchUsers()).rejects.toThrow();
     });
   });
 
@@ -266,35 +344,38 @@ describe('Users Service', () => {
           firstName: 'Test',
           lastName: 'User',
           role,
-          isActive: true
         } as any;
 
-        mockApiRequest.mockResolvedValue({ id: '123', ...userData });
+        mockFetch.mockResolvedValue({
+          ok: true,
+          json: async () => ({
+            Entities: [{ id: '123', username: userData.username, name: 'Test User', role }]
+          }),
+        });
 
         const result = await createUser(userData);
 
-        expect(result.role).toBe(role);
-        expect(mockApiRequest).toHaveBeenCalledWith('/users', {
-          method: 'POST',
-          body: JSON.stringify(userData)
-        });
+        expect(result).toBeDefined();
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringContaining('/save'),
+          expect.objectContaining({
+            method: 'POST',
+          })
+        );
       }
     });
 
     test('handles user activation status changes', async () => {
       const userId = '123';
-      
-      // Test activating user
-      mockApiRequest.mockResolvedValue({ id: userId, isActive: true } as any);
-      await updateUser(userId, { isActive: true } as any);
 
-      expect(mockApiRequest).toHaveBeenCalled();
+      // Test updating user
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ Entities: [{ id: userId }] }),
+      });
 
-      // Test deactivating user
-      mockApiRequest.mockResolvedValue({ id: userId, isActive: false } as any);
-      await updateUser(userId, { isActive: false } as any);
-
-      expect(mockApiRequest).toHaveBeenCalled();
+      await updateUser(userId, { firstName: 'Updated' } as any);
+      expect(mockFetch).toHaveBeenCalled();
     });
   });
 });

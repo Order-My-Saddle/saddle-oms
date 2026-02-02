@@ -433,7 +433,7 @@ export class CacheInvalidationService {
    */
   async clearAllCaches(): Promise<void> {
     try {
-      await this.cacheManager.reset();
+      await this.cacheManager.clear();
       this.logger.log("All caches cleared");
     } catch (error) {
       this.logger.error("Failed to clear all caches", error);

@@ -6,6 +6,16 @@ global.fetch = jest.fn();
 describe('Customer Update Functionality', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Mock localStorage for token
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: jest.fn().mockReturnValue(JSON.stringify('mock-token')),
+        setItem: jest.fn(),
+        removeItem: jest.fn(),
+        clear: jest.fn(),
+      },
+      writable: true,
+    });
   });
 
   afterEach(() => {
@@ -26,13 +36,9 @@ describe('Customer Update Functionality', () => {
       cellNo: '555-5678'
     };
 
-    const mockResponse = {
-      Entities: [mockCustomer]
-    };
-
     (fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      json: jest.fn().mockResolvedValueOnce(mockResponse)
+      json: jest.fn().mockResolvedValueOnce(mockCustomer)
     });
 
     const result = await updateCustomer('test-123', {
@@ -42,68 +48,27 @@ describe('Customer Update Functionality', () => {
 
     expect(result).toEqual(mockCustomer);
     expect(fetch).toHaveBeenCalledWith(
-      'http://localhost:3001/save',
+      expect.stringContaining('/api/v1/customers/test-123'),
       expect.objectContaining({
-        method: 'POST',
+        method: 'PUT',
         headers: expect.objectContaining({
-          'Content-Type': 'application/ld+json',
-          'Accept': 'application/ld+json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }),
-        body: expect.stringContaining('"entityTypeName":"Customer:#App.Entity"')
+        body: JSON.stringify({
+          name: 'John Doe Updated',
+          email: 'john.updated@example.com'
+        })
       })
     );
   });
 
-  it('should handle cache-proxy errors gracefully', async () => {
-    const customerData = {
-      name: 'Jane Doe',
-      email: 'jane@example.com'
-    };
-
-    const cacheProxyError = {
-      "@context": "/contexts/Error",
-      "@type": "hydra:Error",
-      "hydra:title": "An error occurred",
-      "hydra:description": "cURL error 6: Could not resolve host: cache-proxy (see https://curl.haxx.se/libcurl/c/libcurl-errors.html)"
-    };
-
-    (fetch as jest.Mock).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      statusText: 'Internal Server Error',
-      text: jest.fn().mockResolvedValueOnce(JSON.stringify(cacheProxyError))
-    });
-
-    // Mock console.warn to verify it's called
-    const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
-
-    const result = await updateCustomer('test-456', customerData);
-
-    expect(result).toEqual({
-      id: 'test-456',
-      ...customerData
-    });
-
-    expect(consoleSpy).toHaveBeenCalledWith(
-      '✅ Customer update succeeded, but cache invalidation failed (this is normal in local development)'
-    );
-
-    consoleSpy.mockRestore();
-  });
-
-  it('should throw error for non-cache-proxy failures', async () => {
-    const actualError = {
-      "@context": "/contexts/Error",
-      "@type": "hydra:Error",
-      "hydra:title": "Validation failed",
-      "hydra:description": "Name field is required"
-    };
-
+  it('should throw error for failed updates', async () => {
     (fetch as jest.Mock).mockResolvedValueOnce({
       ok: false,
       status: 400,
       statusText: 'Bad Request',
-      text: jest.fn().mockResolvedValueOnce(JSON.stringify(actualError))
+      text: jest.fn().mockResolvedValueOnce('Validation failed')
     });
 
     await expect(
@@ -111,59 +76,40 @@ describe('Customer Update Functionality', () => {
     ).rejects.toThrow('Failed to update customer: 400 Bad Request');
   });
 
-  it('should handle empty entities response', async () => {
-    const customerData = {
-      name: 'Bob Smith',
-      email: 'bob@example.com'
-    };
+  it('should throw error for server errors', async () => {
+    (fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: 'Internal Server Error',
+      text: jest.fn().mockResolvedValueOnce('Server error')
+    });
 
-    const mockResponse = {
-      Entities: [] // Empty entities array
+    await expect(
+      updateCustomer('test-456', { name: 'Jane Doe' })
+    ).rejects.toThrow('Failed to update customer: 500 Internal Server Error');
+  });
+
+  it('should send correct authorization headers', async () => {
+    const mockCustomer = {
+      id: 'test-auth',
+      name: 'Auth Test',
     };
 
     (fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
-      json: jest.fn().mockResolvedValueOnce(mockResponse)
+      json: jest.fn().mockResolvedValueOnce(mockCustomer)
     });
 
-    const result = await updateCustomer('test-empty', customerData);
+    await updateCustomer('test-auth', { name: 'Auth Test' });
 
-    expect(result).toEqual({
-      id: 'test-empty',
-      ...customerData
-    });
+    expect(fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'Authorization': 'Bearer mock-token'
+        }),
+        credentials: 'include',
+      })
+    );
   });
 });
-
-// Manual test function for debugging
-export async function testCustomerUpdateManually() {
-  console.log('🧪 Testing customer update functionality...');
-
-  try {
-    // Test with actual customer ID from your database
-    const testCustomerId = '6051b7ef-9a14-4de7-8a7d-e60d13e37791'; // Replace with actual customer ID
-
-    const updateData = {
-      name: `Test Customer ${Date.now()}`,
-      email: `test-${Date.now()}@example.com`,
-      address: '123 Test Street',
-      city: 'Test City',
-      country: 'Test Country',
-      state: 'TC',
-      zipcode: '12345',
-      phoneNo: '555-TEST',
-      cellNo: '555-CELL'
-    };
-
-    console.log('📤 Sending update request...', updateData);
-
-    const result = await updateCustomer(testCustomerId, updateData);
-
-    console.log('✅ Update successful!', result);
-    return result;
-
-  } catch (error) {
-    console.error('❌ Update failed:', error);
-    throw error;
-  }
-}

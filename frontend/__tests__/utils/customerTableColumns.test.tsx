@@ -224,11 +224,12 @@ describe('Customer Table Columns', () => {
     });
 
     it('handles missing email gracefully', () => {
+      const customerWithoutEmail = { ...mockCustomer, email: null };
       const columns = getCustomerTableColumns(mockHeaderFilters, mockSetHeaderFilters);
       const emailCol = columns.find(col => col.key === 'email');
 
       const TestComponent = () => {
-        const renderedValue = (emailCol?.render as any)?.(mockCustomer.email, mockCustomer);
+        const renderedValue = (emailCol?.render as any)?.(customerWithoutEmail.email, customerWithoutEmail);
         return <div data-testid="customer-email">{renderedValue || 'No email'}</div>;
       };
 

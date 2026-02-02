@@ -69,7 +69,7 @@ export class CacheTestingUtilities {
         this.testData.delete(key);
         return Promise.resolve();
       }),
-      reset: jest.fn().mockImplementation(() => {
+      clear: jest.fn().mockImplementation(() => {
         this.testData.clear();
         return Promise.resolve();
       }),

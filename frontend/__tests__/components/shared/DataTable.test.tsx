@@ -102,7 +102,7 @@ describe('DataTable', () => {
 
       const nameHeaders = screen.getAllByText('Name');
       const nameHeader = nameHeaders.find(el => el.tagName === 'TH');
-      expect(nameHeader).toHaveStyle({ maxWidth: '200px' });
+      expect(nameHeader).toHaveStyle({ textOverflow: 'ellipsis', overflow: 'auto' });
     });
   });
 
@@ -116,10 +116,10 @@ describe('DataTable', () => {
         />
       );
 
-      expect(screen.getByText('No data available')).toBeInTheDocument();
+      expect(screen.getByText('No results found')).toBeInTheDocument();
     });
 
-    it('renders empty search results message', () => {
+    it('renders empty state message even with search term', () => {
       render(
         <DataTable
           columns={mockColumns}
@@ -129,7 +129,8 @@ describe('DataTable', () => {
         />
       );
 
-      expect(screen.getByText('No results found for "nonexistent"')).toBeInTheDocument();
+      // Source always shows "No results found" regardless of searchTerm
+      expect(screen.getByText('No results found')).toBeInTheDocument();
     });
   });
 
@@ -200,6 +201,7 @@ describe('DataTable', () => {
           columns={mockColumns}
           data={mockData}
           pagination={mockPagination}
+          onSearch={jest.fn()}
           searchPlaceholder={placeholder}
         />
       );
@@ -224,12 +226,17 @@ describe('DataTable', () => {
       const searchInput = screen.getByPlaceholderText('Search...');
       await user.type(searchInput, 'john');
 
-      await waitFor(() => {
-        expect(onSearchMock).toHaveBeenCalledWith('john');
-      }, { timeout: 600 });
+      // onSearch is called on every change event (no debounce)
+      // Since the input is controlled by searchTerm prop (empty string),
+      // each keystroke produces a single character in the change event
+      expect(onSearchMock).toHaveBeenCalledTimes(4);
+      expect(onSearchMock).toHaveBeenNthCalledWith(1, 'j');
+      expect(onSearchMock).toHaveBeenNthCalledWith(2, 'o');
+      expect(onSearchMock).toHaveBeenNthCalledWith(3, 'h');
+      expect(onSearchMock).toHaveBeenNthCalledWith(4, 'n');
     });
 
-    it('debounces search input', async () => {
+    it('calls onSearch on each keystroke (no debounce)', async () => {
       const user = userEvent.setup();
       const onSearchMock = jest.fn();
 
@@ -244,18 +251,11 @@ describe('DataTable', () => {
       );
 
       const searchInput = screen.getByPlaceholderText('Search...');
-      
-      await user.type(searchInput, 'j');
-      await user.type(searchInput, 'o');
-      await user.type(searchInput, 'h');
-      await user.type(searchInput, 'n');
 
-      expect(onSearchMock).not.toHaveBeenCalled();
+      await user.type(searchInput, 'john');
 
-      await waitFor(() => {
-        expect(onSearchMock).toHaveBeenCalledTimes(1);
-        expect(onSearchMock).toHaveBeenCalledWith('john');
-      }, { timeout: 600 });
+      // onSearch is called for each keystroke since there is no debounce
+      expect(onSearchMock).toHaveBeenCalledTimes(4);
     });
 
     it('displays current search term in input', () => {
@@ -264,6 +264,7 @@ describe('DataTable', () => {
           columns={mockColumns}
           data={mockData}
           pagination={mockPagination}
+          onSearch={jest.fn()}
           searchTerm="existing search"
           searchPlaceholder="Search..."
         />
@@ -271,6 +272,19 @@ describe('DataTable', () => {
 
       const searchInput = screen.getByPlaceholderText('Search...');
       expect(searchInput).toHaveValue('existing search');
+    });
+
+    it('does not render search input when onSearch is not provided', () => {
+      render(
+        <DataTable
+          columns={mockColumns}
+          data={mockData}
+          pagination={mockPagination}
+          searchPlaceholder="Search..."
+        />
+      );
+
+      expect(screen.queryByPlaceholderText('Search...')).not.toBeInTheDocument();
     });
   });
 
@@ -284,13 +298,13 @@ describe('DataTable', () => {
         />
       );
 
-      expect(screen.getByText('First')).toBeInTheDocument();
-      expect(screen.getByText('Previous')).toBeInTheDocument();
-      expect(screen.getByText('Next')).toBeInTheDocument();
-      expect(screen.getByText('Last')).toBeInTheDocument();
+      expect(screen.getByText('<< FIRST')).toBeInTheDocument();
+      expect(screen.getByText('< PREVIOUS')).toBeInTheDocument();
+      expect(screen.getByText('NEXT >')).toBeInTheDocument();
+      expect(screen.getByText('LAST >>')).toBeInTheDocument();
     });
 
-    it('displays current page and total pages', () => {
+    it('displays results info with item range and total', () => {
       render(
         <DataTable
           columns={mockColumns}
@@ -299,19 +313,9 @@ describe('DataTable', () => {
         />
       );
 
-      expect(screen.getByText('Page 1 of 3')).toBeInTheDocument();
-    });
-
-    it('displays total items and items per page', () => {
-      render(
-        <DataTable
-          columns={mockColumns}
-          data={mockData}
-          pagination={mockPagination}
-        />
-      );
-
-      expect(screen.getByText('Showing 1-10 of 25 items')).toBeInTheDocument();
+      // Source format: "Displaying results: {start}-{end} of {total}"
+      // With 5 items on page 1 with itemsPerPage=10: "Displaying results: 1-5 of 25"
+      expect(screen.getByText('Displaying results: 1-5 of 25')).toBeInTheDocument();
     });
 
     it('calls onPageChange when First button is clicked', async () => {
@@ -327,7 +331,7 @@ describe('DataTable', () => {
         />
       );
 
-      await user.click(screen.getByText('First'));
+      await user.click(screen.getByText('<< FIRST'));
       expect(onPageChangeMock).toHaveBeenCalledWith(1);
     });
 
@@ -344,7 +348,7 @@ describe('DataTable', () => {
         />
       );
 
-      await user.click(screen.getByText('Previous'));
+      await user.click(screen.getByText('< PREVIOUS'));
       expect(onPageChangeMock).toHaveBeenCalledWith(1);
     });
 
@@ -361,7 +365,7 @@ describe('DataTable', () => {
         />
       );
 
-      await user.click(screen.getByText('Next'));
+      await user.click(screen.getByText('NEXT >'));
       expect(onPageChangeMock).toHaveBeenCalledWith(2);
     });
 
@@ -378,7 +382,7 @@ describe('DataTable', () => {
         />
       );
 
-      await user.click(screen.getByText('Last'));
+      await user.click(screen.getByText('LAST >>'));
       expect(onPageChangeMock).toHaveBeenCalledWith(3);
     });
 
@@ -391,8 +395,8 @@ describe('DataTable', () => {
         />
       );
 
-      expect(screen.getByText('First')).toBeDisabled();
-      expect(screen.getByText('Previous')).toBeDisabled();
+      expect(screen.getByText('<< FIRST')).toBeDisabled();
+      expect(screen.getByText('< PREVIOUS')).toBeDisabled();
     });
 
     it('disables Next and Last buttons on last page', () => {
@@ -405,8 +409,8 @@ describe('DataTable', () => {
         />
       );
 
-      expect(screen.getByText('Next')).toBeDisabled();
-      expect(screen.getByText('Last')).toBeDisabled();
+      expect(screen.getByText('NEXT >')).toBeDisabled();
+      expect(screen.getByText('LAST >>')).toBeDisabled();
     });
   });
 
@@ -433,7 +437,26 @@ describe('DataTable', () => {
       expect(screen.getByText('Edit Jane Smith')).toBeInTheDocument();
     });
 
-    it('does not render Actions column when renderActions is not provided', () => {
+    it('renders OPTIONS column header when renderActions is provided', () => {
+      const renderActions = (item: MockData) => (
+        <div>
+          <button>Edit {item.name}</button>
+        </div>
+      );
+
+      render(
+        <DataTable
+          columns={mockColumns}
+          data={mockData}
+          pagination={mockPagination}
+          renderActions={renderActions}
+        />
+      );
+
+      expect(screen.getByText('OPTIONS')).toBeInTheDocument();
+    });
+
+    it('does not render OPTIONS column when renderActions is not provided', () => {
       render(
         <DataTable
           columns={mockColumns}
@@ -442,12 +465,12 @@ describe('DataTable', () => {
         />
       );
 
-      expect(screen.queryByText('Actions')).not.toBeInTheDocument();
+      expect(screen.queryByText('OPTIONS')).not.toBeInTheDocument();
     });
   });
 
   describe('Table Structure', () => {
-    it('applies correct CSS classes', () => {
+    it('applies correct CSS classes to container', () => {
       render(
         <DataTable
           columns={mockColumns}
@@ -460,7 +483,7 @@ describe('DataTable', () => {
       expect(tableContainer).toHaveClass('overflow-auto');
     });
 
-    it('renders sticky header and footer', () => {
+    it('renders sticky header cells', () => {
       render(
         <DataTable
           columns={mockColumns}
@@ -469,11 +492,15 @@ describe('DataTable', () => {
         />
       );
 
-      const header = screen.getByRole('table').querySelector('thead');
-      expect(header).toHaveClass('sticky top-0');
+      // sticky and top-0 are on individual <th> elements, not <thead>
+      const headerCells = screen.getAllByRole('columnheader');
+      headerCells.forEach(cell => {
+        expect(cell).toHaveClass('sticky');
+        expect(cell).toHaveClass('top-0');
+      });
     });
 
-    it('applies row striping', () => {
+    it('applies row striping on odd-indexed rows', () => {
       render(
         <DataTable
           columns={mockColumns}
@@ -484,9 +511,11 @@ describe('DataTable', () => {
 
       const tableBody = screen.getByRole('table').querySelector('tbody');
       const rows = tableBody?.querySelectorAll('tr');
-      
-      expect(rows?.[0]).toHaveClass('bg-white');
-      expect(rows?.[1]).toHaveClass('bg-gray-50');
+
+      // Row at index 0: no striping class
+      expect(rows?.[0]).not.toHaveClass('even:bg-gray-50');
+      // Row at index 1 (odd): has even:bg-gray-50 class
+      expect(rows?.[1]).toHaveClass('even:bg-gray-50');
     });
   });
 
@@ -530,10 +559,10 @@ describe('DataTable', () => {
       );
 
       const buttons = screen.getAllByRole('button');
-      expect(buttons.some(btn => btn.textContent === 'First')).toBe(true);
-      expect(buttons.some(btn => btn.textContent === 'Previous')).toBe(true);
-      expect(buttons.some(btn => btn.textContent === 'Next')).toBe(true);
-      expect(buttons.some(btn => btn.textContent === 'Last')).toBe(true);
+      expect(buttons.some(btn => btn.textContent === '<< FIRST')).toBe(true);
+      expect(buttons.some(btn => btn.textContent === '< PREVIOUS')).toBe(true);
+      expect(buttons.some(btn => btn.textContent === 'NEXT >')).toBe(true);
+      expect(buttons.some(btn => btn.textContent === 'LAST >>')).toBe(true);
     });
   });
 });

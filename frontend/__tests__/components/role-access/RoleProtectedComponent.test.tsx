@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import { RoleProtectedComponent } from '@/components/shared/RoleProtectedComponent';
 import { UserRole } from '@/types/Role';
 import { getAllRoles } from '../../utils/roleTestHelpers';
@@ -418,7 +418,7 @@ describe('RoleProtectedComponent', () => {
           return false;
         });
 
-        const { container } = render(
+        const { unmount } = render(
           <div>
             <RoleProtectedComponent requiredPermission="ORDER_CREATE">
               <button>Create Order</button>
@@ -449,6 +449,8 @@ describe('RoleProtectedComponent', () => {
         } else {
           expect(screen.queryByText('Delete Order')).not.toBeInTheDocument();
         }
+
+        unmount();
       });
     });
 
@@ -479,18 +481,18 @@ describe('RoleProtectedComponent', () => {
         });
 
         mockHasScreenPermission.mockImplementation((userRole, permission) => {
-          const rolePermissions = {
+          const rolePermissions: Record<string, string[]> = {
             [UserRole.USER]: ['DASHBOARD', 'ORDERS'],
             [UserRole.FITTER]: ['DASHBOARD', 'ORDERS', 'CUSTOMERS'],
             [UserRole.ADMIN]: ['DASHBOARD', 'ORDERS', 'CUSTOMERS', 'FITTERS', 'REPORTS'],
             [UserRole.SUPPLIER]: ['DASHBOARD'],
             [UserRole.SUPERVISOR]: ['DASHBOARD', 'ORDERS', 'CUSTOMERS', 'FITTERS', 'REPORTS']
           };
-          
-          return (rolePermissions as any)[userRole]?.includes(permission) || false;
+
+          return rolePermissions[userRole]?.includes(permission) || false;
         });
 
-        render(
+        const { unmount } = render(
           <nav>
             <RoleProtectedComponent requiredPermission="DASHBOARD">
               <a href="/dashboard">Dashboard</a>
@@ -511,7 +513,7 @@ describe('RoleProtectedComponent', () => {
         );
 
         const allItems = ['Dashboard', 'Orders', 'Customers', 'Fitters', 'Reports'];
-        
+
         allItems.forEach(item => {
           if (expectedItems.includes(item)) {
             expect(screen.getAllByText(item).length).toBeGreaterThan(0);
@@ -519,6 +521,8 @@ describe('RoleProtectedComponent', () => {
             expect(screen.queryByText(item)).toBeNull();
           }
         });
+
+        unmount();
       });
     });
   });

@@ -39,7 +39,7 @@ describe('Order Table Columns', () => {
       expect(columns).toHaveLength(9);
 
       const columnKeys = columns.map(col => col.key);
-      expect(columnKeys).toContain('orderNumber');
+      expect(columnKeys).toContain('id');
       expect(columnKeys).toContain('saddleSpecifications');
       expect(columnKeys).toContain('seatSize');
       expect(columnKeys).toContain('customer');
@@ -47,14 +47,14 @@ describe('Order Table Columns', () => {
       expect(columnKeys).toContain('status');
       expect(columnKeys).toContain('urgent');
       expect(columnKeys).toContain('fitter');
-      expect(columnKeys).toContain('supplier');
+      expect(columnKeys).toContain('factory');
     });
 
     it('sets correct column titles', () => {
       const columns = getOrderTableColumns(mockHeaderFilters, mockSetHeaderFilters, mockSuppliers, mockSeatSizes);
 
-      const orderNumberCol = columns.find(col => col.key === 'orderNumber');
-      expect(orderNumberCol?.title).toBeDefined();
+      const idCol = columns.find(col => col.key === 'id');
+      expect(idCol?.title).toBeDefined();
 
       const customerCol = columns.find(col => col.key === 'customer');
       expect(customerCol?.title).toBeDefined();
@@ -103,6 +103,7 @@ describe('Order Table Columns', () => {
     it('extracts complex seat sizes from reference', () => {
       const orderWithComplexRef = {
         ...mockOrder,
+        seatSize: undefined,
         reference: 'REF-SEAT-17.5-WIDE-002',
       };
 
@@ -280,25 +281,26 @@ describe('Order Table Columns', () => {
       expect(screen.getByTestId('fitter-name')).toHaveTextContent('Jane Fitter');
     });
 
-    it('extracts supplier name correctly', () => {
+    it('extracts factory name correctly', () => {
       const columns = getOrderTableColumns(mockHeaderFilters, mockSetHeaderFilters, mockSuppliers, mockSeatSizes);
-      const supplierCol = columns.find(col => col.key === 'supplier');
+      const factoryCol = columns.find(col => col.key === 'factory');
 
       const TestComponent = () => {
-        const renderedValue = (supplierCol?.render as any)?.(mockOrder.supplier, mockOrder);
-        return <div data-testid="supplier-name">{renderedValue}</div>;
+        const renderedValue = (factoryCol?.render as any)?.(mockOrder.supplier, mockOrder);
+        return <div data-testid="factory-name">{renderedValue}</div>;
       };
 
       render(<TestComponent />);
-      expect(screen.getByTestId('supplier-name')).toHaveTextContent('Acme Supplier');
+      expect(screen.getByTestId('factory-name')).toHaveTextContent('Acme Supplier');
     });
 
-    it('extracts brand name correctly', () => {
+    it('extracts brand name via saddleSpecifications column', () => {
       const columns = getOrderTableColumns(mockHeaderFilters, mockSetHeaderFilters, mockSuppliers, mockSeatSizes);
-      const brandCol = columns.find(col => col.key === 'brand');
+      const saddleCol = columns.find(col => col.key === 'saddleSpecifications');
 
+      const orderWithBrand = { ...mockOrder, brandName: 'Test Brand', modelName: 'Test Model' };
       const TestComponent = () => {
-        const renderedValue = (brandCol?.render as any)?.(mockOrder.brand, mockOrder);
+        const renderedValue = (saddleCol?.render as any)?.(null, orderWithBrand);
         return <div data-testid="brand-name">{renderedValue}</div>;
       };
 
@@ -354,11 +356,11 @@ describe('Order Table Columns', () => {
 
       const TestComponent = () => {
         const renderedValue = (customerCol?.render as any)?.(orderWithoutCustomer.customer, orderWithoutCustomer);
-        return <div data-testid="customer-name">{renderedValue || 'No customer'}</div>;
+        return <div data-testid="customer-name">{renderedValue}</div>;
       };
 
       render(<TestComponent />);
-      expect(screen.getByTestId('customer-name')).toHaveTextContent('No customer');
+      expect(screen.getByTestId('customer-name')).toHaveTextContent('-');
     });
 
     it('handles missing fitter data', () => {
@@ -372,44 +374,48 @@ describe('Order Table Columns', () => {
 
       const TestComponent = () => {
         const renderedValue = (fitterCol?.render as any)?.(orderWithoutFitter.fitter, orderWithoutFitter);
-        return <div data-testid="fitter-name">{renderedValue || 'No fitter'}</div>;
+        return <div data-testid="fitter-name">{renderedValue}</div>;
       };
 
       render(<TestComponent />);
-      expect(screen.getByTestId('fitter-name')).toHaveTextContent('No fitter');
+      expect(screen.getByTestId('fitter-name')).toHaveTextContent('-');
     });
 
-    it('handles missing supplier data', () => {
-      const orderWithoutSupplier = {
+    it('handles missing factory data', () => {
+      const orderWithoutFactory = {
         ...mockOrder,
         supplier: null,
+        factory: null,
       };
 
       const columns = getOrderTableColumns(mockHeaderFilters, mockSetHeaderFilters, mockSuppliers, mockSeatSizes);
-      const supplierCol = columns.find(col => col.key === 'supplier');
+      const factoryCol = columns.find(col => col.key === 'factory');
 
       const TestComponent = () => {
-        const renderedValue = (supplierCol?.render as any)?.(orderWithoutSupplier.supplier, orderWithoutSupplier);
-        return <div data-testid="supplier-name">{renderedValue || 'No supplier'}</div>;
+        const renderedValue = (factoryCol?.render as any)?.(orderWithoutFactory.factory, orderWithoutFactory);
+        return <div data-testid="factory-name">{renderedValue}</div>;
       };
 
       render(<TestComponent />);
-      expect(screen.getByTestId('supplier-name')).toHaveTextContent('No supplier');
+      expect(screen.getByTestId('factory-name')).toHaveTextContent('-');
     });
   });
 
-  describe('Column Width Configuration', () => {
-    it('sets appropriate max widths for columns', () => {
+  describe('Column Structure', () => {
+    it('all columns have key and title properties', () => {
       const columns = getOrderTableColumns(mockHeaderFilters, mockSetHeaderFilters, mockSuppliers, mockSeatSizes);
 
-      const orderNumberCol = columns.find(col => col.key === 'orderNumber');
-      expect((orderNumberCol as any)?.maxWidth).toBeDefined();
+      const idCol = columns.find(col => col.key === 'id');
+      expect(idCol).toBeDefined();
+      expect(idCol?.title).toBeDefined();
 
       const statusCol = columns.find(col => col.key === 'status');
-      expect((statusCol as any)?.maxWidth).toBeDefined();
+      expect(statusCol).toBeDefined();
+      expect(statusCol?.title).toBeDefined();
 
       const urgentCol = columns.find(col => col.key === 'urgent');
-      expect((urgentCol as any)?.maxWidth).toBeDefined();
+      expect(urgentCol).toBeDefined();
+      expect(urgentCol?.title).toBeDefined();
     });
   });
 

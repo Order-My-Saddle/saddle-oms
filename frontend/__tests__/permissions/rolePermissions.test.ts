@@ -154,7 +154,7 @@ describe('Role Permissions Configuration', () => {
     test('returns correct display names for all roles', () => {
       expect(getRoleDisplayName(UserRole.USER)).toBe('User');
       expect(getRoleDisplayName(UserRole.FITTER)).toBe('Fitter');
-      expect(getRoleDisplayName(UserRole.SUPPLIER)).toBe('Supplier');
+      expect(getRoleDisplayName(UserRole.SUPPLIER)).toBe('Factory');
       expect(getRoleDisplayName(UserRole.ADMIN)).toBe('Administrator');
       expect(getRoleDisplayName(UserRole.SUPERVISOR)).toBe('Supervisor');
     });

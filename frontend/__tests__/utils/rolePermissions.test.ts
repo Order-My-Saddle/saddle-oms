@@ -50,6 +50,7 @@ describe('Role Permissions System', () => {
           'OPTIONS',
           'EXTRAS',
           'PRESETS',
+          'SUPPLIERS',
           'SADDLE_MODELING',
           'ORDER_CREATE',
           'ORDER_EDIT',
@@ -59,6 +60,14 @@ describe('Role Permissions System', () => {
           'CUSTOMER_CREATE',
           'CUSTOMER_EDIT',
           'CUSTOMER_DELETE',
+          'FITTER_CREATE',
+          'FITTER_EDIT',
+          'FITTER_DELETE',
+          'SUPPLIER_CREATE',
+          'SUPPLIER_EDIT',
+          'SUPPLIER_DELETE',
+          'REPAIRS',
+          'ALL_SADDLE_STOCK',
         ];
 
         adminScreens.forEach(screen => {
@@ -66,8 +75,7 @@ describe('Role Permissions System', () => {
         });
       });
 
-      it('should have access to user management screens', () => {
-        // Based on the actual implementation, ADMIN has access to user management
+      it('should NOT have access to user management screens (supervisor-only)', () => {
         const userManagementScreens: ScreenType[] = [
           'USER_CREATE',
           'USER_EDIT',
@@ -80,17 +88,24 @@ describe('Role Permissions System', () => {
         ];
 
         userManagementScreens.forEach(screen => {
-          expect(hasScreenPermission(UserRole.ADMIN, screen)).toBe(true);
+          expect(hasScreenPermission(UserRole.ADMIN, screen)).toBe(false);
         });
       });
     });
 
     describe('SUPERVISOR Role', () => {
-      it('should have access to all screens including admin screens', () => {
+      it('should have access to all screens that include SUPERVISOR or ADMIN in allowed roles', () => {
         const allScreens = Object.keys(SCREEN_PERMISSIONS) as ScreenType[];
 
+        // SUPERVISOR inherits ADMIN permissions but NOT fitter-only permissions
+        const fitterOnlyScreens = ['MY_SADDLE_STOCK', 'AVAILABLE_SADDLE_STOCK'];
+
         allScreens.forEach(screen => {
-          expect(hasScreenPermission(UserRole.SUPERVISOR, screen)).toBe(true);
+          if (fitterOnlyScreens.includes(screen)) {
+            expect(hasScreenPermission(UserRole.SUPERVISOR, screen)).toBe(false);
+          } else {
+            expect(hasScreenPermission(UserRole.SUPERVISOR, screen)).toBe(true);
+          }
         });
       });
 
@@ -155,6 +170,7 @@ describe('Role Permissions System', () => {
           'PRESETS',
           'ORDER_CREATE',
           'ORDER_VIEW',
+          'REPAIRS',
         ];
 
         userScreens.forEach(screen => {
@@ -256,6 +272,32 @@ describe('Role Permissions System', () => {
         'CUSTOMER_CREATE',
         'CUSTOMER_EDIT',
         'CUSTOMER_DELETE',
+        'FITTER_CREATE',
+        'FITTER_EDIT',
+        'FITTER_DELETE',
+        'SUPPLIER_CREATE',
+        'SUPPLIER_EDIT',
+        'SUPPLIER_DELETE',
+        'REPAIRS',
+        'MY_SADDLE_STOCK',
+        'AVAILABLE_SADDLE_STOCK',
+        'ALL_SADDLE_STOCK',
+        'ACCOUNT_MANAGEMENT',
+        'USER_MANAGEMENT',
+        'WAREHOUSE_MANAGEMENT',
+        'USER_PERMISSIONS_VIEW',
+        'ACCESS_FILTER_GROUPS',
+        'WAREHOUSES',
+        'COUNTRY_MANAGERS',
+        'SUPPLIERS_MANAGEMENT',
+        'USER_CREATE',
+        'USER_EDIT',
+        'USER_DELETE',
+        'USER_VIEW',
+        'WAREHOUSE_CREATE',
+        'WAREHOUSE_EDIT',
+        'WAREHOUSE_DELETE',
+        'WAREHOUSE_VIEW',
       ];
 
       expectedScreens.forEach(screen => {
@@ -304,7 +346,7 @@ describe('Role Permissions System', () => {
       // Test specific role combinations
       const testCases = [
         { role: UserRole.SUPERVISOR, screen: 'USER_CREATE' as ScreenType, expected: true },
-        { role: UserRole.ADMIN, screen: 'USER_CREATE' as ScreenType, expected: true }, // ADMIN has access too
+        { role: UserRole.ADMIN, screen: 'USER_CREATE' as ScreenType, expected: false }, // ADMIN does NOT have access
         { role: UserRole.FITTER, screen: 'REPORTS' as ScreenType, expected: false },
         { role: UserRole.USER, screen: 'CUSTOMERS' as ScreenType, expected: false },
         { role: UserRole.SUPPLIER, screen: 'ORDERS' as ScreenType, expected: false },

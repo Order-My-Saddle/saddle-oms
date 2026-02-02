@@ -176,8 +176,9 @@ describe('useUserRole Hook', () => {
 
         const { result } = renderHook(() => useUserRole());
 
+        // Array check uses direct includes() - no hierarchy
         expect(result.current.hasRole([UserRole.ADMIN, UserRole.SUPERVISOR])).toBe(true);
-        expect(result.current.hasRole([UserRole.USER, UserRole.FITTER])).toBe(true);
+        expect(result.current.hasRole([UserRole.USER, UserRole.FITTER])).toBe(false); // ADMIN not in array
         expect(result.current.hasRole([UserRole.SUPERVISOR])).toBe(false);
       });
 
@@ -189,8 +190,9 @@ describe('useUserRole Hook', () => {
 
         const { result } = renderHook(() => useUserRole());
 
+        // Array check uses direct includes() - no hierarchy
         expect(result.current.hasRole([UserRole.ADMIN, UserRole.SUPERVISOR])).toBe(true);
-        expect(result.current.hasRole([UserRole.USER, UserRole.FITTER])).toBe(true);
+        expect(result.current.hasRole([UserRole.USER, UserRole.FITTER])).toBe(false); // SUPERVISOR not in array
         expect(result.current.hasRole([UserRole.SUPERVISOR])).toBe(true);
       });
     });

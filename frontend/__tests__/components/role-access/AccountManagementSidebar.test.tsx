@@ -239,8 +239,8 @@ describe('Account Management Sidebar Section', () => {
         return role === UserRole.ADMIN && permission === 'SUPPLIERS';
       });
 
-      const { container } = render(<AccountManagementSidebarSection isCollapsed={false} />);
-      
+      render(<AccountManagementSidebarSection isCollapsed={false} initiallyCollapsed={false} />);
+
       // Should render but only show suppliers
       expect(screen.getByTestId('account-management-section')).toBeInTheDocument();
       expect(screen.getByTestId('account-item-suppliers')).toBeInTheDocument();

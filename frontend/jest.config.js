@@ -20,6 +20,9 @@ module.exports = {
     '^@/api/(.*)$': '<rootDir>/api/$1',
     '^@/schemas/(.*)$': '<rootDir>/schemas/$1',
   },
+  transformIgnorePatterns: [
+    '/node_modules/(?!(jspdf|fflate|fast-png)/)',
+  ],
   transform: {
     '^.+\\.(js|jsx|ts|tsx)$': ['babel-jest', {
       presets: [['next/babel', { 'preset-react': { runtime: 'automatic' } }]]

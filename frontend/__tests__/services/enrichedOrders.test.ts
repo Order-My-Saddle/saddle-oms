@@ -65,7 +65,7 @@ describe('Enriched Orders Service - Fitter Filtering', () => {
       });
 
       expect(mockFetchEntities).toHaveBeenCalledWith({
-        entity: 'enriched-orders',
+        entity: 'enriched_orders',
         page: 1,
         partial: undefined,
         extraParams: expect.objectContaining({
@@ -97,7 +97,7 @@ describe('Enriched Orders Service - Fitter Filtering', () => {
       });
 
       expect(mockFetchEntities).toHaveBeenCalledWith({
-        entity: 'enriched-orders',
+        entity: 'enriched_orders',
         page: 1,
         partial: undefined,
         extraParams: {},
@@ -133,7 +133,7 @@ describe('Enriched Orders Service - Fitter Filtering', () => {
       });
 
       expect(mockFetchEntities).toHaveBeenCalledWith({
-        entity: 'enriched-orders',
+        entity: 'enriched_orders',
         page: 1,
         partial: undefined,
         extraParams: expect.objectContaining({
@@ -158,7 +158,7 @@ describe('Enriched Orders Service - Fitter Filtering', () => {
       });
 
       expect(mockFetchEntities).toHaveBeenCalledWith({
-        entity: 'enriched-orders',
+        entity: 'enriched_orders',
         page: 1,
         partial: undefined,
         extraParams: {},
@@ -193,9 +193,7 @@ describe('Enriched Orders Service - Fitter Filtering', () => {
       expect(callParams).not.toHaveProperty('fitterUsername');
     });
 
-    it('logs fitter filter application', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
-
+    it('auto-applies fitter filter when fitter role is detected', async () => {
       mockLocalStorage.getItem.mockReturnValue(JSON.stringify({
         id: 1,
         username: 'jane.fitter',
@@ -212,12 +210,14 @@ describe('Enriched Orders Service - Fitter Filtering', () => {
         filters: {},
       });
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'enrichedOrders.ts: Auto-applying fitter filter for user:',
-        'jane.fitter'
+      // Verify the fitter filter was applied in the API call
+      expect(mockFetchEntities).toHaveBeenCalledWith(
+        expect.objectContaining({
+          extraParams: expect.objectContaining({
+            fitterUsername: 'jane.fitter',
+          }),
+        })
       );
-
-      consoleSpy.mockRestore();
     });
   });
 
@@ -282,7 +282,7 @@ describe('Enriched Orders Service - Fitter Filtering', () => {
       });
 
       expect(mockFetchEntities).toHaveBeenCalledWith({
-        entity: 'enriched-orders',
+        entity: 'enriched_orders',
         page: 1,
         partial: undefined,
         extraParams: expect.objectContaining({
@@ -361,7 +361,7 @@ describe('Enriched Orders Service - Fitter Filtering', () => {
       });
 
       expect(mockFetchEntities).toHaveBeenCalledWith({
-        entity: 'enriched-orders',
+        entity: 'enriched_orders',
         page: 1,
         partial: undefined,
         extraParams: expect.objectContaining({
@@ -395,7 +395,7 @@ describe('Enriched Orders Service - Fitter Filtering', () => {
       });
 
       expect(mockFetchEntities).toHaveBeenCalledWith({
-        entity: 'enriched-orders',
+        entity: 'enriched_orders',
         page: 1,
         partial: undefined,
         extraParams: {},
@@ -426,7 +426,7 @@ describe('Enriched Orders Service - Fitter Filtering', () => {
 
       // Should still apply fitter filter
       expect(mockFetchEntities).toHaveBeenCalledWith({
-        entity: 'enriched-orders',
+        entity: 'enriched_orders',
         page: 1,
         partial: undefined,
         extraParams: expect.objectContaining({

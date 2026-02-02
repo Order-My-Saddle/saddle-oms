@@ -110,10 +110,10 @@ describe('UserPermissions Component', () => {
       render(<UserPermissions />);
 
       expect(screen.getByTestId('permissions-table')).toBeInTheDocument();
-      
+
       // Check table structure
       expect(screen.getByRole('table')).toBeInTheDocument();
-      expect(screen.getByRole('rowgroup')).toBeInTheDocument(); // thead
+      expect(screen.getAllByRole('rowgroup').length).toBeGreaterThanOrEqual(1); // thead and tbody
     });
 
     test('renders all role headers', () => {
@@ -324,10 +324,12 @@ describe('UserPermissions Component', () => {
           hasRole: jest.fn()
         });
 
-        render(<UserPermissions />);
+        const { unmount } = render(<UserPermissions />);
 
         // Component should render regardless of user role (SUPERVISOR-only access is handled at route level)
         expect(screen.getByTestId('user-permissions')).toBeInTheDocument();
+
+        unmount();
       });
     });
   });

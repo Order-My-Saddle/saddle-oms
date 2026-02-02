@@ -3,9 +3,10 @@ import { CacheModule as NestCacheModule } from "@nestjs/cache-manager";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { ScheduleModule } from "@nestjs/schedule";
 import { BullModule } from "@nestjs/bullmq";
-import { redisStore } from "cache-manager-redis-yet";
+import KeyvRedis from "@keyv/redis";
 import { Redis } from "ioredis";
 import { AllConfigType } from "../config/config.type";
+import { REDIS_SCAN_CLIENT } from "./cache.constants";
 import { ProductionCacheService } from "./production-cache.service";
 import { CacheWarmingService } from "./cache-warming.service";
 import { CacheMetricsService } from "./cache-metrics.service";
@@ -40,80 +41,35 @@ import { CacheInvalidationProcessor } from "./processors/cache-invalidation.proc
             "Cache is disabled. Using memory cache with limited capacity.",
           );
           return {
-            store: "memory",
             ttl: cacheConfig?.ttl || 300000,
             max: 1000,
           };
         }
 
         try {
-          // Production Redis configuration with connection pooling
-          const redisOptions = {
-            host: redisConfig?.host || "localhost",
-            port: redisConfig?.port || 6379,
-            password: redisConfig?.password,
-            db: redisConfig?.database || 0,
-            keyPrefix: redisConfig?.keyPrefix || "oms_cache:",
+          const host = redisConfig?.host || "localhost";
+          const port = redisConfig?.port || 6379;
+          const password = redisConfig?.password;
+          const db = redisConfig?.database || 0;
+          const keyPrefix = redisConfig?.keyPrefix || "oms_cache:";
 
-            // Connection pool settings for production scale
-            lazyConnect: true,
-            retryDelayOnFailure: redisConfig?.retryDelayOnFailure || 100,
-            connectTimeout: redisConfig?.connectionTimeout || 5000,
+          // Build Redis URL for Keyv
+          const authPart = password
+            ? `:${encodeURIComponent(password)}@`
+            : "";
+          const redisUrl = `redis://${authPart}${host}:${port}/${db}`;
 
-            // Health check settings
-            enableReadyCheck: true,
-            enableOfflineQueue: false,
+          const keyvRedis = new KeyvRedis(redisUrl, {
+            keyPrefixSeparator: "",
+            namespace: keyPrefix,
+          });
 
-            // Performance optimizations
-            keepAlive: 30000,
-            family: 4, // Use IPv4
-          };
-
-          let redis: Redis;
-
-          if (
-            redisConfig?.clusterEnabled &&
-            redisConfig?.clusterNodes?.length > 0
-          ) {
-            // Redis Cluster configuration for high availability
-            const { Cluster } = await import("ioredis");
-            redis = new Cluster(
-              redisConfig.clusterNodes.map((node) => ({
-                host: node.host,
-                port: node.port,
-              })),
-              {
-                redisOptions: {
-                  password: redisConfig.password,
-                  keyPrefix: redisConfig.keyPrefix || "oms_cache:",
-                },
-                enableOfflineQueue: false,
-                enableReadyCheck: true,
-              },
-            ) as any;
-            logger.log(
-              `Redis cluster initialized with ${redisConfig.clusterNodes.length} nodes`,
-            );
-          } else {
-            // Single Redis instance with connection pool
-            redis = new Redis(redisOptions);
-            logger.log(
-              `Redis connection initialized: ${redisOptions.host}:${redisOptions.port}/${redisOptions.db}`,
-            );
-          }
-
-          // Test Redis connection
-          await redis.ping();
-          logger.log("Redis connection established successfully");
+          logger.log(
+            `Redis connection initialized via Keyv: ${host}:${port}/${db}`,
+          );
 
           return {
-            store: await redisStore({
-              socket: {
-                host: redisOptions.host,
-                port: redisOptions.port,
-              },
-              ttl: redisConfig?.ttl || 300000, // 5 minutes default
-            }),
+            stores: [keyvRedis],
             ttl: redisConfig?.ttl || 300000,
             max: redisConfig?.max || 10000,
           };
@@ -123,7 +79,6 @@ import { CacheInvalidationProcessor } from "./processors/cache-invalidation.proc
             error,
           );
           return {
-            store: "memory",
             ttl: cacheConfig?.ttl || 300000,
             max: 1000,
           };
@@ -134,6 +89,42 @@ import { CacheInvalidationProcessor } from "./processors/cache-invalidation.proc
     }),
   ],
   providers: [
+    // Dedicated ioredis client for SCAN operations (pattern invalidation)
+    {
+      provide: REDIS_SCAN_CLIENT,
+      useFactory: (configService: ConfigService<AllConfigType>) => {
+        const logger = new Logger("CacheModule:RedisScanClient");
+        const cacheConfig = configService.get("cache", { infer: true });
+        const redisConfig = configService.get("redis", { infer: true });
+
+        if (!cacheConfig?.enabled) {
+          return null;
+        }
+
+        try {
+          const redis = new Redis({
+            host: redisConfig?.host || "localhost",
+            port: redisConfig?.port || 6379,
+            password: redisConfig?.password,
+            db: redisConfig?.database || 0,
+            keyPrefix: redisConfig?.keyPrefix || "oms_cache:",
+            lazyConnect: true,
+            connectTimeout: redisConfig?.connectionTimeout || 5000,
+            enableReadyCheck: true,
+            enableOfflineQueue: false,
+            keepAlive: 30000,
+            family: 4,
+          });
+          logger.log("Redis SCAN client initialized");
+          return redis;
+        } catch (error) {
+          logger.warn("Failed to create Redis SCAN client", error);
+          return null;
+        }
+      },
+      inject: [ConfigService],
+    },
+
     // Core cache services
     ProductionCacheService,
     CacheWarmingService,
@@ -148,6 +139,7 @@ import { CacheInvalidationProcessor } from "./processors/cache-invalidation.proc
   ],
   exports: [
     NestCacheModule,
+    REDIS_SCAN_CLIENT,
     ProductionCacheService,
     CacheWarmingService,
     CacheMetricsService,

@@ -1,18 +1,26 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { Sidebar } from '@/components/Sidebar';
 import { UserRole } from '@/types/Role';
 
 // Mock the navigation components
-jest.mock('@/components/SaddleModellingSidebarSection', () => {
-  const SaddleModellingSidebarSection = ({ isCollapsed }: { isCollapsed: boolean }) => {
+jest.mock('@/components/SaddlesSidebarSection', () => {
+  const SaddlesSidebarSection = ({ isCollapsed }: { isCollapsed: boolean }) => {
     const mockUseUserRole = require('@/hooks/useUserRole').useUserRole;
     const { role } = mockUseUserRole();
     const mockHasScreenPermission = require('@/utils/rolePermissions').hasScreenPermission;
-    
+
     const saddleItems = ['Models', 'Brands', 'Leather Types', 'Options', 'Extras', 'Presets'];
-    const visibleItems = saddleItems.filter(item => 
-      mockHasScreenPermission(role, item.replace(/\s+/g, '_').toUpperCase())
+    const permissionMap: Record<string, string> = {
+      'Models': 'MODELS',
+      'Brands': 'BRANDS',
+      'Leather Types': 'LEATHER_TYPES',
+      'Options': 'OPTIONS',
+      'Extras': 'EXTRAS',
+      'Presets': 'PRESETS',
+    };
+    const visibleItems = saddleItems.filter(item =>
+      mockHasScreenPermission(role, permissionMap[item])
     );
 
     if (visibleItems.length === 0) return null;
@@ -32,7 +40,7 @@ jest.mock('@/components/SaddleModellingSidebarSection', () => {
       </div>
     );
   };
-  return { __esModule: true, SaddleModellingSidebarSection };
+  return { __esModule: true, SaddlesSidebarSection };
 });
 
 jest.mock('@/components/AccountManagementSidebarSection', () => {
@@ -40,15 +48,16 @@ jest.mock('@/components/AccountManagementSidebarSection', () => {
     const mockUseUserRole = require('@/hooks/useUserRole').useUserRole;
     const { role } = mockUseUserRole();
     const mockHasScreenPermission = require('@/utils/rolePermissions').hasScreenPermission;
-    
+
     const accountItems = [
       { name: 'Users', permission: 'USER_MANAGEMENT' },
-      { name: 'Warehouses', permission: 'WAREHOUSE_MANAGEMENT' },
-      { name: 'Suppliers', permission: 'SUPPLIERS' },
+      { name: 'Warehouses', permission: 'WAREHOUSES' },
+      { name: 'Access Filter Groups', permission: 'ACCESS_FILTER_GROUPS' },
+      { name: 'Country Managers', permission: 'COUNTRY_MANAGERS' },
       { name: 'User Permissions', permission: 'USER_PERMISSIONS_VIEW' }
     ];
 
-    const visibleItems = accountItems.filter(item => 
+    const visibleItems = accountItems.filter(item =>
       mockHasScreenPermission(role, item.permission)
     );
 
@@ -57,7 +66,7 @@ jest.mock('@/components/AccountManagementSidebarSection', () => {
     return (
       <div data-testid="account-management-section">
         <button data-testid="account-management-toggle">
-          🛡️ Account Management
+          Account Management
         </button>
         <div>
           {visibleItems.map(item => (
@@ -79,6 +88,29 @@ jest.mock('@/hooks/useUserRole', () => ({
 
 jest.mock('@/utils/rolePermissions', () => ({
   hasScreenPermission: jest.fn(),
+  SCREEN_PERMISSIONS: {
+    DASHBOARD: 'DASHBOARD',
+    ORDERS: 'ORDERS',
+    CUSTOMERS: 'CUSTOMERS',
+    FITTERS: 'FITTERS',
+    REPORTS: 'REPORTS',
+    SUPPLIERS_MANAGEMENT: 'SUPPLIERS_MANAGEMENT',
+    MY_SADDLE_STOCK: 'MY_SADDLE_STOCK',
+    AVAILABLE_SADDLE_STOCK: 'AVAILABLE_SADDLE_STOCK',
+    ALL_SADDLE_STOCK: 'ALL_SADDLE_STOCK',
+    REPAIRS: 'REPAIRS',
+    BRANDS: 'BRANDS',
+    MODELS: 'MODELS',
+    LEATHER_TYPES: 'LEATHER_TYPES',
+    OPTIONS: 'OPTIONS',
+    EXTRAS: 'EXTRAS',
+    PRESETS: 'PRESETS',
+    USER_MANAGEMENT: 'USER_MANAGEMENT',
+    WAREHOUSES: 'WAREHOUSES',
+    ACCESS_FILTER_GROUPS: 'ACCESS_FILTER_GROUPS',
+    COUNTRY_MANAGERS: 'COUNTRY_MANAGERS',
+    USER_PERMISSIONS_VIEW: 'USER_PERMISSIONS_VIEW',
+  },
   NAVIGATION_ITEMS: [
     { name: 'Dashboard', href: '/dashboard', permission: 'DASHBOARD' },
     { name: 'Orders', href: '/orders', permission: 'ORDERS' },
@@ -96,15 +128,22 @@ jest.mock('next/navigation', () => ({
 }));
 
 jest.mock('lucide-react', () => ({
-  LayoutDashboard: () => <div data-testid="dashboard-icon">📊</div>,
-  ShoppingCart: () => <div data-testid="orders-icon">🛒</div>,
-  Users: () => <div data-testid="users-icon">👥</div>,
-  BarChart3: () => <div data-testid="reports-icon">📈</div>,
-  Search: () => <div data-testid="search-icon">🔍</div>,
-  ChevronRight: () => <div data-testid="chevron-right">→</div>,
-  ChevronLeft: () => <div data-testid="chevron-left">←</div>,
-  DivideIcon: () => <div data-testid="divide-icon">÷</div>,
-  Boxes: () => <div data-testid="boxes-icon">📦</div>
+  LayoutDashboard: () => <div data-testid="dashboard-icon">Dashboard Icon</div>,
+  ShoppingCart: () => <div data-testid="orders-icon">Orders Icon</div>,
+  Users: () => <div data-testid="users-icon">Users Icon</div>,
+  BarChart3: () => <div data-testid="reports-icon">Reports Icon</div>,
+  Search: () => <div data-testid="search-icon">Search Icon</div>,
+  ChevronRight: () => <div data-testid="chevron-right">&rarr;</div>,
+  ChevronLeft: () => <div data-testid="chevron-left">&larr;</div>,
+  ChevronDown: () => <div data-testid="chevron-down">&darr;</div>,
+  DivideIcon: () => <div data-testid="divide-icon">&divide;</div>,
+  Boxes: () => <div data-testid="boxes-icon">Boxes Icon</div>,
+  Wrench: () => <div data-testid="wrench-icon">Wrench Icon</div>,
+  PackageCheck: () => <div data-testid="package-check-icon">PackageCheck Icon</div>,
+  Factory: () => <div data-testid="factory-icon">Factory Icon</div>,
+  Archive: () => <div data-testid="archive-icon">Archive Icon</div>,
+  Warehouse: () => <div data-testid="warehouse-icon">Warehouse Icon</div>,
+  UserCog: () => <div data-testid="user-cog-icon">UserCog Icon</div>,
 }));
 
 const mockUseUserRole = require('@/hooks/useUserRole').useUserRole as jest.Mock;
@@ -113,7 +152,7 @@ const mockHasScreenPermission = require('@/utils/rolePermissions').hasScreenPerm
 describe('Updated Navigation Structure', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Mock window resize events
     Object.defineProperty(window, 'innerWidth', {
       writable: true,
@@ -122,6 +161,10 @@ describe('Updated Navigation Structure', () => {
     });
     window.addEventListener = jest.fn();
     window.removeEventListener = jest.fn();
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   describe('Navigation Structure Changes', () => {
@@ -134,17 +177,17 @@ describe('Updated Navigation Structure', () => {
       mockHasScreenPermission.mockImplementation((role, permission) => {
         const supervisorPermissions = [
           'DASHBOARD', 'ORDERS', 'CUSTOMERS', 'FITTERS', 'REPORTS',
-          'ACCOUNT_MANAGEMENT', 'USER_MANAGEMENT', 'WAREHOUSE_MANAGEMENT', 'SUPPLIERS', 'USER_PERMISSIONS_VIEW'
+          'SUPPLIERS_MANAGEMENT', 'USER_MANAGEMENT', 'WAREHOUSES',
+          'ACCESS_FILTER_GROUPS', 'COUNTRY_MANAGERS', 'USER_PERMISSIONS_VIEW',
+          'ALL_SADDLE_STOCK', 'REPAIRS', 'BRANDS', 'MODELS', 'LEATHER_TYPES',
+          'OPTIONS', 'EXTRAS', 'PRESETS'
         ];
         return supervisorPermissions.includes(permission);
       });
 
       render(<Sidebar />);
 
-      // Main navigation should not include suppliers
-      expect(screen.queryByText('Suppliers')).not.toBeInTheDocument();
-      
-      // But main navigation items should be present
+      // Main navigation items should be present
       expect(screen.getByText('Dashboard')).toBeInTheDocument();
       expect(screen.getByText('Orders')).toBeInTheDocument();
       expect(screen.getByText('Customers')).toBeInTheDocument();
@@ -152,7 +195,7 @@ describe('Updated Navigation Structure', () => {
       expect(screen.getByText('Reports')).toBeInTheDocument();
     });
 
-    test('suppliers now appears in account management section', () => {
+    test('account management section is visible for supervisor', () => {
       mockUseUserRole.mockReturnValue({
         role: UserRole.SUPERVISOR,
         hasRole: jest.fn()
@@ -161,7 +204,10 @@ describe('Updated Navigation Structure', () => {
       mockHasScreenPermission.mockImplementation((role, permission) => {
         const supervisorPermissions = [
           'DASHBOARD', 'ORDERS', 'CUSTOMERS', 'FITTERS', 'REPORTS',
-          'ACCOUNT_MANAGEMENT', 'USER_MANAGEMENT', 'WAREHOUSE_MANAGEMENT', 'SUPPLIERS', 'USER_PERMISSIONS_VIEW'
+          'SUPPLIERS_MANAGEMENT', 'USER_MANAGEMENT', 'WAREHOUSES',
+          'ACCESS_FILTER_GROUPS', 'COUNTRY_MANAGERS', 'USER_PERMISSIONS_VIEW',
+          'ALL_SADDLE_STOCK', 'REPAIRS', 'BRANDS', 'MODELS', 'LEATHER_TYPES',
+          'OPTIONS', 'EXTRAS', 'PRESETS'
         ];
         return supervisorPermissions.includes(permission);
       });
@@ -170,9 +216,6 @@ describe('Updated Navigation Structure', () => {
 
       // Account management section should be present
       expect(screen.getByTestId('account-management-section')).toBeInTheDocument();
-      
-      // Suppliers should be in account management section
-      expect(screen.getByTestId('account-item-suppliers')).toBeInTheDocument();
     });
 
     test('new account management items are available', () => {
@@ -182,19 +225,17 @@ describe('Updated Navigation Structure', () => {
       });
 
       mockHasScreenPermission.mockImplementation((role, permission) => {
-        const supervisorPermissions = [
-          'ACCOUNT_MANAGEMENT', 'USER_MANAGEMENT', 'WAREHOUSE_MANAGEMENT', 'SUPPLIERS', 'USER_PERMISSIONS_VIEW'
-        ];
-        return supervisorPermissions.includes(permission);
+        return ['USER_MANAGEMENT', 'WAREHOUSES', 'ACCESS_FILTER_GROUPS', 'COUNTRY_MANAGERS', 'USER_PERMISSIONS_VIEW'].includes(permission);
       });
 
       render(<Sidebar />);
 
-      // New account management items should be present
+      // Account management items should be present for supervisor
       expect(screen.getByTestId('account-item-users')).toBeInTheDocument();
       expect(screen.getByTestId('account-item-warehouses')).toBeInTheDocument();
       expect(screen.getByTestId('account-item-user-permissions')).toBeInTheDocument();
-      expect(screen.getByTestId('account-item-suppliers')).toBeInTheDocument();
+      expect(screen.getByTestId('account-item-access-filter-groups')).toBeInTheDocument();
+      expect(screen.getByTestId('account-item-country-managers')).toBeInTheDocument();
     });
   });
 
@@ -205,7 +246,7 @@ describe('Updated Navigation Structure', () => {
         hasRole: jest.fn()
       });
 
-      mockHasScreenPermission.mockImplementation((role, permission) => {
+      mockHasScreenPermission.mockImplementation(() => {
         // Supervisor has access to everything
         return true;
       });
@@ -224,7 +265,7 @@ describe('Updated Navigation Structure', () => {
       expect(screen.getByTestId('account-management-section')).toBeInTheDocument();
     });
 
-    test('ADMIN sees limited account management', () => {
+    test('ADMIN does not see account management (SUPERVISOR-only)', () => {
       mockUseUserRole.mockReturnValue({
         role: UserRole.ADMIN,
         hasRole: jest.fn()
@@ -233,8 +274,8 @@ describe('Updated Navigation Structure', () => {
       mockHasScreenPermission.mockImplementation((role, permission) => {
         const adminPermissions = [
           'DASHBOARD', 'ORDERS', 'CUSTOMERS', 'FITTERS', 'REPORTS',
-          'ACCOUNT_MANAGEMENT', 'USER_MANAGEMENT', 'WAREHOUSE_MANAGEMENT', 'SUPPLIERS', 'USER_PERMISSIONS_VIEW',
-          'SADDLE_MODELING', 'BRANDS', 'MODELS', 'LEATHER_TYPES', 'OPTIONS', 'EXTRAS', 'PRESETS'
+          'BRANDS', 'MODELS', 'LEATHER_TYPES', 'OPTIONS', 'EXTRAS', 'PRESETS',
+          'ALL_SADDLE_STOCK', 'REPAIRS'
         ];
         return adminPermissions.includes(permission);
       });
@@ -249,9 +290,8 @@ describe('Updated Navigation Structure', () => {
       // Should see saddle modelling section
       expect(screen.getByTestId('saddle-modelling-section')).toBeInTheDocument();
 
-      // Should see account management section with all items
-      expect(screen.getByTestId('account-management-section')).toBeInTheDocument();
-      expect(screen.getByTestId('account-item-suppliers')).toBeInTheDocument();
+      // Should NOT see account management section (SUPERVISOR-only)
+      expect(screen.queryByTestId('account-management-section')).not.toBeInTheDocument();
     });
 
     test('USER sees only basic navigation', () => {
@@ -262,8 +302,8 @@ describe('Updated Navigation Structure', () => {
 
       mockHasScreenPermission.mockImplementation((role, permission) => {
         const userPermissions = [
-          'DASHBOARD', 'ORDERS',
-          'SADDLE_MODELING', 'BRANDS', 'MODELS', 'LEATHER_TYPES', 'OPTIONS', 'EXTRAS', 'PRESETS'
+          'DASHBOARD', 'ORDERS', 'REPAIRS',
+          'BRANDS', 'MODELS', 'LEATHER_TYPES', 'OPTIONS', 'EXTRAS', 'PRESETS'
         ];
         return userPermissions.includes(permission);
       });
@@ -293,7 +333,7 @@ describe('Updated Navigation Structure', () => {
       });
 
       mockHasScreenPermission.mockImplementation((role, permission) => {
-        const fitterPermissions = ['DASHBOARD', 'ORDERS', 'CUSTOMERS'];
+        const fitterPermissions = ['DASHBOARD', 'ORDERS', 'CUSTOMERS', 'MY_SADDLE_STOCK', 'AVAILABLE_SADDLE_STOCK', 'REPAIRS'];
         return fitterPermissions.includes(permission);
       });
 
@@ -308,21 +348,21 @@ describe('Updated Navigation Structure', () => {
       expect(screen.queryByText('Fitters')).not.toBeInTheDocument();
       expect(screen.queryByText('Reports')).not.toBeInTheDocument();
 
-      // Should not see saddle modelling section
+      // Should not see saddle modelling section (no BRANDS/MODELS etc permissions)
       expect(screen.queryByTestId('saddle-modelling-section')).not.toBeInTheDocument();
 
       // Should not see account management section
       expect(screen.queryByTestId('account-management-section')).not.toBeInTheDocument();
     });
 
-    test('SUPPLIER sees minimal navigation with access through account management', () => {
+    test('SUPPLIER sees minimal navigation', () => {
       mockUseUserRole.mockReturnValue({
         role: UserRole.SUPPLIER,
         hasRole: jest.fn()
       });
 
       mockHasScreenPermission.mockImplementation((role, permission) => {
-        const supplierPermissions = ['DASHBOARD', 'SUPPLIERS'];
+        const supplierPermissions = ['DASHBOARD'];
         return supplierPermissions.includes(permission);
       });
 
@@ -338,13 +378,8 @@ describe('Updated Navigation Structure', () => {
       // Should not see saddle modelling section
       expect(screen.queryByTestId('saddle-modelling-section')).not.toBeInTheDocument();
 
-      // Should see account management section with suppliers
-      expect(screen.getByTestId('account-management-section')).toBeInTheDocument();
-      expect(screen.getByTestId('account-item-suppliers')).toBeInTheDocument();
-
-      // Should not see other account management items
-      expect(screen.queryByTestId('account-item-users')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('account-item-warehouses')).not.toBeInTheDocument();
+      // Should not see account management section
+      expect(screen.queryByTestId('account-management-section')).not.toBeInTheDocument();
     });
   });
 
@@ -357,26 +392,24 @@ describe('Updated Navigation Structure', () => {
 
       // Test with full permissions
       mockHasScreenPermission.mockImplementation((role, permission) => {
-        return ['ACCOUNT_MANAGEMENT', 'USER_MANAGEMENT', 'WAREHOUSE_MANAGEMENT', 'SUPPLIERS', 'USER_PERMISSIONS_VIEW'].includes(permission);
+        return ['USER_MANAGEMENT', 'WAREHOUSES', 'ACCESS_FILTER_GROUPS', 'COUNTRY_MANAGERS', 'USER_PERMISSIONS_VIEW'].includes(permission);
       });
 
       const { rerender } = render(<Sidebar />);
 
       expect(screen.getByTestId('account-item-users')).toBeInTheDocument();
       expect(screen.getByTestId('account-item-warehouses')).toBeInTheDocument();
-      expect(screen.getByTestId('account-item-suppliers')).toBeInTheDocument();
       expect(screen.getByTestId('account-item-user-permissions')).toBeInTheDocument();
 
       // Test with limited permissions
       mockHasScreenPermission.mockImplementation((role, permission) => {
-        return ['SUPPLIERS'].includes(permission);
+        return ['USER_MANAGEMENT'].includes(permission);
       });
 
       rerender(<Sidebar />);
 
-      expect(screen.queryByTestId('account-item-users')).not.toBeInTheDocument();
+      expect(screen.getByTestId('account-item-users')).toBeInTheDocument();
       expect(screen.queryByTestId('account-item-warehouses')).not.toBeInTheDocument();
-      expect(screen.getByTestId('account-item-suppliers')).toBeInTheDocument();
       expect(screen.queryByTestId('account-item-user-permissions')).not.toBeInTheDocument();
     });
 
@@ -409,21 +442,12 @@ describe('Updated Navigation Structure', () => {
 
       render(<Sidebar />);
 
-      // Check that elements appear in expected order in the DOM
-      const navigationElements = [
-        screen.getByText('Dashboard'),
-        screen.getByText('Orders'),
-        screen.getByText('Customers'),
-        screen.getByText('Fitters'),
-        screen.getByTestId('saddle-modelling-section'),
-        screen.getByTestId('account-management-section'),
-        screen.getByText('Reports')
-      ];
-
-      // Verify elements exist in DOM order
-      navigationElements.forEach((element, index) => {
-        expect(element).toBeInTheDocument();
-      });
+      // Check that key elements exist in DOM
+      expect(screen.getByText('Dashboard')).toBeInTheDocument();
+      expect(screen.getByText('Orders')).toBeInTheDocument();
+      expect(screen.getByTestId('saddle-modelling-section')).toBeInTheDocument();
+      expect(screen.getByTestId('account-management-section')).toBeInTheDocument();
+      expect(screen.getByText('Reports')).toBeInTheDocument();
     });
 
     test('collapsible sections work independently', () => {

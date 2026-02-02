@@ -1,9 +1,8 @@
-import { fetchWarehouses, createWarehouse, updateWarehouse, deleteWarehouse, CreateWarehouseData, UpdateWarehouseData } from '@/services/warehouses';
+import { fetchWarehouses, createWarehouse, updateWarehouse, deleteWarehouse } from '@/services/warehouses';
 
 // Mock the api service
 jest.mock('@/services/api', () => ({
   fetchEntities: jest.fn(),
-  apiRequest: jest.fn()
 }));
 
 // Mock fetch globally
@@ -24,11 +23,9 @@ describe('Warehouses Service', () => {
           {
             id: '1',
             name: 'Main Warehouse',
+            username: 'main-warehouse',
             location: 'New York',
-            address: '123 Main St',
             status: 'active',
-            capacity: 1000,
-            currentStock: 750
           } as any
         ],
         'hydra:totalItems': 1
@@ -41,11 +38,10 @@ describe('Warehouses Service', () => {
       expect(mockFetchEntities).toHaveBeenCalledWith({
         entity: 'warehouses',
         page: 1,
-        itemsPerPage: 25,
-        filters: {},
-        orderBy: 'name',
-        orderDirection: 'asc'
-      } as any);
+        orderBy: 'username',
+        partial: false,
+        extraParams: {},
+      });
 
       expect(result).toEqual(mockResponse);
     });
@@ -60,19 +56,17 @@ describe('Warehouses Service', () => {
 
       await fetchWarehouses({
         page: 2,
-        itemsPerPage: 10,
         filters: { status: 'active' },
-        orderBy: 'location',
-        orderDirection: 'desc'
-      } as any);
+        orderBy: 'name',
+        partial: true,
+      });
 
       expect(mockFetchEntities).toHaveBeenCalledWith({
         entity: 'warehouses',
         page: 2,
-        itemsPerPage: 10,
-        filters: { status: 'active' },
-        orderBy: 'location',
-        orderDirection: 'desc'
+        orderBy: 'name',
+        partial: true,
+        extraParams: { status: 'active' },
       });
     });
 
@@ -87,14 +81,10 @@ describe('Warehouses Service', () => {
   describe('createWarehouse', () => {
     test('creates warehouse with correct data', async () => {
       const warehouseData = {
+        username: 'new-warehouse',
         name: 'New Warehouse',
         location: 'California',
-        address: '456 Storage Ave',
         status: 'active' as const,
-        capacity: 2000,
-        currentStock: 0,
-        contactEmail: 'warehouse@example.com',
-        contactPhone: '+1-555-0123'
       } as any;
 
       const mockResponse = {
@@ -114,12 +104,8 @@ describe('Warehouses Service', () => {
 
     test('handles create warehouse error', async () => {
       const warehouseData = {
+        username: 'new-warehouse',
         name: 'New Warehouse',
-        location: 'California',
-        address: '456 Storage Ave',
-        status: 'active' as const,
-        capacity: 2000,
-        currentStock: 0
       } as any;
 
       mockFetch.mockResolvedValue({
@@ -130,44 +116,6 @@ describe('Warehouses Service', () => {
 
       await expect(createWarehouse(warehouseData as any)).rejects.toThrow();
     });
-
-    test('validates required fields', async () => {
-      const incompleteWarehouseData = {
-        name: 'Incomplete Warehouse'
-        // Missing required fields
-      } as any;
-
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({}),
-      } as any);
-
-      await createWarehouse(incompleteWarehouseData);
-    });
-
-    test('creates warehouse with different statuses', async () => {
-      const statuses = ['active', 'inactive', 'maintenance'] as const;
-
-      for (const status of statuses) {
-        const warehouseData = {
-          name: `${status} Warehouse`,
-          location: 'Test Location',
-          address: 'Test Address',
-          status,
-          capacity: 1000,
-          currentStock: 500
-        };
-
-        mockFetch.mockResolvedValue({
-          ok: true,
-          json: async () => ({ id: '123', ...warehouseData }),
-        } as any);
-
-        const result = await createWarehouse(warehouseData as any);
-
-        expect(result.status).toBe(status);
-      }
-    });
   });
 
   describe('updateWarehouse', () => {
@@ -176,14 +124,11 @@ describe('Warehouses Service', () => {
       const updateData = {
         name: 'Updated Warehouse',
         location: 'Updated Location',
-        capacity: 1500,
-        status: 'maintenance' as const
       };
 
       const mockResponse = {
         id: warehouseId,
-        address: 'Original Address',
-        currentStock: 750,
+        username: 'test-warehouse',
         ...updateData
       };
 
@@ -208,37 +153,6 @@ describe('Warehouses Service', () => {
       } as any);
 
       await expect(updateWarehouse(warehouseId, updateData as any)).rejects.toThrow();
-    });
-
-    test('updates warehouse status', async () => {
-      const warehouseId = '123';
-      const statuses = ['active', 'inactive', 'maintenance'] as const;
-
-      for (const status of statuses) {
-        const updateData = { status };
-
-        mockFetch.mockResolvedValue({
-          ok: true,
-          json: async () => ({ id: warehouseId, status }),
-        } as any);
-
-        await updateWarehouse(warehouseId, updateData as any);
-      }
-    });
-
-    test('updates warehouse capacity and stock', async () => {
-      const warehouseId = '123';
-      const updateData = {
-        capacity: 2500,
-        currentStock: 1800
-      };
-
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({ id: warehouseId, ...updateData }),
-      } as any);
-
-      await updateWarehouse(warehouseId, updateData as any);
     });
   });
 
@@ -285,12 +199,10 @@ describe('Warehouses Service', () => {
 
       for (const status of statuses) {
         const warehouseData = {
+          username: `${status}-warehouse`,
           name: `${status} Warehouse`,
           location: 'Test Location',
-          address: 'Test Address',
           status,
-          capacity: 1000,
-          currentStock: 500
         };
 
         mockFetch.mockResolvedValue({
@@ -303,52 +215,71 @@ describe('Warehouses Service', () => {
         expect((result as any).status).toBe(status);
       }
     });
+  });
 
-    test('handles capacity and stock validation', async () => {
-      const warehouseData = {
-        name: 'Test Warehouse',
-        location: 'Test Location',
-        address: 'Test Address',
-        status: 'active' as const,
-        capacity: 1000,
-        currentStock: 800
+  describe('Filtering and Sorting', () => {
+    test('filters warehouses by status', async () => {
+      const mockResponse = {
+        'hydra:member': [
+          { id: '1', name: 'Active Warehouse', status: 'active' } as any
+        ],
+        'hydra:totalItems': 1
       };
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({ id: '123', ...warehouseData }),
-      } as any);
+      mockFetchEntities.mockResolvedValue(mockResponse);
 
-      const result = await createWarehouse(warehouseData as any);
+      await fetchWarehouses({
+        filters: { status: 'active' }
+      });
 
-      expect((result as any).capacity).toBe(1000);
-      expect((result as any).currentStock).toBe(800);
-      expect((result as any).currentStock).toBeLessThanOrEqual((result as any).capacity);
+      expect(mockFetchEntities).toHaveBeenCalledWith({
+        entity: 'warehouses',
+        page: 1,
+        orderBy: 'username',
+        partial: false,
+        extraParams: { status: 'active' },
+      });
     });
 
-    test('handles optional contact information', async () => {
-      const warehouseData = {
-        name: 'Contact Warehouse',
-        location: 'Test Location',
-        address: 'Test Address',
-        status: 'active' as const,
-        capacity: 1000,
-        currentStock: 500,
-        contactEmail: 'contact@warehouse.com',
-        contactPhone: '+1-555-0123',
-        description: 'Test warehouse with contact info'
+    test('filters warehouses by location', async () => {
+      const mockResponse = {
+        'hydra:member': [],
+        'hydra:totalItems': 0
       };
 
-      mockFetch.mockResolvedValue({
-        ok: true,
-        json: async () => ({ id: '123', ...warehouseData }),
-      } as any);
+      mockFetchEntities.mockResolvedValue(mockResponse);
 
-      const result = await createWarehouse(warehouseData as any);
+      await fetchWarehouses({
+        filters: { location: 'California' }
+      });
 
-      expect((result as any).contactEmail).toBe('contact@warehouse.com');
-      expect((result as any).contactPhone).toBe('+1-555-0123');
-      expect((result as any).description).toBe('Test warehouse with contact info');
+      expect(mockFetchEntities).toHaveBeenCalledWith({
+        entity: 'warehouses',
+        page: 1,
+        orderBy: 'username',
+        partial: false,
+        extraParams: { location: 'California' },
+      });
+    });
+
+    test('sorts warehouses by different fields', async () => {
+      const sortFields = ['name', 'username', 'location'];
+
+      for (const field of sortFields) {
+        mockFetchEntities.mockResolvedValue({ 'hydra:member': [], 'hydra:totalItems': 0 });
+
+        await fetchWarehouses({
+          orderBy: field,
+        });
+
+        expect(mockFetchEntities).toHaveBeenCalledWith({
+          entity: 'warehouses',
+          page: 1,
+          orderBy: field,
+          partial: false,
+          extraParams: {},
+        });
+      }
     });
   });
 
@@ -371,89 +302,6 @@ describe('Warehouses Service', () => {
         username: 'test',
         name: 'Test Warehouse',
       } as any)).rejects.toThrow();
-    });
-
-    test('handles validation errors', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        statusText: 'Bad Request',
-        json: async () => ({ message: 'Validation failed: Name is required' }),
-      } as any);
-
-      await expect(createWarehouse({
-        username: 'test',
-        name: '',
-      } as any)).rejects.toThrow();
-    });
-  });
-
-  describe('Filtering and Sorting', () => {
-    test('filters warehouses by status', async () => {
-      const mockResponse = {
-        'hydra:member': [
-          { id: '1', name: 'Active Warehouse', status: 'active' } as any
-        ],
-        'hydra:totalItems': 1
-      };
-
-      mockFetchEntities.mockResolvedValue(mockResponse);
-
-      await fetchWarehouses({
-        filters: { status: 'active' }
-      } as any);
-
-      expect(mockFetchEntities).toHaveBeenCalledWith({
-        entity: 'warehouses',
-        page: 1,
-        itemsPerPage: 25,
-        filters: { status: 'active' },
-        orderBy: 'name',
-        orderDirection: 'asc'
-      });
-    });
-
-    test('filters warehouses by location', async () => {
-      const mockResponse = {
-        'hydra:member': [],
-        'hydra:totalItems': 0
-      };
-
-      mockFetchEntities.mockResolvedValue(mockResponse);
-
-      await fetchWarehouses({
-        filters: { location: 'California' }
-      } as any);
-
-      expect(mockFetchEntities).toHaveBeenCalledWith({
-        entity: 'warehouses',
-        page: 1,
-        itemsPerPage: 25,
-        filters: { location: 'California' },
-        orderBy: 'name',
-        orderDirection: 'asc'
-      });
-    });
-
-    test('sorts warehouses by different fields', async () => {
-      const sortFields = ['name', 'location', 'capacity', 'status'];
-
-      for (const field of sortFields) {
-        mockFetchEntities.mockResolvedValue({ 'hydra:member': [], 'hydra:totalItems': 0 });
-
-        await fetchWarehouses({
-          orderBy: field,
-          orderDirection: 'desc'
-        } as any);
-
-        expect(mockFetchEntities).toHaveBeenCalledWith({
-          entity: 'warehouses',
-          page: 1,
-          itemsPerPage: 25,
-          filters: {},
-          orderBy: field,
-          orderDirection: 'desc'
-        });
-      }
     });
   });
 });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import { useRouter } from 'next/navigation';
 import { UserRole } from '@/types/Role';
 
@@ -26,10 +26,10 @@ jest.mock('@/utils/rolePermissions', () => ({
   }
 }));
 
-// Mock the middleware redirect function
+// Mock the middleware redirect function (virtual module since @/middleware path doesn't resolve in test)
 jest.mock('@/middleware', () => ({
   redirectToUnauthorized: jest.fn()
-}));
+}), { virtual: true });
 
 // Mock page components to test route protection
 const MockUsersPage = () => {
@@ -161,6 +161,7 @@ describe('Account Management Routes Protection', () => {
       const regularRoles = [UserRole.USER, UserRole.FITTER, UserRole.SUPPLIER];
 
       regularRoles.forEach(role => {
+        cleanup();
         mockUseUserRole.mockReturnValue({
           role,
           isAdmin: false,
@@ -218,6 +219,7 @@ describe('Account Management Routes Protection', () => {
       const regularRoles = [UserRole.USER, UserRole.FITTER, UserRole.SUPPLIER];
 
       regularRoles.forEach(role => {
+        cleanup();
         mockUseUserRole.mockReturnValue({
           role,
           isAdmin: false,
@@ -275,6 +277,7 @@ describe('Account Management Routes Protection', () => {
       const regularRoles = [UserRole.USER, UserRole.FITTER, UserRole.SUPPLIER];
 
       regularRoles.forEach(role => {
+        cleanup();
         mockUseUserRole.mockReturnValue({
           role,
           isAdmin: false,
@@ -354,6 +357,7 @@ describe('Account Management Routes Protection', () => {
       const restrictedRoles = [UserRole.USER, UserRole.FITTER];
 
       restrictedRoles.forEach(role => {
+        cleanup();
         mockUseUserRole.mockReturnValue({
           role,
           isAdmin: false,
@@ -437,6 +441,7 @@ describe('Account Management Routes Protection', () => {
       ];
 
       unauthorizedScenarios.forEach(({ role, page }) => {
+        cleanup();
         mockUseUserRole.mockReturnValue({
           role,
           isAdmin: role === UserRole.ADMIN,

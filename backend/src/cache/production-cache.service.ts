@@ -1,8 +1,9 @@
-import { Injectable, Logger, Inject, OnModuleInit } from "@nestjs/common";
+import { Injectable, Logger, Inject, Optional, OnModuleInit } from "@nestjs/common";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Cache } from "cache-manager";
 import { ConfigService } from "@nestjs/config";
 import { AllConfigType } from "../config/config.type";
+import { REDIS_SCAN_CLIENT } from "./cache.constants";
 import { Redis } from "ioredis";
 
 export interface CacheStats {
@@ -63,6 +64,9 @@ export class ProductionCacheService implements OnModuleInit {
   constructor(
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     private readonly configService: ConfigService<AllConfigType>,
+    @Optional()
+    @Inject(REDIS_SCAN_CLIENT)
+    private readonly redisScanClient: Redis | null,
   ) {}
 
   async onModuleInit() {
@@ -372,7 +376,7 @@ export class ProductionCacheService implements OnModuleInit {
    */
   async clearAllCaches(): Promise<void> {
     try {
-      await this.cacheManager.reset();
+      await this.cacheManager.clear();
       this.stats.hits = 0;
       this.stats.misses = 0;
       this.logger.log("All caches cleared");
@@ -438,16 +442,7 @@ export class ProductionCacheService implements OnModuleInit {
 
   private async getRedisClient(): Promise<Redis | null> {
     await Promise.resolve();
-    try {
-      // Access the underlying Redis client from cache-manager-redis-yet
-      const store = (this.cacheManager as any).store;
-      if (store && store.client) {
-        return store.client as Redis;
-      }
-    } catch (error) {
-      this.logger.warn("Could not access Redis client", error);
-    }
-    return null;
+    return this.redisScanClient || null;
   }
 
   // Data loading methods for cache warming (implement based on actual data sources)

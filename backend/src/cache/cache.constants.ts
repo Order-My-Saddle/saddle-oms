@@ -1,0 +1,1 @@
+export const REDIS_SCAN_CLIENT = "REDIS_SCAN_CLIENT";
