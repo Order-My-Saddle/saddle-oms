@@ -31,7 +31,7 @@ import { CacheInvalidationProcessor } from "./processors/cache-invalidation.proc
 
     NestCacheModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService<AllConfigType>) => {
+      useFactory: (configService: ConfigService<AllConfigType>) => {
         const logger = new Logger("CacheModule");
         const cacheConfig = configService.get("cache", { infer: true });
         const redisConfig = configService.get("redis", { infer: true });
@@ -54,9 +54,7 @@ import { CacheInvalidationProcessor } from "./processors/cache-invalidation.proc
           const keyPrefix = redisConfig?.keyPrefix || "oms_cache:";
 
           // Build Redis URL for Keyv
-          const authPart = password
-            ? `:${encodeURIComponent(password)}@`
-            : "";
+          const authPart = password ? `:${encodeURIComponent(password)}@` : "";
           const redisUrl = `redis://${authPart}${host}:${port}/${db}`;
 
           const keyvRedis = new KeyvRedis(redisUrl, {
