@@ -20,7 +20,7 @@ env:
 jobs:
   # 🔐 Security and Secret Scanning (First Line of Defense)
   security-scan:
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     name: 🔍 Security & Secret Scanning
     steps:
       - name: Checkout code
@@ -59,7 +59,7 @@ jobs:
 
   # 🧪 Dependency and License Scanning
   dependency-scan:
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     name: 📦 Dependency & License Audit
     steps:
       - name: Checkout code
@@ -174,7 +174,7 @@ jobs:
 
   # Frontend testing (Next.js)
   test-frontend:
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     name: 🎨 Test Next.js Frontend
     needs: [security-scan, dependency-scan]
 
@@ -435,7 +435,7 @@ jobs:
 
   # Trigger Jenkins for deployment (replaces direct K8s deploy)
   trigger-jenkins-deploy:
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     name: 🚀 Trigger Jenkins Deploy
     needs: build-and-push
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
