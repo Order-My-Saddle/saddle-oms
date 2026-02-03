@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { fetchRepairs } from '@/services/orderProductSaddles';
+import { EnrichedOrder } from '@/types/EnrichedOrder';
 import { EntityTable } from '@/components/shared/EntityTable';
 import { Column } from '@/components/shared/DataTable';
 import { useTableFilters, usePagination } from '@/hooks';
@@ -31,9 +32,8 @@ const formatDate = (dateString: string) => {
 
 // The enriched_orders list endpoint returns snake_case keys from raw SQL.
 // Column interface uses: key (for item[key] lookup), title, render.
-type EnrichedOrderRow = Record<string, unknown>;
 
-const getRepairColumns = (): Column<EnrichedOrderRow>[] => [
+const getRepairColumns = (): Column<EnrichedOrder>[] => [
   {
     key: 'id',
     title: 'Order ID',
@@ -68,7 +68,7 @@ const getRepairColumns = (): Column<EnrichedOrderRow>[] => [
 ];
 
 export default function RepairsPage() {
-  const [repairs, setRepairs] = useState<EnrichedOrderRow[]>([]);
+  const [repairs, setRepairs] = useState<EnrichedOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -112,11 +112,11 @@ export default function RepairsPage() {
     updateFilter(key, value);
   };
 
-  const handleViewRepair = (repair: EnrichedOrderRow) => {
+  const handleViewRepair = (repair: EnrichedOrder) => {
     logger.log('View repair', repair);
   };
 
-  const handleEditRepair = (repair: EnrichedOrderRow) => {
+  const handleEditRepair = (repair: EnrichedOrder) => {
     logger.log('Edit repair', repair);
   };
 

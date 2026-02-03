@@ -22,7 +22,7 @@ export async function fetchRepairs({
   page = 1,
   partial = false,
   orderBy = 'id',
-  order = 'desc'
+  order = 'desc' as const
 } = {}): Promise<RepairsSearchResult> {
   return await fetchEntities({
     entity: 'enriched_orders',

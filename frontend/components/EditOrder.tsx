@@ -94,14 +94,7 @@ export function EditOrder({ order, isLoading = false, error, onClose, onBack }: 
   const [fitterSearchResults, setFitterSearchResults] = useState<Fitter[]>([]);
   const [fitterSearchLoading, setFitterSearchLoading] = useState(false);
 
-  // Load comprehensive order data
-  useEffect(() => {
-    if (order?.id) {
-      loadOrderData();
-    }
-  }, [order?.id]);
-
-  const loadOrderData = async () => {
+  const loadOrderData = useCallback(async () => {
     if (!order?.id) return;
     
     setLoadingData(true);
@@ -288,7 +281,15 @@ export function EditOrder({ order, isLoading = false, error, onClose, onBack }: 
     } finally {
       setLoadingData(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.id]);
+
+  // Load comprehensive order data
+  useEffect(() => {
+    if (order?.id) {
+      loadOrderData();
+    }
+  }, [order?.id, loadOrderData]);
 
   // Customer search with debouncing
   const searchCustomersDebounced = useCallback(

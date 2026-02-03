@@ -109,6 +109,7 @@ export default function Users() {
     }, 300); // 300ms debounce for search
 
     return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchTerm, filters]);
 
   // Update pagination total when data changes

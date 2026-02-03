@@ -83,17 +83,12 @@ export default function Customers() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchTerm, JSON.stringify(filters)]);
+  }, [currentPage, searchTerm, filters]);
 
   // Fetch customers when dependencies change
   useEffect(() => {
     fetchCustomersData();
   }, [fetchCustomersData]);
-
-  // Also add a direct effect for page changes to ensure it triggers
-  useEffect(() => {
-    fetchCustomersData();
-  }, [currentPage]);
 
   // Handle filter changes
   const handleFilterChange = (key: string, value: string) => {

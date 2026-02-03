@@ -549,7 +549,11 @@ export class EnrichedOrdersService {
     if (query.customerCountry)
       keyParts.push(`customerCountry:${query.customerCountry}`);
     // Repair filter
-    if (query.repair !== undefined && query.repair !== null && query.repair !== "")
+    if (
+      query.repair !== undefined &&
+      query.repair !== null &&
+      query.repair !== ""
+    )
       keyParts.push(`repair:${query.repair}`);
 
     return keyParts.join(":");
