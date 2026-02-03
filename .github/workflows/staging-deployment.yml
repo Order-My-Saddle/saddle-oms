@@ -116,7 +116,7 @@ jobs:
         tags: |
           type=ref,event=branch
           type=ref,event=pr
-          type=sha,prefix={{branch}}-
+          type=sha,prefix=sha-
           type=raw,value=staging-v2-latest
 
     - name: Build and push Docker image
@@ -183,7 +183,7 @@ jobs:
         tags: |
           type=ref,event=branch
           type=ref,event=pr
-          type=sha,prefix={{branch}}-
+          type=sha,prefix=sha-
           type=raw,value=staging-v2-latest
 
     - name: Build and push Docker image
