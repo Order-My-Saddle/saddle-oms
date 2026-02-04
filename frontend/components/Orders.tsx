@@ -230,6 +230,7 @@ export default function Orders() {
     }, 300000); // 5 min
     setRefreshInterval(interval);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchAndSetOrders]);
 
   // Process orders for the table using shared utility

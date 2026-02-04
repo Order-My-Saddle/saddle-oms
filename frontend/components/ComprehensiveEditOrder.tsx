@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   DialogContent,
   DialogHeader,
@@ -148,14 +148,7 @@ export function ComprehensiveEditOrder({ order, isLoading = false, error, onClos
 
   const orderId = order?.orderId || Number(order?.id) || 0;
 
-  // Load order data and edit options
-  useEffect(() => {
-    if (orderId) {
-      loadData();
-    }
-  }, [orderId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoadingData(true);
     setDataError(null);
 
@@ -254,7 +247,14 @@ export function ComprehensiveEditOrder({ order, isLoading = false, error, onClos
     } finally {
       setLoadingData(false);
     }
-  };
+  }, [orderId]);
+
+  // Load order data and edit options
+  useEffect(() => {
+    if (orderId) {
+      loadData();
+    }
+  }, [orderId, loadData]);
 
   // Customer search
   useEffect(() => {

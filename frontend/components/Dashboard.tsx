@@ -215,7 +215,7 @@ export default function Dashboard() {
         setLoadingOrders(false);
       });
     }
-  }, [headerFilters, currentPage, dateFilterTrigger, debouncedSearchTerm]);
+  }, [headerFilters, currentPage, dateFilterTrigger, debouncedSearchTerm, date.from, date.to]);
 
   useEffect(() => {
     if (refreshInterval.current) clearInterval(refreshInterval.current);
@@ -271,7 +271,7 @@ export default function Dashboard() {
     return () => {
       if (refreshInterval.current) clearInterval(refreshInterval.current);
     };
-  }, [headerFilters, currentPage, dateFilterTrigger]);
+  }, [headerFilters, currentPage, dateFilterTrigger, date.from, date.to]);
 
   // Extract unique seat sizes from orders using shared utility
   const dynamicSeatSizes = React.useMemo(() => {

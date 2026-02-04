@@ -226,7 +226,7 @@ describe('Navigation Access Control', () => {
 
         const logo = screen.getByAltText('Custom Saddlery Logo');
         expect(logo).toBeInTheDocument();
-        expect(logo).toHaveAttribute('src', '/logo.png');
+        expect(logo.getAttribute('src')).toContain('logo.png');
 
         unmount();
       });

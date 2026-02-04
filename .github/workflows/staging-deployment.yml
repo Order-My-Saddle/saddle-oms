@@ -41,7 +41,7 @@ jobs:
   # Security scanning and linting
   security-scan:
     name: Security Scan
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     steps:
     - uses: actions/checkout@v4
 
@@ -116,7 +116,7 @@ jobs:
         tags: |
           type=ref,event=branch
           type=ref,event=pr
-          type=sha,prefix={{branch}}-
+          type=sha,prefix=sha-
           type=raw,value=staging-v2-latest
 
     - name: Build and push Docker image
@@ -183,7 +183,7 @@ jobs:
         tags: |
           type=ref,event=branch
           type=ref,event=pr
-          type=sha,prefix={{branch}}-
+          type=sha,prefix=sha-
           type=raw,value=staging-v2-latest
 
     - name: Build and push Docker image
@@ -358,7 +358,7 @@ jobs:
   # E2E tests against deployed staging environment
   e2e-tests:
     name: Run E2E Tests
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     needs: deploy-staging
     defaults:
       run:
@@ -399,7 +399,7 @@ jobs:
   # Slack notification
   notify:
     name: Notify Deployment Status
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     needs: [deploy-staging, e2e-tests]
     if: always()
 

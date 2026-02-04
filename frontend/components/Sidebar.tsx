@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { LayoutDashboard, Users, ShoppingCart, BarChart3, Search, ChevronRight, ChevronLeft, Wrench, PackageCheck, Factory, Archive, Warehouse } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter, usePathname } from 'next/navigation';
+import Image from 'next/image';
 import { SaddlesSidebarSection } from './SaddlesSidebarSection';
 import { AccountManagementSidebarSection } from './AccountManagementSidebarSection';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -129,7 +130,7 @@ export function Sidebar() {
     >
       {/* Logo at the top of sidebar, always centered horizontally */}
       <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '18px 0 18px 0', minHeight: 72 }}>
-        <img src="/logo.png" alt="Custom Saddlery Logo" style={{ width: 80, height: 36, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }} />
+        <Image src="/logo.png" alt="Custom Saddlery Logo" width={80} height={36} style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }} />
       </div>
 
       <nav className={cn(
